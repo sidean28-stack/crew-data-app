@@ -162,8 +162,22 @@ function submitCrewForm() {
     return;
   }
   const formData = getFormData();
-  window.crewDatabase.unshift(formData);
+  
+  if (window.editingSubmissionId) {
+    formData.submissionId = window.editingSubmissionId;
+    formData.action = 'update_crew';
+    const idx = window.crewDatabase.findIndex(c => c.submissionId === window.editingSubmissionId);
+    if (idx !== -1) window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...formData };
+  } else {
+    formData.submissionId = "CRW-" + Date.now();
+    formData.action = 'submit_crew';
+    window.crewDatabase.unshift(formData);
+  }
+  
   if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+  
+  if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
+  if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
 
   fetch(getGasUrl(), {
     method: "POST",
@@ -172,7 +186,12 @@ function submitCrewForm() {
     body: JSON.stringify(formData)
   }).catch(err => console.error("GAS post sync:", err));
 
-  alert(i18n[window.currentLang].alertSubmitSuccess);
+  alert(window.editingSubmissionId ? "Data kru berhasil diupdate!" : i18n[window.currentLang].alertSubmitSuccess);
+  
+  window.editingSubmissionId = null;
+  const btn = document.querySelector('.btn-submit');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
+  
   clearDraft();
   switchTab('directory');
 }
