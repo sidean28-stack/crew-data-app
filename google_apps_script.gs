@@ -131,6 +131,23 @@ function doPost(e) {
       (data.city ? " Kab/Kota: " + data.city : "") +
       (data.province ? " Prov: " + data.province : "");
 
+    // Cek apakah update
+    var isUpdate = (action === "update_crew");
+    var updateRowIndex = -1;
+    var existingFolderUrl = "";
+
+    if (isUpdate) {
+      var dataRange = sheet.getDataRange();
+      var values = dataRange.getValues();
+      for (var i = 1; i < values.length; i++) {
+        if (String(values[i][1]) === String(data.submissionId)) {
+          updateRowIndex = i + 1;
+          existingFolderUrl = values[i][31] || "";
+          break;
+        }
+      }
+    }
+
     // Get or Create Google Drive Folder for Uploads
     var folderName = "Crew_Longline_Uploads_PT_ALINDA";
     var folders = DriveApp.getFoldersByName(folderName);
@@ -139,15 +156,22 @@ function doPost(e) {
     // Sub-folder per Crew
     var safeName = (data.fullName || "Crew").replace(/[^a-zA-Z0-9]/g, "_");
     var crewFolderName = safeName + "_" + (data.submissionId || Date.now());
-    var crewFolder = targetFolder.createFolder(crewFolderName);
+    var crewFolder;
     
-    try {
-      crewFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch(shareErr) {
-      Logger.log("Sharing restriction notice: " + shareErr.toString());
+    var crewFolders = targetFolder.getFoldersByName(crewFolderName);
+    if (crewFolders.hasNext()) {
+      crewFolder = crewFolders.next();
+    } else {
+      crewFolder = targetFolder.createFolder(crewFolderName);
+      try {
+        crewFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch(shareErr) {
+        Logger.log("Sharing restriction notice: " + shareErr.toString());
+      }
     }
     
     // Save Uploaded Files to Drive
+    // If update, we might re-upload files. It's safer to re-upload if base64 is present.
     var docUrls = { passport: [], ktp: [], cdc: [], medical: [], cert: [], photo: [] };
     
     if (data.documents) {
@@ -155,8 +179,8 @@ function doPost(e) {
         var files = data.documents[docType];
         if (Array.isArray(files)) {
           files.forEach(function(fileObj, index) {
-            if (fileObj && fileObj.base64) {
-              var fileUrl = saveBase64FileToDrive(crewFolder, fileObj, docType + "_" + (index + 1));
+            if (fileObj && fileObj.base64 && fileObj.base64.length > 100) {
+              var fileUrl = saveBase64FileToDrive(crewFolder, fileObj, docType + "_" + (index + 1) + "_" + Date.now());
               if (fileUrl && docUrls[docType]) {
                 docUrls[docType].push(fileUrl);
               }
@@ -165,9 +189,8 @@ function doPost(e) {
         }
       }
     }
-    
-    // Append Row to Google Sheet
-    sheet.appendRow([
+
+    var rowValues = [
       new Date(),
       data.submissionId || Date.now(),
       data.fullName || "",
@@ -206,12 +229,28 @@ function doPost(e) {
       docUrls.medical.join(" \n"),
       docUrls.cert.join(" \n"),
       docUrls.photo.join(" \n")
-    ]);
+    ];
+
+    if (isUpdate && updateRowIndex !== -1) {
+      // For updates, we keep the original URLs if the new one is empty (meaning no new file was uploaded)
+      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 38).getValues()[0];
+      for (var c = 32; c <= 37; c++) {
+        if (rowValues[c] === "" && oldValues[c] !== "") {
+          rowValues[c] = oldValues[c]; // retain old links
+        } else if (rowValues[c] !== "" && oldValues[c] !== "") {
+          rowValues[c] = oldValues[c] + " \n" + rowValues[c]; // append new links
+        }
+      }
+      rowValues[0] = oldValues[0]; // Retain original timestamp
+      sheet.getRange(updateRowIndex, 1, 1, 38).setValues([rowValues]);
+    } else {
+      sheet.appendRow(rowValues);
+    }
     
     return ContentService
       .createTextOutput(JSON.stringify({
         status: "success",
-        message: "Data crew Longline Wantaifeng / PT ALINDA berhasil disimpan!",
+        message: "Data crew Longline Wantaifeng / PT ALINDA berhasil " + (isUpdate ? "diupdate!" : "disimpan!"),
         folderUrl: crewFolder.getUrl(),
         submissionId: data.submissionId
       }))
