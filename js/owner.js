@@ -76,6 +76,7 @@ function openCrewDetailModal(submissionId) {
   const displayPhone = isUnmasked ? crew.phoneNo : maskString(crew.phoneNo, 4);
   const address = isUnmasked ? crew.combinedAddress : '*** Masked ***';
 
+  window.ownerSelections = window.ownerSelections || {};
   let selection = window.ownerSelections[submissionId] || {
     status: crew.status || 'WAITING',
     commScore: 0, skillScore: 0, expScore: 0, attitudeScore: 0, leadershipScore: 0, notes: ''
