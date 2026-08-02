@@ -58,6 +58,9 @@ function loadDirectoryTable() {
             <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="exportCrewZip('${escapeHTML(crew.submissionId)}')" title="Download Berkas ZIP">
               <i class="fa-solid fa-file-zipper"></i>
             </button>
+            <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; color: var(--accent-amber);" onclick="editCrew('${escapeHTML(crew.submissionId)}')" title="Edit Data Kru">
+              <i class="fa-solid fa-pen"></i>
+            </button>
             ${window.currentRole === 'admin' ? `
               <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; color: var(--status-error);" onclick="openDeleteModal('${escapeHTML(crew.submissionId)}')" title="Hapus Data Kru">
                 <i class="fa-solid fa-trash"></i>
@@ -121,6 +124,221 @@ function executeDeleteCrew() {
   closeDeleteModal();
 }
 
+function editCrew(submissionId) {
+  const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
+  if (!crew) return;
+
+  window.editingSubmissionId = submissionId;
+  if(typeof switchTab === 'function') switchTab('form');
+
+  const fields = ['fullName', 'chineseName', 'rankPosition', 'gender', 'pob', 'dob', 'religion', 'maritalStatus', 'bloodType', 'shirtSize', 'shoeSize', 'streetAddress', 'rtRw', 'village', 'district', 'city', 'province', 'phoneNo', 'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry', 'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus', 'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus'];
+
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && crew[id] !== undefined) el.value = crew[id];
+  });
+
+  const expRadios = document.getElementsByName('expLongline');
+  for(let i=0; i<expRadios.length; i++){
+    if(expRadios[i].value === crew.expLongline) {
+       expRadios[i].checked = true;
+       break;
+    }
+  }
+
+  const skillCheckboxes = document.getElementsByName('skillGeneral');
+  const skills = Array.isArray(crew.skillGeneral) ? crew.skillGeneral : (crew.skillGeneral ? crew.skillGeneral.split(',').map(s=>s.trim()) : []);
+  for(let i=0; i<skillCheckboxes.length; i++){
+    skillCheckboxes[i].checked = skills.includes(skillCheckboxes[i].value);
+  }
+
+  if (crew.documents) {
+    window.uploadedDocuments = JSON.parse(JSON.stringify(crew.documents));
+    const docTypes = ['passport', 'ktp', 'cdc', 'photo', 'medical', 'bst', 'skck', 'kk', 'akte', 'cert1', 'cert2'];
+    docTypes.forEach(dt => { if(typeof renderGallery === 'function' && window.uploadedDocuments[dt]) renderGallery(dt); });
+  }
+
+  const btn = document.querySelector('.btn-submit');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> UPDATE DATA';
+  window.scrollTo(0,0);
+}
+
+let pendingExcelData = [];
+
+async function handleExcelImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+  const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+  if (rows.length === 0) {
+    alert("Excel kosong.");
+    return;
+  }
+
+  const mapKey = (headerName) => {
+    headerName = headerName.toLowerCase();
+    if (headerName.includes("id submisi") || headerName === "id") return "submissionId";
+    if (headerName.includes("nama lengkap") || headerName.includes("full name") || headerName.includes("nama")) return "fullName";
+    if (headerName.includes("nama mandarin") || headerName.includes("chinese")) return "chineseName";
+    if (headerName.includes("jabatan") || headerName.includes("posisi")) return "rankPosition";
+    if (headerName.includes("hp") || headerName.includes("wa") || headerName.includes("phone")) return "phoneNo";
+    if (headerName.includes("alamat")) return "streetAddress";
+    if (headerName.includes("keluarga 1") && !headerName.includes("telp")) return "fam1Name";
+    if (headerName.includes("telp keluarga 1")) return "fam1Phone";
+    if (headerName.includes("keluarga 2") && !headerName.includes("telp")) return "fam2Name";
+    if (headerName.includes("telp keluarga 2")) return "fam2Phone";
+    if (headerName.includes("pengalaman") || headerName.includes("longline")) return "expLongline";
+    if (headerName.includes("nama kapal")) return "vesselName";
+    if (headerName.includes("jenis kapal")) return "vesselTypeLongline";
+    if (headerName.includes("asal kapal")) return "vesselOrigin";
+    if (headerName.includes("penempatan") || headerName.includes("negara")) return "placementCountry";
+    if (headerName.includes("skill")) return "skillGeneral";
+    if (headerName.includes("paspor") || headerName.includes("passport")) {
+      if (headerName.includes("expired") || headerName.includes("exp")) return "passportExpiry";
+      return "passportNo";
+    }
+    if (headerName.includes("seaman book") || headerName.includes("cdc") || headerName.includes("buku pelaut")) {
+      if (headerName.includes("expired") || headerName.includes("exp")) return "cdcExpiry";
+      return "cdcNo";
+    }
+    if (headerName.includes("bst")) return "bstExpiry";
+    if (headerName.includes("kk")) return "kkStatus";
+    if (headerName.includes("mcu")) return "medicalStatus";
+    if (headerName.includes("baju")) return "shirtSize";
+    if (headerName.includes("sepatu")) return "shoeSize";
+    return null;
+  };
+
+  let totalParsed = 0;
+  let duplicateCount = 0;
+  let newCount = 0;
+  pendingExcelData = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    let crewData = {};
+    
+    for (let key in row) {
+      const mappedKey = mapKey(key);
+      if (mappedKey && row[key]) {
+        crewData[mappedKey] = String(row[key]).trim();
+      }
+    }
+    
+    if (!crewData.submissionId) crewData.submissionId = "IMP-" + Date.now() + "-" + i;
+    if (!crewData.fullName) continue; 
+
+    const existing = window.crewDatabase.find(c => 
+      c.submissionId === crewData.submissionId || 
+      (crewData.passportNo && c.passportNo === crewData.passportNo) ||
+      (crewData.cdcNo && c.cdcNo === crewData.cdcNo)
+    );
+    
+    if (existing) {
+       crewData._isDuplicate = true;
+       crewData._existingId = existing.submissionId;
+       duplicateCount++;
+    } else {
+       crewData._isDuplicate = false;
+       newCount++;
+    }
+    
+    pendingExcelData.push(crewData);
+    totalParsed++;
+  }
+
+  document.getElementById("excelPreviewStats").innerHTML = `
+    <ul style="list-style: none; padding: 0;">
+      <li><strong>Total Baris Ditemukan:</strong> ${totalParsed}</li>
+      <li><strong style="color: var(--status-error);">Kru Duplikat (Akan Ditimpa):</strong> ${duplicateCount}</li>
+      <li><strong style="color: var(--status-success);">Kru Baru:</strong> ${newCount}</li>
+    </ul>
+    <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">Catatan: Sistem mendeteksi duplikat dari Nomor Paspor, Buku Pelaut, atau ID.</p>
+  `;
+
+  document.getElementById("excelImportProgressContainer").style.display = "none";
+  document.getElementById("excelPreviewButtons").style.display = "flex";
+  document.getElementById("excelPreviewModal").classList.add("active");
+  event.target.value = '';
+}
+
+function closeExcelPreview() {
+  document.getElementById("excelPreviewModal").classList.remove("active");
+  pendingExcelData = [];
+}
+
+async function confirmExcelImport() {
+  document.getElementById("excelPreviewButtons").style.display = "none";
+  document.getElementById("excelImportProgressContainer").style.display = "block";
+  
+  const progressBar = document.getElementById("excelProgressBar");
+  const progressText = document.getElementById("excelProgressText");
+  const progressPercentage = document.getElementById("excelProgressPercentage");
+  
+  let importedCount = 0;
+  const total = pendingExcelData.length;
+
+  for (let i = 0; i < total; i++) {
+    const crewData = pendingExcelData[i];
+    let action = "submit_crew";
+    
+    let payload = { ...crewData };
+    delete payload._isDuplicate;
+    delete payload._existingId;
+    
+    if (crewData._isDuplicate) {
+       const idx = window.crewDatabase.findIndex(c => c.submissionId === crewData._existingId);
+       if (idx !== -1) {
+          window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...payload };
+          // the payload sent to GAS should have the full merged data, especially existing submissionId
+          payload = { ...window.crewDatabase[idx] };
+       }
+       action = "update_crew";
+    } else {
+       payload.status = "WAITING";
+       payload.documents = { passport:[], ktp:[], cdc:[], medical:[], photo:[] };
+       window.crewDatabase.unshift(payload);
+    }
+    
+    // UI Update immediate
+    importedCount++;
+    const pct = Math.round((importedCount / total) * 100);
+    progressBar.style.width = pct + "%";
+    progressText.innerText = `Memproses Kru ${importedCount} dari ${total}`;
+    progressPercentage.innerText = pct + "%";
+    
+    try {
+      payload.action = action;
+      // Backup UI changes before sending to backend
+      if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+      
+      await fetch(getGasUrl(), {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      // Added a tiny delay to prevent Apps Script concurrent request limitation drop
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch(e) { 
+      console.error("GAS Sync Error:", e);
+    }
+  }
+  
+  progressText.innerText = `Berhasil Import ${importedCount} Kru!`;
+  loadDirectoryTable();
+  if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+  
+  setTimeout(() => {
+    closeExcelPreview();
+  }, 2000);
+}
+
 function exportDirectoryCSV() {
   if (window.crewDatabase.length === 0) { alert("Tidak ada data untuk diekspor."); return; }
   let csvContent = "data:text/csv;charset=utf-8,ID Submisi,Nama Lengkap,Nama Mandarin,Jabatan,No HP,Alamat,Pengalaman Longline,Jenis Kapal,Asal Kapal,Negara Penempatan,Paspor Expired,CDC Expired,Status\n";
@@ -134,80 +352,332 @@ function exportDirectoryCSV() {
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
 
-// Print CV Pelaut Ikan Layout
+// Print CV Pelaut Ikan Layout (Ultimate Trilingual Edition)
 function printCrewCV(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
 
   const printWindow = window.open('', '_blank');
   
-  // Ambil foto profil (index 0) jika ada
-  let photoHtml = '[ FOTO CREW ]';
+  // Ambil foto profil (index 0) jika ada, format 4x6
+  let photoHtml = '<div style="margin-top: 80px; font-size: 10pt;">4 x 6 cm</div>';
   if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
-    photoHtml = `<img src="${crew.documents.photo[0].base64}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+    photoHtml = `<img src="${crew.documents.photo[0].base64}">`;
+  }
+
+  // Hitung Umur
+  let age = '-';
+  if (crew.dob) {
+    const diff = Date.now() - new Date(crew.dob).getTime();
+    age = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+  }
+
+  // Format Skills dengan Bullet
+  let skillsHtml = '-';
+  if (Array.isArray(crew.skillGeneral) && crew.skillGeneral.length > 0) {
+    skillsHtml = crew.skillGeneral.map(s => `&#10003; ${s}`).join('<br>');
+  } else if (typeof crew.skillGeneral === 'string' && crew.skillGeneral.trim() !== '') {
+    skillsHtml = crew.skillGeneral.split(',').map(s => `&#10003; ${s.trim()}`).join('<br>');
+  }
+
+  // Validasi Expiry
+  const isDocValid = (dateStr) => {
+    if (!dateStr) return false;
+    return new Date(dateStr) > new Date();
+  };
+  const isPassportValid = isDocValid(crew.passportExpiry);
+  const isCdcValid = isDocValid(crew.cdcExpiry);
+  const isBstValid = isDocValid(crew.bstExpiry);
+
+  // Generate QR Code URL
+  const qrUrl = encodeURIComponent(`https://sidean28-stack.github.io/crew-data-app/?view=${crew.submissionId}`);
+  const qrImage = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${qrUrl}" alt="QR Code">`;
+
+  // Attachments HTML (Halaman 2)
+  let attachmentsHtml = '';
+  const docNames = {
+    passport: 'Paspor / Passport / 護照',
+    ktp: 'KTP / ID Card / 身份證',
+    cdc: 'Buku Pelaut / Seaman Book / 船員手冊',
+    kk: 'Kartu Keluarga / Family Card / 戶口名簿',
+    akte: 'Akte Kelahiran / Birth Certificate / 出生證明',
+    medical: 'MCU / Medical Certificate / 體檢報告',
+    bst: 'BST / Basic Safety Training / 基本安全訓練',
+    skck: 'SKCK / Police Record / 良民證'
+  };
+
+  if (crew.documents) {
+    for (const [key, label] of Object.entries(docNames)) {
+      if (crew.documents[key] && crew.documents[key].length > 0) {
+        crew.documents[key].forEach((doc) => {
+          attachmentsHtml += `
+            <div style="margin-bottom: 40px; text-align: center; page-break-inside: avoid;">
+              <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${label}</h4>
+              <img src="${doc.base64}" style="max-width: 100%; max-height: 800px; border: 1px solid #999; padding: 5px;">
+            </div>
+          `;
+        });
+      }
+    }
+  }
+
+  let page2Html = '';
+  if (attachmentsHtml) {
+    page2Html = `
+      <div style="page-break-before: always;"></div>
+      <div class="header">
+        <h1>DOCUMENT ATTACHMENTS</h1>
+        <p>附件文件 - ${crew.fullName} (${crew.submissionId})</p>
+      </div>
+      <div class="attachments-container">
+        ${attachmentsHtml}
+      </div>
+    `;
   }
 
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>CV Pelaut Ikan - ${crew.fullName}</title>
+      <title>CV - ${crew.fullName}</title>
       <style>
-        body { font-family: Arial, sans-serif; padding: 40px; color: #000; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h2 { margin: 0; font-size: 18pt; }
-        .header p { margin: 4px 0; font-size: 10pt; }
-        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+        body { font-family: Arial, sans-serif; padding: 30px; color: #000; line-height: 1.4; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 22pt; font-weight: bold; letter-spacing: 1px; }
+        .header h2 { margin: 5px 0 0 0; font-size: 14pt; color: #333; }
+        .header p { margin: 5px 0 0 0; font-size: 14pt; font-weight: bold; }
+        
+        .grid { display: grid; grid-template-columns: 1fr auto; gap: 30px; margin-bottom: 20px; }
+        
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #000; padding: 8px; font-size: 10pt; text-align: left; }
-        th { background: #eee; }
-        .photo-box { border: 1px solid #000; height: 180px; text-align: center; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .signature-box { display: flex; justify-content: space-between; margin-top: 50px; text-align: center; font-size: 10pt; }
+        th, td { border: 1px solid #000; padding: 8px 10px; font-size: 10pt; text-align: left; vertical-align: top; }
+        th { background: #f4f4f4; width: 35%; }
+        
+        /* Photo 4x6 cm approx 151x226px at 96 DPI */
+        .photo-box { width: 151px; height: 226px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; padding: 2px; }
+        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .lbl-id { font-size: 10pt; display: block; font-weight: bold; }
+        .lbl-en { font-size: 8.5pt; color: #444; display: block; margin-top: 2px; font-weight: normal; }
+        .lbl-tw { font-size: 9pt; font-weight: bold; color: #000; display: block; margin-top: 1px; }
+        
+        .signature-section { display: flex; justify-content: space-between; margin-top: 40px; }
+        .signature-box { text-align: center; width: 250px; }
+        .signature-title { font-size: 10pt; font-weight: bold; margin-bottom: 2px; }
+        .signature-tw { font-size: 9pt; color: #333; margin-bottom: 60px; }
+        .signature-line { border-bottom: 1px solid #000; width: 100%; margin: 0 auto; }
+        
+        .footer { margin-top: 30px; text-align: left; font-size: 8pt; color: #555; border-top: 2px solid #000; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .qr-container { text-align: center; }
+        .qr-container img { width: 80px; height: 80px; border: 1px solid #ccc; padding: 2px; }
+        .qr-container p { font-size: 7.5pt; margin: 4px 0 0 0; color: #333; font-weight: bold; }
+        .qr-container p.qr-tw { font-weight: normal; margin-top: 2px; }
       </style>
     </head>
     <body>
       <div class="header">
-        <h2>WANTAIFENG INTERNATIONAL CO LTD - PT ALINDA PRIMA SENTOSA</h2>
-        <p>CURRICULUM VITAE PELAUT KAPAL LONGLINE / 远洋延绳钓船员履历表</p>
+        <h1>CURRICULUM VITAE</h1>
+        <h2>LONGLINE FISHING CREW</h2>
+        <p>遠洋延繩釣船員履歷表</p>
       </div>
 
       <div class="grid">
         <table>
-          <tr><th>ID Kru / ID</th><td>${crew.submissionId}</td></tr>
-          <tr><th>Nama Lengkap / 全名</th><td>${crew.fullName} (${crew.chineseName || '-'})</td></tr>
-          <tr><th>Jabatan / 职务</th><td><strong>${crew.rankPosition}</strong></td></tr>
-          <tr><th>Tgl Lahir / DOB</th><td>${crew.dob} (${crew.gender})</td></tr>
-          <tr><th>No. HP / Phone</th><td>${crew.phoneNo}</td></tr>
-          <tr><th>Alamat / Address</th><td>${crew.combinedAddress || crew.streetAddress}</td></tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Nama Lengkap</span>
+              <span class="lbl-en">Full Name</span>
+              <span class="lbl-tw">姓名</span>
+            </th>
+            <td style="font-size: 12pt;"><strong>${crew.fullName}</strong></td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Nama Mandarin</span>
+              <span class="lbl-en">Chinese Name</span>
+              <span class="lbl-tw">中文姓名</span>
+            </th>
+            <td style="font-size: 12pt;"><strong>${crew.chineseName || '-'}</strong></td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">ID Kru</span>
+              <span class="lbl-en">Crew ID</span>
+              <span class="lbl-tw">船員編號</span>
+            </th>
+            <td>${crew.submissionId}</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Jabatan</span>
+              <span class="lbl-en">Position</span>
+              <span class="lbl-tw">職務</span>
+            </th>
+            <td style="font-size: 11pt;"><strong>${crew.rankPosition}</strong></td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Tanggal Lahir</span>
+              <span class="lbl-en">Date of Birth</span>
+              <span class="lbl-tw">出生日期</span>
+            </th>
+            <td>${crew.dob}</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Umur</span>
+              <span class="lbl-en">Age</span>
+              <span class="lbl-tw">年齡</span>
+            </th>
+            <td>${age} Tahun / Years / 歲</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Jenis Kelamin</span>
+              <span class="lbl-en">Gender</span>
+              <span class="lbl-tw">性別</span>
+            </th>
+            <td>${crew.gender === 'Male' ? 'Laki-laki / Male / 男' : (crew.gender === 'Female' ? 'Perempuan / Female / 女' : crew.gender)}</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Agama</span>
+              <span class="lbl-en">Religion</span>
+              <span class="lbl-tw">宗教</span>
+            </th>
+            <td>${crew.religion}</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Alamat</span>
+              <span class="lbl-en">Address</span>
+              <span class="lbl-tw">地址</span>
+            </th>
+            <td>${crew.combinedAddress || crew.streetAddress}</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Kontak Darurat</span>
+              <span class="lbl-en">Emergency Contact</span>
+              <span class="lbl-tw">緊急聯絡人</span>
+            </th>
+            <td>${crew.fam1Name} (${crew.fam1Relation}): ${crew.fam1Phone}</td>
+          </tr>
         </table>
-        <div class="photo-box">
-          ${photoHtml}
+        
+        <div>
+          <div class="photo-box">
+            ${photoHtml}
+          </div>
         </div>
       </div>
 
-      <h3>KUALIFIKASI LONGLINE & DOKUMEN</h3>
+      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">KUALIFIKASI / QUALIFICATIONS / 資格</h3>
       <table>
-        <tr><th>Pengalaman Longline</th><td>${crew.expLongline}</td></tr>
-        <tr><th>Jenis Kapal / Vessel</th><td>${crew.vesselTypeLongline} (${crew.vesselOrigin})</td></tr>
-        <tr><th>No. Paspor / Passport</th><td>${crew.passportNo} (Exp: ${crew.passportExpiry})</td></tr>
-        <tr><th>Buku Pelaut / CDC</th><td>${crew.cdcNo} (Exp: ${crew.cdcExpiry})</td></tr>
-        <tr><th>Status Dokumen</th><td>KK: ${crew.kkStatus} | Akte: ${crew.akteStatus} | MCU: ${crew.medicalStatus}</td></tr>
+        <tr>
+          <th>
+            <span class="lbl-id">Pengalaman Longline</span>
+            <span class="lbl-en">Years of Experience</span>
+            <span class="lbl-tw">工作年資</span>
+          </th>
+          <td><strong>${crew.expLongline}</strong></td>
+        </tr>
+        <tr>
+          <th>
+            <span class="lbl-id">Jenis Kapal</span>
+            <span class="lbl-en">Vessel Type</span>
+            <span class="lbl-tw">船型</span>
+          </th>
+          <td>${crew.vesselTypeLongline} (${crew.vesselOrigin})</td>
+        </tr>
+        <tr>
+          <th>
+            <span class="lbl-id">Negara Penempatan</span>
+            <span class="lbl-en">Available for</span>
+            <span class="lbl-tw">可派遣地區</span>
+          </th>
+          <td><strong>${crew.placementCountry || '-'}</strong></td>
+        </tr>
+        <tr>
+          <th>
+            <span class="lbl-id">Skill Umum</span>
+            <span class="lbl-en">General Skills</span>
+            <span class="lbl-tw">一般技能</span>
+          </th>
+          <td style="line-height: 1.6;">${skillsHtml}</td>
+        </tr>
       </table>
 
-      <div class="signature-box">
-        <div>
-          <p>Tanda Tangan Kru</p>
-          <br><br><br>
-          <p>( ${crew.fullName} )</p>
+      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">STATUS DOKUMEN / DOCUMENT STATUS / 文件狀態</h3>
+      <table style="text-align: center;">
+        <tr>
+          <th style="text-align: center; width: 33%;">Document<br><span style="font-weight:normal; font-size:9pt;">文件</span></th>
+          <th style="text-align: center; width: 33%;">Status<br><span style="font-weight:normal; font-size:9pt;">狀態</span></th>
+          <th style="text-align: center; width: 33%;">Chinese<br><span style="font-weight:normal; font-size:9pt;">中文</span></th>
+        </tr>
+        <tr>
+          <td><strong>Passport</strong><br><span style="font-size: 8pt; color: #555;">${crew.passportNo}</span></td>
+          <td>${isPassportValid ? 'Valid until ' + crew.passportExpiry : 'Expired / None'}</td>
+          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + crew.passportExpiry : '無效'}</td>
+        </tr>
+        <tr>
+          <td><strong>Seaman Book</strong><br><span style="font-size: 8pt; color: #555;">${crew.cdcNo}</span></td>
+          <td>${isCdcValid ? 'Valid until ' + crew.cdcExpiry : 'Expired / None'}</td>
+          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + crew.cdcExpiry : '無效'}</td>
+        </tr>
+        <tr>
+          <td><strong>MCU</strong></td>
+          <td>${crew.medicalStatus === 'Ada' ? 'Available' : 'Expired / None'}</td>
+          <td style="font-weight: bold;">${crew.medicalStatus === 'Ada' ? '已提供' : '無'}</td>
+        </tr>
+        <tr>
+          <td><strong>BST</strong></td>
+          <td>${isBstValid ? 'Valid until ' + crew.bstExpiry : 'Expired / None'}</td>
+          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + crew.bstExpiry : '無'}</td>
+        </tr>
+        <tr>
+          <td><strong>SKCK / ID Card</strong></td>
+          <td>${(crew.kkStatus === 'Ada' || crew.akteStatus === 'Ada') ? 'Available' : 'None'}</td>
+          <td style="font-weight: bold;">${(crew.kkStatus === 'Ada' || crew.akteStatus === 'Ada') ? '已提供' : '無'}</td>
+        </tr>
+      </table>
+
+      <div class="signature-section">
+        <div class="signature-box">
+          <div class="signature-title">Crew Signature</div>
+          <div class="signature-tw">船員簽名</div>
+          <div class="signature-line"></div>
         </div>
+        
+        <div class="signature-box">
+          <div class="signature-title">Authorized Manning Agency</div>
+          <div class="signature-tw">PT ALINDA PRIMA SENTOSA<br>合法船員派遣公司</div>
+          <div class="signature-line"></div>
+        </div>
+      </div>
+      
+      <div class="footer">
         <div>
-          <p>PT ALINDA PRIMA SENTOSA</p>
-          <br><br><br>
-          <p>( Authorized Manning Agency )</p>
+          Generated by<br>
+          <strong>Longline Crew Management System</strong><br>
+          Version 2.0<br>
+          <strong>PT ALINDA PRIMA SENTOSA</strong>
+        </div>
+        <div class="qr-container">
+          ${qrImage}
+          <p>Scan to View Complete Profile</p>
+          <p class="qr-tw">掃描查看完整資料</p>
         </div>
       </div>
 
-      <script>window.onload = function() { window.print(); }</script>
+      ${page2Html}
+
+      <script>
+        window.onload = function() { 
+          setTimeout(() => { window.print(); }, 500); 
+        }
+      </script>
     </body>
     </html>
   `);
