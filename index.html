@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Excel Parser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -693,6 +695,11 @@
             <button class="btn-secondary" onclick="exportDirectoryCSV()">
               <i class="fa-solid fa-file-csv"></i> <span data-i18n="exportCSV">Ekspor CSV Lengkap</span>
             </button>
+            <button class="btn-secondary" onclick="document.getElementById('excelFileInput').click()">
+              <i class="fa-solid fa-file-excel"></i> <span>Import Excel</span>
+            </button>
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none;" onchange="handleExcelImport(event)">
+            <span id="importProgressText" style="font-size: 0.9rem; font-weight: bold; color: var(--primary); display: none;"></span>
           </div>
         </div>
 
@@ -837,6 +844,30 @@
       <div style="position: relative; display: inline-block;">
         <img id="enlargedImage" src="" style="max-width: 100%; max-height: 80vh; border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
         <div class="watermark-overlay-text" id="watermarkOverlay">CONFIDENTIAL FOR MARITIME AUTHORITY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. EXCEL IMPORT PREVIEW MODAL -->
+  <div class="modal-overlay" id="excelPreviewModal">
+    <div class="modal-card" style="max-width: 500px;">
+      <button class="modal-close-btn" onclick="closeExcelPreview()">&times;</button>
+      <h3><i class="fa-solid fa-file-excel" style="color: green;"></i> Import Excel Preview</h3>
+      <div id="excelPreviewStats" style="margin: 20px 0; padding: 15px; background: var(--surface); border-radius: 8px;">
+        <!-- Filled by JS -->
+      </div>
+      <div id="excelImportProgressContainer" style="display: none; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span id="excelProgressText" style="font-weight: bold; font-size: 0.9rem;">Importing...</span>
+          <span id="excelProgressPercentage" style="font-weight: bold; font-size: 0.9rem;">0%</span>
+        </div>
+        <div style="width: 100%; background: #e2e8f0; border-radius: 8px; height: 10px; overflow: hidden;">
+          <div id="excelProgressBar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;" id="excelPreviewButtons">
+        <button class="btn-secondary" onclick="closeExcelPreview()">Batal</button>
+        <button class="btn-primary" onclick="confirmExcelImport()">Konfirmasi Import</button>
       </div>
     </div>
   </div>
