@@ -134,6 +134,84 @@ function exportDirectoryCSV() {
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
 
-// printCrewCV is defined in app.js
+// Print CV Pelaut Ikan Layout
+function printCrewCV(submissionId) {
+  const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
+  if (!crew) return;
+
+  const printWindow = window.open('', '_blank');
+  
+  // Ambil foto profil (index 0) jika ada
+  let photoHtml = '[ FOTO CREW ]';
+  if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
+    photoHtml = `<img src="${crew.documents.photo[0].base64}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+  }
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>CV Pelaut Ikan - ${crew.fullName}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; color: #000; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h2 { margin: 0; font-size: 18pt; }
+        .header p { margin: 4px 0; font-size: 10pt; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; font-size: 10pt; text-align: left; }
+        th { background: #eee; }
+        .photo-box { border: 1px solid #000; height: 180px; text-align: center; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .signature-box { display: flex; justify-content: space-between; margin-top: 50px; text-align: center; font-size: 10pt; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>WANTAIFENG INTERNATIONAL CO LTD - PT ALINDA PRIMA SENTOSA</h2>
+        <p>CURRICULUM VITAE PELAUT KAPAL LONGLINE / 远洋延绳钓船员履历表</p>
+      </div>
+
+      <div class="grid">
+        <table>
+          <tr><th>ID Kru / ID</th><td>${crew.submissionId}</td></tr>
+          <tr><th>Nama Lengkap / 全名</th><td>${crew.fullName} (${crew.chineseName || '-'})</td></tr>
+          <tr><th>Jabatan / 职务</th><td><strong>${crew.rankPosition}</strong></td></tr>
+          <tr><th>Tgl Lahir / DOB</th><td>${crew.dob} (${crew.gender})</td></tr>
+          <tr><th>No. HP / Phone</th><td>${crew.phoneNo}</td></tr>
+          <tr><th>Alamat / Address</th><td>${crew.combinedAddress || crew.streetAddress}</td></tr>
+        </table>
+        <div class="photo-box">
+          ${photoHtml}
+        </div>
+      </div>
+
+      <h3>KUALIFIKASI LONGLINE & DOKUMEN</h3>
+      <table>
+        <tr><th>Pengalaman Longline</th><td>${crew.expLongline}</td></tr>
+        <tr><th>Jenis Kapal / Vessel</th><td>${crew.vesselTypeLongline} (${crew.vesselOrigin})</td></tr>
+        <tr><th>No. Paspor / Passport</th><td>${crew.passportNo} (Exp: ${crew.passportExpiry})</td></tr>
+        <tr><th>Buku Pelaut / CDC</th><td>${crew.cdcNo} (Exp: ${crew.cdcExpiry})</td></tr>
+        <tr><th>Status Dokumen</th><td>KK: ${crew.kkStatus} | Akte: ${crew.akteStatus} | MCU: ${crew.medicalStatus}</td></tr>
+      </table>
+
+      <div class="signature-box">
+        <div>
+          <p>Tanda Tangan Kru</p>
+          <br><br><br>
+          <p>( ${crew.fullName} )</p>
+        </div>
+        <div>
+          <p>PT ALINDA PRIMA SENTOSA</p>
+          <br><br><br>
+          <p>( Authorized Manning Agency )</p>
+        </div>
+      </div>
+
+      <script>window.onload = function() { window.print(); }</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
 
 function exportCrewZip(submissionId) { alert(`Download ZIP Berkas Foto Kru (${submissionId}) diproses.`); }
