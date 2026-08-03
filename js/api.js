@@ -1,5 +1,5 @@
 // js/api.js
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzhlv6FzrFLSIuhOQ5lsHIuOwn8dG1WrYCHvJJnJQ1aMaOwFXaoM6cc1GYlPXeO0J2A/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzkp-RI9PE1cXr0OvW1vWd92Ayzi5Sxu_dVvh-9RV6pyuhzEghL7GYdqupiZdYzIjqL/exec";
 
 function getGasUrl() {
   let url = localStorage.getItem('crew_app_gas_url') || DEFAULT_GAS_URL;
