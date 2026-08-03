@@ -94,11 +94,9 @@ window.api = {
         window.crewDatabase = [];
       }
     } else {
-      // Dummy Crew only injected in Development environment
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      if (isLocal) {
-        console.warn("DEV MODE: Injecting Dummy Crew Database");
-        window.crewDatabase = [
+      // Production Mode
+      // LocalStorage is only an offline cache fallback here.
+      window.crewDatabase = [];
           {
             submissionId: "CREW-LONG-1001", fullName: "BUDI SANTOSO", chineseName: "张伟大 (Zhang Weida)",
             rankPosition: "DECKHAND", phoneNo: "+6281298765432", streetAddress: "Jl. Yos Sudarso No. 45",

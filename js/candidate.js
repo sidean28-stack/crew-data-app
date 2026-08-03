@@ -280,13 +280,25 @@ function handleFiles(files, docType) {
 function renderGallery(docType) {
   const container = document.getElementById(`gallery${docType.charAt(0).toUpperCase() + docType.slice(1)}`);
   if (!container) return;
-  container.innerHTML = window.uploadedDocuments[docType].map((doc, idx) => `
+  container.innerHTML = window.uploadedDocuments[docType].map((doc, idx) => {
+    let imgSrc = doc.base64;
+    let clickAction = `onclick="openImagePreview('${doc.base64}')"`;
+    if (doc.isDriveUrl) {
+      if (imgSrc.includes('open?id=')) imgSrc = imgSrc.replace('open?id=', 'uc?export=view&id=');
+      if (imgSrc.includes('file/d/')) {
+         const match = imgSrc.match(/file\/d\/([a-zA-Z0-9_-]+)/);
+         if (match) imgSrc = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+      clickAction = `onclick="window.open('${doc.base64}', '_blank')"`;
+    }
+    return `
     <div class="thumb-item">
-      <img src="${doc.base64}" onclick="openImagePreview('${doc.base64}')">
+      <img src="${imgSrc}" ${clickAction} onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'50\\' height=\\'50\\'><text x=\\'5\\' y=\\'25\\' font-size=\\'10\\'>Drive Link</text></svg>';">
       <button class="thumb-remove-btn" onclick="removeDoc('${docType}', ${idx})">&times;</button>
       <div class="thumb-label">${escapeHTML(doc.name)}</div>
     </div>
-  `).join('');
+    `;
+  }).join('');
 
   const card = document.getElementById(`docCard${docType.charAt(0).toUpperCase() + docType.slice(1)}`);
   if (card) {

@@ -131,6 +131,11 @@ function editCrew(submissionId) {
   window.editingSubmissionId = submissionId;
   if(typeof switchTab === 'function') switchTab('form');
 
+  // Address fallback for Excel Import
+  if (!crew.streetAddress && crew.combinedAddress) {
+    crew.streetAddress = crew.combinedAddress;
+  }
+
   const fields = ['fullName', 'chineseName', 'rankPosition', 'gender', 'pob', 'dob', 'heightCm', 'weightKg', 'religion', 'maritalStatus', 'bloodType', 'shirtSize', 'shoeSize', 'streetAddress', 'rtRw', 'village', 'district', 'city', 'province', 'phoneNo', 'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry', 'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus', 'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus'];
 
   fields.forEach(id => {
@@ -152,11 +157,26 @@ function editCrew(submissionId) {
     skillCheckboxes[i].checked = skills.includes(skillCheckboxes[i].value);
   }
 
-  if (crew.documents) {
-    window.uploadedDocuments = JSON.parse(JSON.stringify(crew.documents));
-    const docTypes = ['passport', 'ktp', 'cdc', 'photo', 'medical', 'bst', 'skck', 'kk', 'akte', 'cert1', 'cert2'];
-    docTypes.forEach(dt => { if(typeof renderGallery === 'function' && window.uploadedDocuments[dt]) renderGallery(dt); });
+  // Normalize documents from Excel to crew.documents
+  if (!crew.documents) {
+    crew.documents = { passport: [], ktp: [], cdc: [], photo: [], medical: [], cert: [] };
   }
+  const excelDocMap = { docPhoto: 'photo', docPassport: 'passport', docCdc: 'cdc', docMedical: 'medical', docKtp: 'ktp', docCert: 'cert' };
+  for (let key in excelDocMap) {
+    if (crew[key] && Array.isArray(crew[key])) {
+      crew[key].forEach(url => {
+        // Only add if not already present
+        if (!crew.documents[excelDocMap[key]].find(d => d.base64 === url || d.url === url)) {
+           // We push as URL string to base64 property to be compatible with renderGallery temporarily
+           crew.documents[excelDocMap[key]].push({ name: 'Google Drive Link', base64: url, isDriveUrl: true });
+        }
+      });
+    }
+  }
+
+  window.uploadedDocuments = JSON.parse(JSON.stringify(crew.documents));
+  const docTypes = ['passport', 'ktp', 'cdc', 'photo', 'medical', 'bst', 'skck', 'kk', 'akte', 'cert1', 'cert2', 'cert'];
+  docTypes.forEach(dt => { if(typeof renderGallery === 'function' && window.uploadedDocuments[dt]) renderGallery(dt); });
 
   const btn = document.querySelector('.btn-submit');
   if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> UPDATE DATA';

@@ -96,21 +96,21 @@ function openCrewDetailModal(submissionId) {
           <h3 style="margin-bottom: 10px; color: var(--primary-container);">${t('revCandidateInfo')}</h3>
           <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
             <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblFullName')}:</td><td>${escapeHTML(displayName)}</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: bold;">Jabatan:</td><td>${escapeHTML(crew.rankPosition)}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblRankPosition')}:</td><td>${escapeHTML(crew.rankPosition)}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblDob')}:</td><td>${escapeHTML(crew.dob)}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblHeight')}:</td><td>${crew.heightCm || '-'} cm</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblWeight')}:</td><td>${crew.weightKg || '-'} kg</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblExperience')}:</td><td>${escapeHTML(crew.expLongline)}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblLastVessel')}:</td><td>${escapeHTML(crew.vesselName)} (${escapeHTML(crew.vesselTypeLongline)})</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: bold;">Kontak:</td><td>${escapeHTML(displayPhone)}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblContact')}:</td><td>${escapeHTML(displayPhone)}</td></tr>
           </table>
 
           <h3 style="margin-top: 20px; margin-bottom: 10px; color: var(--primary-container);">${t('lblDocStatus')}</h3>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            ${generateDocButton(crew, 'photo', 'Foto')}
-            ${generateDocButton(crew, 'passport', 'Paspor')}
-            ${generateDocButton(crew, 'cdc', 'Buku Pelaut')}
-            ${generateDocButton(crew, 'medical', 'MCU')}
+            ${generateDocButton(crew, 'photo', t('docPhoto'))}
+            ${generateDocButton(crew, 'passport', t('docPassport'))}
+            ${generateDocButton(crew, 'cdc', t('docCdc'))}
+            ${generateDocButton(crew, 'medical', t('docMedical'))}
           </div>
         </div>
 
@@ -118,29 +118,29 @@ function openCrewDetailModal(submissionId) {
         <div style="flex: 1 1 300px; background: var(--bg-primary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-subtle);">
           <h3 style="margin-bottom: 16px; color: var(--primary-container);"><i class="fa-solid fa-star-half-stroke"></i> ${t('lblInterviewScore')}</h3>
           
-          ${generateScoreInput('Communication', 'commScore', selection.commScore)}
-          ${generateScoreInput('Skill / Teknik', 'skillScore', selection.skillScore)}
-          ${generateScoreInput('Experience', 'expScore', selection.expScore)}
-          ${generateScoreInput('Attitude', 'attitudeScore', selection.attitudeScore)}
-          ${generateScoreInput('Leadership', 'leadershipScore', selection.leadershipScore)}
+          ${generateScoreInput(t('lblScoreComm'), 'commScore', selection.commScore)}
+          ${generateScoreInput(t('lblScoreSkill'), 'skillScore', selection.skillScore)}
+          ${generateScoreInput(t('lblScoreExp'), 'expScore', selection.expScore)}
+          ${generateScoreInput(t('lblScoreAttitude'), 'attitudeScore', selection.attitudeScore)}
+          ${generateScoreInput(t('lblScoreLeadership'), 'leadershipScore', selection.leadershipScore)}
 
           <div style="margin-top: 16px;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 6px;">Interview Notes:</label>
-            <textarea id="reviewNotes" class="form-control" rows="3" placeholder="Tambahkan catatan interview di sini...">${selection.notes}</textarea>
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 6px;">${t('lblInterviewNotes')}:</label>
+            <textarea id="reviewNotes" class="form-control" rows="3" placeholder="${t('phInterviewNotes')}">${selection.notes}</textarea>
           </div>
 
           <div style="margin-top: 20px;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 10px;">Selection Status:</label>
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 10px;">${t('lblSelectionStatus')}:</label>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn-secondary" id="btnWait" style="${selection.status==='WAITING'?'background:var(--text-muted);color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'WAITING')">Waiting</button>
-              <button class="btn-secondary" id="btnSel" style="${selection.status==='SELECTED'?'background:var(--status-success);color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'SELECTED')">Selected</button>
-              <button class="btn-secondary" id="btnPri" style="${selection.status==='PRIORITY'?'background:#8b5cf6;color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'PRIORITY')">Priority</button>
-              <button class="btn-secondary" id="btnRej" style="${selection.status==='REJECTED'?'background:var(--status-error);color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'REJECTED')">Rejected</button>
+              <button class="btn-secondary" id="btnWait" style="${selection.status==='WAITING'?'background:var(--text-muted);color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'WAITING')">${t('btnWaiting')}</button>
+              <button class="btn-secondary" id="btnSel" style="${selection.status==='SELECTED'?'background:var(--status-success);color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'SELECTED')">${t('btnSelected')}</button>
+              <button class="btn-secondary" id="btnPri" style="${selection.status==='PRIORITY'?'background:#8b5cf6;color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'PRIORITY')">${t('btnPriority')}</button>
+              <button class="btn-secondary" id="btnRej" style="${selection.status==='REJECTED'?'background:var(--status-error);color:#fff;':''}" onclick="setReviewStatus('${crew.submissionId}', 'REJECTED')">${t('btnRejected')}</button>
             </div>
           </div>
           
           <button class="btn-primary" style="width: 100%; margin-top: 20px; padding: 12px;" onclick="saveReviewSelection('${crew.submissionId}')">
-            <i class="fa-solid fa-floppy-disk"></i> Simpan Review & Keputusan
+            <i class="fa-solid fa-floppy-disk"></i> ${t('btnSaveReview')}
           </button>
         </div>
       </div>
@@ -162,8 +162,9 @@ function generateScoreInput(label, id, value) {
 
 function generateDocButton(crew, type, label) {
   if (crew.documents && crew.documents[type] && crew.documents[type].length > 0) {
-    const b64 = crew.documents[type][0].base64;
-    return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px;" onclick="openImagePreview('${b64}')"><i class="fa-solid fa-image"></i> ${label}</button>`;
+    const doc = crew.documents[type][0];
+    const clickAction = doc.isDriveUrl ? `window.open('${doc.base64}', '_blank')` : `openImagePreview('${doc.base64}')`;
+    return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px;" onclick="${clickAction}"><i class="fa-solid fa-image"></i> ${label}</button>`;
   }
   return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px; opacity: 0.5;" disabled><i class="fa-solid fa-image"></i> ${label}</button>`;
 }

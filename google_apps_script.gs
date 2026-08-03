@@ -42,7 +42,7 @@ function doPost(e) {
         selectedList
       ]);
 
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Booking order registered successfully!" }))
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Booking order registered successfully!" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (action === "edit_crew") {
@@ -70,7 +70,7 @@ function doPost(e) {
         review.notes || ""
       ]);
 
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Review saved" }))
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Review saved" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -228,12 +228,14 @@ function doPost(e) {
       docUrls.cdc.join(" \n"),
       docUrls.medical.join(" \n"),
       docUrls.cert.join(" \n"),
-      docUrls.photo.join(" \n")
+      docUrls.photo.join(" \n"),
+      data.heightCm || "",
+      data.weightKg || ""
     ];
 
     if (isUpdate && updateRowIndex !== -1) {
       // For updates, we keep the original URLs if the new one is empty (meaning no new file was uploaded)
-      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 38).getValues()[0];
+      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 40).getValues()[0];
       for (var c = 32; c <= 37; c++) {
         if (rowValues[c] === "" && oldValues[c] !== "") {
           rowValues[c] = oldValues[c]; // retain old links
@@ -242,23 +244,25 @@ function doPost(e) {
         }
       }
       rowValues[0] = oldValues[0]; // Retain original timestamp
-      sheet.getRange(updateRowIndex, 1, 1, 38).setValues([rowValues]);
+      sheet.getRange(updateRowIndex, 1, 1, 40).setValues([rowValues]);
     } else {
       sheet.appendRow(rowValues);
     }
     
     return ContentService
       .createTextOutput(JSON.stringify({
-        status: "success",
+        success: true,
         message: "Data crew Longline Wantaifeng / PT ALINDA berhasil " + (isUpdate ? "diupdate!" : "disimpan!"),
         folderUrl: crewFolder.getUrl(),
-        submissionId: data.submissionId
+        submissionId: data.submissionId,
+        total: sheet.getLastRow() - 1,
+        lastSync: new Date().toISOString()
       }))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
     return ContentService
-      .createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
+      .createTextOutput(JSON.stringify({ success: false, message: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
@@ -290,6 +294,127 @@ function saveBase64FileToDrive(folder, fileObj, fileTag) {
 }
 
 function doGet(e) {
+  var action = e.parameter.action;
+  
+  if (action === "getAllCrew") {
+    try {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
+      var dataRange = sheet.getDataRange();
+      var values = dataRange.getValues();
+      var crewList = [];
+      
+      // Assumes row 1 is header. Data starts at row 2.
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        if (!row[1]) continue; // skip if no submissionId
+        
+        var parseUrls = function(str) {
+          if (!str) return [];
+          return String(str).split("\\n").map(function(u){ return u.trim(); }).filter(function(u){ return u.length > 0; });
+        };
+        
+        var fam1 = String(row[7]).split("(");
+        var fam2 = String(row[9]).split("(");
+        var combinedDob = String(row[30]).split("/");
+        
+        crewList.push({
+          submissionId: String(row[1]),
+          fullName: String(row[2]),
+          chineseName: String(row[3]),
+          rankPosition: String(row[4]),
+          phoneNo: String(row[5]),
+          combinedAddress: String(row[6]),
+          fam1Name: fam1[0].trim(),
+          fam1Relation: fam1[1] ? fam1[1].replace(")","").trim() : "",
+          fam1Phone: String(row[8]),
+          fam2Name: fam2[0].trim(),
+          fam2Relation: fam2[1] ? fam2[1].replace(")","").trim() : "",
+          fam2Phone: String(row[10]),
+          expLongline: String(row[11]),
+          vesselName: String(row[12]),
+          vesselTypeLongline: String(row[13]),
+          vesselOrigin: String(row[14]),
+          placementCountry: String(row[15]),
+          skillGeneral: String(row[16]),
+          passportNo: String(row[17]),
+          passportExpiry: String(row[18]),
+          cdcNo: String(row[19]),
+          cdcExpiry: String(row[20]),
+          bstExpiry: String(row[21]),
+          kkStatus: String(row[22]),
+          akteStatus: String(row[23]),
+          ijazahLevel: String(row[24]),
+          medicalStatus: String(row[25]),
+          waliStatus: String(row[26]),
+          skckStatus: String(row[27]),
+          shirtSize: String(row[28]),
+          shoeSize: String(row[29]),
+          dob: combinedDob[0] ? combinedDob[0].trim() : "",
+          gender: combinedDob[1] ? combinedDob[1].trim() : "",
+          religion: combinedDob[2] ? combinedDob[2].trim() : "",
+          folderUrl: String(row[31]),
+          documents: {
+            passport: parseUrls(row[32]),
+            ktp: parseUrls(row[33]),
+            cdc: parseUrls(row[34]),
+            medical: parseUrls(row[35]),
+            cert: parseUrls(row[36]),
+            photo: parseUrls(row[37])
+          },
+          heightCm: row[38] ? parseInt(row[38]) : null,
+          weightKg: row[39] ? parseInt(row[39]) : null,
+          status: "WAITING"
+        });
+      }
+      
+      var reviewSheet = ss.getSheetByName("Review Owner");
+      if (reviewSheet) {
+        var reviewValues = reviewSheet.getDataRange().getValues();
+        var reviewMap = {};
+        for (var j = 1; j < reviewValues.length; j++) {
+          var rRow = reviewValues[j];
+          var sId = String(rRow[1]);
+          if (sId) {
+             reviewMap[sId] = {
+               status: String(rRow[3]),
+               commScore: String(rRow[4]),
+               skillScore: String(rRow[5]),
+               expScore: String(rRow[6]),
+               attitudeScore: String(rRow[7]),
+               leadershipScore: String(rRow[8]),
+               notes: String(rRow[9])
+             };
+          }
+        }
+        for (var k = 0; k < crewList.length; k++) {
+           var cId = crewList[k].submissionId;
+           if (reviewMap[cId]) {
+              crewList[k].status = reviewMap[cId].status;
+              crewList[k].review = reviewMap[cId];
+           }
+        }
+      }
+      
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          total: crewList.length,
+          lastSync: new Date().toISOString(),
+          crew: crewList
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+        
+    } catch (e) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: false,
+          error: e.toString()
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   return ContentService.createTextOutput("Crew Data System Endpoint (PT ALINDA PRIMA SENTOSA) is Active.");
 }
 
