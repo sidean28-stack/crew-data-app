@@ -2,11 +2,12 @@
 const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzkp-RI9PE1cXr0OvW1vWd92Ayzi5Sxu_dVvh-9RV6pyuhzEghL7GYdqupiZdYzIjqL/exec";
 
 function getGasUrl() {
-  let url = localStorage.getItem('crew_app_gas_url') || DEFAULT_GAS_URL;
-  if (url.includes("googleusercontent.com") && url.includes("user_content_key")) {
-    console.error("FATAL ERROR: Ephemeral GAS URL detected. It has expired.");
+  const cachedUrl = localStorage.getItem('crew_app_gas_url');
+  if (cachedUrl && cachedUrl !== DEFAULT_GAS_URL) {
+    // Clear stale overrides from previous sessions to prevent failures across different devices
+    localStorage.removeItem('crew_app_gas_url');
   }
-  return url;
+  return DEFAULT_GAS_URL;
 }
 
 window.api = {

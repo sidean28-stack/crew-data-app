@@ -202,7 +202,7 @@ async function submitCrewForm() {
     alert(window.editingSubmissionId ? t('alertUpdateSuccess') : t('alertSaveSuccess'));
     
     window.editingSubmissionId = null;
-    clearDraft();
+    clearDraft(true);
     switchTab('directory');
     
   } catch (err) {
@@ -229,7 +229,7 @@ function loadSavedDraft() {
   } catch(e) {}
 }
 
-function clearDraft() {
+function clearDraft(silent = false) {
   localStorage.removeItem('crew_app_draft');
   const form = document.getElementById('crewForm');
   if (form) form.reset();
@@ -247,7 +247,9 @@ function clearDraft() {
   window.currentStep = 1;
   if (typeof updateWizardProgress === 'function') updateWizardProgress();
   
-  alert(t ? t('alertDeleteSuccess') : 'Draft cleared.');
+  if (!silent) {
+    alert(t ? t('alertDeleteSuccess') : 'Draft cleared.');
+  }
 }
 
 function setupDragAndDrop() {

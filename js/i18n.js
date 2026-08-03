@@ -482,6 +482,8 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
+window.i18n = i18n;
+
 window.t = function(key) {
   const lang = localStorage.getItem('crew_lang') || 'id';
   if (window.i18n && window.i18n[lang] && window.i18n[lang][key]) {

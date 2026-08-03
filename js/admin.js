@@ -184,6 +184,9 @@ function editCrew(submissionId) {
   const docTypes = ['passport', 'ktp', 'cdc', 'photo', 'medical', 'bst', 'skck', 'kk', 'akte', 'cert1', 'cert2', 'cert'];
   docTypes.forEach(dt => { if(typeof renderGallery === 'function' && window.uploadedDocuments[dt]) renderGallery(dt); });
 
+  const agreeCheck = document.getElementById('agreeTermsCheck');
+  if (agreeCheck) agreeCheck.checked = true;
+
   const btn = document.querySelector('.btn-submit');
   if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> UPDATE DATA';
   window.scrollTo(0,0);
