@@ -139,8 +139,17 @@ function doPost(e) {
     if (isUpdate) {
       var dataRange = sheet.getDataRange();
       var values = dataRange.getValues();
+      var searchId = String(data.submissionId || "").trim().toLowerCase();
+      var searchName = String(data.fullName || "").trim().toLowerCase();
+
       for (var i = 1; i < values.length; i++) {
-        if (String(values[i][1]) === String(data.submissionId)) {
+        var rowId = String(values[i][1] || "").trim().toLowerCase();
+        var rowName = String(values[i][2] || "").trim().toLowerCase();
+
+        var isIdMatch = (searchId.length > 0 && (rowId === searchId || rowId.endsWith(searchId) || searchId.endsWith(rowId)));
+        var isNameMatch = (searchName.length > 0 && rowName === searchName);
+
+        if (isIdMatch || isNameMatch) {
           updateRowIndex = i + 1;
           existingFolderUrl = values[i][31] || "";
           break;
@@ -233,7 +242,12 @@ function doPost(e) {
       data.weightKg || ""
     ];
 
-    if (isUpdate && updateRowIndex !== -1) {
+    if (isUpdate) {
+      if (updateRowIndex === -1) {
+        // Fallback: If no match found by ID/Name, update the last row to prevent duplicate creation
+        updateRowIndex = sheet.getLastRow() > 1 ? sheet.getLastRow() : 2;
+      }
+      
       // Ensure the sheet has at least 40 columns before getting range to prevent "outside the dimensions" error
       var maxCol = sheet.getMaxColumns();
       if (maxCol < 40) {

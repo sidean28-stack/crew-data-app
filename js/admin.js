@@ -442,8 +442,19 @@ function exportDirectoryCSV() {
   XLSX.writeFile(workbook, `Crew_Longline_PT_ALINDA_${Date.now()}.xlsx`);
 }
 
+function resolveImgSrc(docObjOrUrl) {
+  if (!docObjOrUrl) return '';
+  let url = typeof docObjOrUrl === 'string' ? docObjOrUrl : (docObjOrUrl.base64 || docObjOrUrl.url || '');
+  if (!url) return '';
+  if (url.includes('drive.google.com')) {
+    if (url.includes('open?id=')) return url.replace('open?id=', 'uc?export=view&id=');
+    const match = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  }
+  return url;
+}
 
-// Print CV Pelaut Ikan Layout (Ultimate Trilingual Edition)
+// Print CV Pelaut Ikan Layout (Ultimate Trilingual Edition - A4 Compact)
 function printCrewCV(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
@@ -451,9 +462,10 @@ function printCrewCV(submissionId) {
   const printWindow = window.open('', '_blank');
   
   // Ambil foto profil (index 0) jika ada, format 4x6
-  let photoHtml = '<div style="margin-top: 80px; font-size: 10pt;">4 x 6 cm</div>';
+  let photoHtml = '<div style="margin-top: 60px; font-size: 9pt;">4 x 6 cm</div>';
   if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
-    photoHtml = `<img src="${crew.documents.photo[0].base64}">`;
+    const photoSrc = resolveImgSrc(crew.documents.photo[0]);
+    if (photoSrc) photoHtml = `<img src="${photoSrc}">`;
   }
 
   // Hitung Umur
@@ -484,7 +496,7 @@ function printCrewCV(submissionId) {
   const qrUrl = encodeURIComponent(`https://sidean28-stack.github.io/crew-data-app/?view=${crew.submissionId}`);
   const qrImage = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${qrUrl}" alt="QR Code">`;
 
-  // Attachments HTML (Halaman 2)
+  // Attachments HTML (Halaman 2 - Real Size)
   let attachmentsHtml = '';
   const docNames = {
     passport: 'Paspor / Passport / 護照',
@@ -501,12 +513,15 @@ function printCrewCV(submissionId) {
     for (const [key, label] of Object.entries(docNames)) {
       if (crew.documents[key] && crew.documents[key].length > 0) {
         crew.documents[key].forEach((doc) => {
-          attachmentsHtml += `
-            <div style="margin-bottom: 40px; text-align: center; page-break-inside: avoid;">
-              <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${label}</h4>
-              <img src="${doc.base64}" style="max-width: 100%; max-height: 800px; border: 1px solid #999; padding: 5px;">
-            </div>
-          `;
+          const imgSrc = resolveImgSrc(doc);
+          if (imgSrc) {
+            attachmentsHtml += `
+              <div style="margin-bottom: 30px; text-align: center; page-break-inside: avoid;">
+                <h4 style="margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px; font-size: 11pt;">${label}</h4>
+                <img src="${imgSrc}" style="max-width: 100%; max-height: 850px; border: 1px solid #999; padding: 4px;">
+              </div>
+            `;
+          }
         });
       }
     }
@@ -518,11 +533,10 @@ function printCrewCV(submissionId) {
       <div style="page-break-before: always;"></div>
       <div class="header">
         <h1>DOCUMENT ATTACHMENTS</h1>
-        <p>附件文件 - ${crew.fullName} (${crew.submissionId})</p>
+        <h2>DOCUMENTATION ARCHIVE</h2>
+        <p>WA N TAI FENG INTERNATIONAL CO LTD - PT ALINDA PRIMA SENTOSA</p>
       </div>
-      <div class="attachments-container">
-        ${attachmentsHtml}
-      </div>
+      ${attachmentsHtml}
     `;
   }
 
@@ -532,38 +546,42 @@ function printCrewCV(submissionId) {
     <head>
       <title>CV - ${crew.fullName}</title>
       <style>
-        body { font-family: Arial, sans-serif; padding: 30px; color: #000; line-height: 1.4; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 22pt; font-weight: bold; letter-spacing: 1px; }
-        .header h2 { margin: 5px 0 0 0; font-size: 14pt; color: #333; }
-        .header p { margin: 5px 0 0 0; font-size: 14pt; font-weight: bold; }
+        @media print {
+          @page { size: A4 portrait; margin: 6mm 8mm; }
+          body { padding: 0 !important; }
+        }
+        body { font-family: Arial, sans-serif; padding: 12px; color: #000; line-height: 1.25; font-size: 8.5pt; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 16pt; font-weight: bold; letter-spacing: 0.5px; }
+        .header h2 { margin: 2px 0 0 0; font-size: 10pt; color: #333; }
+        .header p { margin: 2px 0 0 0; font-size: 10pt; font-weight: bold; }
         
-        .grid { display: grid; grid-template-columns: 1fr auto; gap: 30px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr auto; gap: 15px; margin-bottom: 10px; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #000; padding: 8px 10px; font-size: 10pt; text-align: left; vertical-align: top; }
-        th { background: #f4f4f4; width: 35%; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { border: 1px solid #000; padding: 4px 6px; font-size: 8.5pt; text-align: left; vertical-align: middle; }
+        th { background: #f4f4f4; width: 33%; }
         
-        /* Photo 4x6 cm approx 151x226px at 96 DPI */
-        .photo-box { width: 151px; height: 226px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; padding: 2px; }
+        /* Photo 4x6 cm compact */
+        .photo-box { width: 130px; height: 180px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; padding: 2px; }
         .photo-box img { width: 100%; height: 100%; object-fit: cover; }
         
-        .lbl-id { font-size: 10pt; display: block; font-weight: bold; }
-        .lbl-en { font-size: 8.5pt; color: #444; display: block; margin-top: 2px; font-weight: normal; }
-        .lbl-tw { font-size: 9pt; font-weight: bold; color: #000; display: block; margin-top: 1px; }
+        .lbl-id { font-size: 8.5pt; display: block; font-weight: bold; }
+        .lbl-en { font-size: 7.5pt; color: #444; display: block; margin-top: 1px; font-weight: normal; }
+        .lbl-tw { font-size: 8pt; font-weight: bold; color: #000; display: block; margin-top: 1px; }
         
-        .signature-section { display: flex; justify-content: space-between; margin-top: 40px; }
-        .signature-box { text-align: center; width: 250px; }
-        .signature-title { font-size: 10pt; font-weight: bold; margin-bottom: 2px; }
-        .signature-tw { font-size: 9pt; color: #333; margin-bottom: 60px; }
+        .signature-section { display: flex; justify-content: space-between; margin-top: 15px; }
+        .signature-box { text-align: center; width: 220px; }
+        .signature-title { font-size: 8.5pt; font-weight: bold; margin-bottom: 2px; }
+        .signature-tw { font-size: 8pt; color: #333; margin-bottom: 35px; }
         .signature-line { border-bottom: 1px solid #000; width: 100%; margin: 0 auto; }
         
-        .footer { margin-top: 30px; text-align: left; font-size: 8pt; color: #555; border-top: 2px solid #000; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .footer { margin-top: 10px; text-align: left; font-size: 7.5pt; color: #555; border-top: 1.5px solid #000; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
         
         .qr-container { text-align: center; }
-        .qr-container img { width: 80px; height: 80px; border: 1px solid #ccc; padding: 2px; }
-        .qr-container p { font-size: 7.5pt; margin: 4px 0 0 0; color: #333; font-weight: bold; }
-        .qr-container p.qr-tw { font-weight: normal; margin-top: 2px; }
+        .qr-container img { width: 65px; height: 65px; border: 1px solid #ccc; padding: 2px; }
+        .qr-container p { font-size: 7pt; margin: 2px 0 0 0; color: #333; font-weight: bold; }
+        .qr-container p.qr-tw { font-weight: normal; margin-top: 1px; }
       </style>
     </head>
     <body>

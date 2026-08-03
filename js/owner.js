@@ -162,11 +162,15 @@ function generateScoreInput(label, id, value) {
 
 function generateDocButton(crew, type, label) {
   if (crew.documents && crew.documents[type] && crew.documents[type].length > 0) {
-    const doc = crew.documents[type][0];
-    const clickAction = doc.isDriveUrl ? `window.open('${doc.base64}', '_blank')` : `openImagePreview('${doc.base64}')`;
-    return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px;" onclick="${clickAction}"><i class="fa-solid fa-image"></i> ${label}</button>`;
+    const item = crew.documents[type][0];
+    const url = typeof item === 'string' ? item : (item.base64 || item.url || '');
+    if (url && url.length > 5) {
+      const isDrive = (typeof item === 'object' && item.isDriveUrl) || url.startsWith('http://') || url.startsWith('https://') || url.includes('drive.google.com');
+      const clickAction = isDrive ? `window.open('${url}', '_blank')` : `openImagePreview('${url}')`;
+      return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 6px 12px; cursor: pointer;" onclick="${clickAction}"><i class="fa-solid fa-file-image"></i> ${label}</button>`;
+    }
   }
-  return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px; opacity: 0.5;" disabled><i class="fa-solid fa-image"></i> ${label}</button>`;
+  return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 6px 12px; opacity: 0.5;" disabled><i class="fa-solid fa-file-image"></i> ${label}</button>`;
 }
 
 function closeCrewDetailModal() {
