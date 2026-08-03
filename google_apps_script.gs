@@ -234,6 +234,12 @@ function doPost(e) {
     ];
 
     if (isUpdate && updateRowIndex !== -1) {
+      // Ensure the sheet has at least 40 columns before getting range to prevent "outside the dimensions" error
+      var maxCol = sheet.getMaxColumns();
+      if (maxCol < 40) {
+        sheet.insertColumnsAfter(maxCol, 40 - maxCol);
+      }
+      
       // For updates, we keep the original URLs if the new one is empty (meaning no new file was uploaded)
       var oldValues = sheet.getRange(updateRowIndex, 1, 1, 40).getValues()[0];
       for (var c = 32; c <= 37; c++) {

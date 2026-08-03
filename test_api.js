@@ -29,9 +29,9 @@ window.api = {
     return this.fetchWithTimeout(url, { method: "GET", cache: "no-store" }, 15000);
   },
 
-  postData: async function (payload, timeoutMs = 120000) {
+  postData: async function (payload) {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
+    const id = setTimeout(() => controller.abort(), 20000);
     try {
       const response = await fetch(getGasUrl(), {
         method: "POST",
@@ -46,9 +46,6 @@ window.api = {
       return { success: true, opaque: true };
     } catch (e) {
       clearTimeout(id);
-      if (e.name === 'AbortError') {
-        throw new Error("Koneksi cloud membutuhkan waktu lebih lama (Timeout 120 detik). Mohon coba lagi atau periksa koneksi internet.");
-      }
       throw e;
     }
   },

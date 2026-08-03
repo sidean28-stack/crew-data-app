@@ -266,14 +266,48 @@ function setupDragAndDrop() {
 function triggerFileInput(id) { document.getElementById(id).click(); }
 function handleFileSelect(e, docType) { handleFiles(e.target.files, docType); }
 
+function compressAndReadImage(file, callback) {
+  if (!file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e) => callback(e.target.result);
+    reader.readAsDataURL(file);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1200;
+      let width = img.width;
+      let height = img.height;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.onerror = () => callback(e.target.result);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleFiles(files, docType) {
   Array.from(files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      window.uploadedDocuments[docType].push({ name: file.name, base64: event.target.result });
+    compressAndReadImage(file, (compressedBase64) => {
+      window.uploadedDocuments[docType].push({ name: file.name, base64: compressedBase64 });
       renderGallery(docType);
-    };
-    reader.readAsDataURL(file);
+    });
   });
 }
 
@@ -335,9 +369,21 @@ function closeCameraModal() {
 function takeCameraSnap() {
   const video = document.getElementById('cameraVideo');
   const canvas = document.getElementById('cameraCanvas');
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  window.uploadedDocuments[window.activeCameraDocType].push({ name: `camera_${Date.now()}.jpg`, base64: canvas.toDataURL('image/jpeg') });
+  const maxDim = 1200;
+  let width = video.videoWidth || 1280;
+  let height = video.videoHeight || 720;
+  if (width > maxDim || height > maxDim) {
+    if (width > height) {
+      height = Math.round((height * maxDim) / width);
+      width = maxDim;
+    } else {
+      width = Math.round((width * maxDim) / height);
+      height = maxDim;
+    }
+  }
+  canvas.width = width; canvas.height = height;
+  canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+  window.uploadedDocuments[window.activeCameraDocType].push({ name: `camera_${Date.now()}.jpg`, base64: canvas.toDataURL('image/jpeg', 0.75) });
   renderGallery(window.activeCameraDocType);
   closeCameraModal();
 }
