@@ -156,24 +156,24 @@
 
           <div class="form-grid">
             <div class="form-group col-6">
-              <label><span data-i18n="fullName">Nama Lengkap Crew (全名)</span> <span class="required-star">*</span></label>
+              <label><span data-i18n="lblFullName">Nama Lengkap / 姓名</span> <span class="required-star">*</span></label>
               <input type="text" id="fullName" class="form-control" placeholder="Nama sesuai Paspor / KTP" required>
             </div>
 
             <div class="form-group col-6">
-              <label><span data-i18n="chineseName">Nama Mandarin (中文姓名 - Opsional)</span></label>
+              <label><span data-i18n="chineseName">Nama Mandarin / 中文姓名 (Opsional)</span></label>
               <input type="text" id="chineseName" class="form-control" placeholder="例如: 张伟 (Zhang Wei)">
             </div>
 
             <div class="form-group col-6">
-              <label><span data-i18n="rankPosition">Jabatan / Posisi Longline (职务)</span> <span class="required-star">*</span></label>
+              <label><span data-i18n="rankPosition">Jabatan / 職務</span> <span class="required-star">*</span></label>
               <select id="rankPosition" class="form-control" required>
                 <!-- Populated dynamically -->
               </select>
             </div>
 
             <div class="form-group col-3">
-              <label><span data-i18n="gender">Jenis Kelamin (性别)</span> <span class="required-star">*</span></label>
+              <label><span data-i18n="lblGender">Jenis Kelamin / 性別</span> <span class="required-star">*</span></label>
               <select id="gender" class="form-control" required>
                 <option value="Male" data-i18n="male">Laki-laki (男)</option>
                 <option value="Female" data-i18n="female">Perempuan (女)</option>
@@ -181,17 +181,27 @@
             </div>
 
             <div class="form-group col-3">
-              <label><span data-i18n="pob">Tempat Lahir (出生地点)</span> <span class="required-star">*</span></label>
+              <label><span data-i18n="lblPob">Tempat Lahir / 出生地點</span> <span class="required-star">*</span></label>
               <input type="text" id="pob" class="form-control" placeholder="Kota Kelahiran" required>
             </div>
 
             <div class="form-group col-4">
-              <label><span data-i18n="dob">Tanggal Lahir (出生日期)</span> <span class="required-star">*</span></label>
+              <label><span data-i18n="lblDob">Tanggal Lahir / 出生日期</span> <span class="required-star">*</span></label>
               <input type="date" id="dob" class="form-control" required>
             </div>
 
             <div class="form-group col-4">
-              <label><span data-i18n="religion">Agama (宗教)</span></label>
+              <label><span data-i18n="lblHeight">Tinggi Badan / 身高</span> (cm) <span class="required-star">*</span></label>
+              <input type="number" id="heightCm" class="form-control" placeholder="cm" min="130" max="220" required>
+            </div>
+
+            <div class="form-group col-4">
+              <label><span data-i18n="lblWeight">Berat Badan / 體重</span> (kg) <span class="required-star">*</span></label>
+              <input type="number" id="weightKg" class="form-control" placeholder="kg" min="35" max="180" required>
+            </div>
+
+            <div class="form-group col-4">
+              <label><span data-i18n="lblReligion">Agama / 宗教</span></label>
               <select id="religion" class="form-control">
                 <option value="Islam">Islam (伊斯兰教)</option>
                 <option value="Protestant">Kristen (基督教)</option>
@@ -202,7 +212,7 @@
             </div>
 
             <div class="form-group col-4">
-              <label><span data-i18n="maritalStatus">Status Perkawinan (婚姻状况)</span></label>
+              <label><span data-i18n="lblMaritalStatus">Status Perkawinan / 婚姻狀況</span></label>
               <select id="maritalStatus" class="form-control">
                 <option value="Single" data-i18n="single">Belum Menikah (未婚)</option>
                 <option value="Married" data-i18n="married">Menikah (已婚)</option>
@@ -211,7 +221,7 @@
             </div>
 
             <div class="form-group col-4">
-              <label><span data-i18n="bloodType">Golongan Darah (血型)</span></label>
+              <label><span data-i18n="lblBloodType">Golongan Darah / 血型</span></label>
               <select id="bloodType" class="form-control">
                 <option value="A">A</option>
                 <option value="B">B</option>
@@ -693,7 +703,7 @@
               <i class="fa-solid fa-key"></i> <span data-i18n="generateOneTimeLink">Buat Link Sekali Pakai (One-Time Link)</span>
             </button>
             <button class="btn-secondary" onclick="exportDirectoryCSV()">
-              <i class="fa-solid fa-file-csv"></i> <span data-i18n="exportCSV">Ekspor CSV Lengkap</span>
+              <i class="fa-solid fa-file-excel"></i> <span data-i18n="exportCSV">Export Excel Lengkap</span>
             </button>
             <button class="btn-secondary" onclick="document.getElementById('excelFileInput').click()">
               <i class="fa-solid fa-file-excel"></i> <span>Import Excel</span>
@@ -872,14 +882,14 @@
     </div>
   </div>
 
-  <script src="i18n.js"></script>
+  <script src="js/i18n.js?v=6"></script>
   <script src="js/config.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/ui-components.js"></script>
+  <script src="js/api.js?v=6"></script>
+  <script src="js/ui-components.js?v=4"></script>
   <script src="js/auth.js"></script>
-  <script src="js/candidate.js"></script>
-  <script src="js/owner.js"></script>
-  <script src="js/admin.js?v=2"></script>
+  <script src="js/candidate.js?v=3"></script>
+  <script src="js/owner.js?v=2"></script>
+  <script src="js/admin.js?v=4"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

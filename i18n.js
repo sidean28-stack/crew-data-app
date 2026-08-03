@@ -145,7 +145,7 @@ const i18n = {
     colDocs: "Status Masa Berlaku Dokumen",
     colStatus: "Status Verifikasi",
     colAction: "Aksi",
-    exportCSV: "Ekspor CSV Lengkap",
+    exportCSV: "Export Excel Lengkap",
     exportZIP: "Download ZIP Berkas Foto",
     generateOneTimeLink: "Buat Link Sekali Pakai (One-Time Link)",
     editCrew: "Edit Data Kru",
@@ -166,7 +166,22 @@ const i18n = {
     confirmDeleteTitle: "Konfirmasi Hapus Data Kru 2-Langkah",
     confirmDeleteDesc: "Apakah Anda yakin ingin menghapus data kru ini secara permanen?",
     gasStatusConnected: "✓ Terhubung dengan Google Cloud / Apps Script API (Live Production)",
-    gasStatusLocal: "Mode Pratinjau Lokal (Data disimpan di Browser)"
+    gasStatusLocal: "Mode Pratinjau Lokal (Data disimpan di Browser)",
+    
+    // Owner Review & Missing
+    revCandidateInfo: "Informasi Kandidat",
+    lblFullName: "Nama Lengkap",
+    lblDob: "Tgl Lahir",
+    lblHeight: "Tinggi",
+    lblWeight: "Berat",
+    lblExperience: "Pengalaman",
+    lblLastVessel: "Kapal Terakhir",
+    lblDocStatus: "Status Dokumen",
+    lblInterviewScore: "Nilai Wawancara",
+    promptOwnerName: "Masukkan Nama Owner / Perusahaan Kapal:",
+    alertExcelEmpty: "Data Excel Kosong atau Format Salah!",
+    alertNoDataExport: "Tidak ada data untuk diekspor!",
+    alertDeleteSuccess: "Data Kru berhasil dihapus dari sistem."
   },
 
   zh: {
@@ -309,7 +324,7 @@ const i18n = {
     colDocs: "证件有效期状态",
     colStatus: "审核状态",
     colAction: "操作",
-    exportCSV: "导出完整 CSV",
+    exportCSV: "导出完整 Excel",
     exportZIP: "打包下载证件照 ZIP",
     generateOneTimeLink: "生成一次性访问链接 (One-Time Link)",
     editCrew: "编辑资料",
@@ -330,7 +345,22 @@ const i18n = {
     confirmDeleteTitle: "确认删除船员数据 (两步确认)",
     confirmDeleteDesc: "您确定要永久删除此船员的数据吗？",
     gasStatusConnected: "✓ 已连接谷歌云 Google Cloud / Apps Script API (生产环境)",
-    gasStatusLocal: "本地预览模式 (数据保存在浏览器中)"
+    gasStatusLocal: "本地预览模式 (数据保存在浏览器中)",
+    
+    // Owner Review & Missing
+    revCandidateInfo: "候选人信息",
+    lblFullName: "全名",
+    lblDob: "出生日期",
+    lblHeight: "身高",
+    lblWeight: "体重",
+    lblExperience: "经验",
+    lblLastVessel: "上一艘船",
+    lblDocStatus: "文件状态",
+    lblInterviewScore: "面试评分",
+    promptOwnerName: "输入船东/船公司名称:",
+    alertExcelEmpty: "Excel 数据为空或格式错误！",
+    alertNoDataExport: "没有可导出的数据！",
+    alertDeleteSuccess: "船员数据已成功从系统中删除。"
   }
 };
 
@@ -413,3 +443,14 @@ if (typeof module !== 'undefined' && module.exports) {
     skillGeneralOptions
   };
 }
+
+window.t = function(key) {
+  const lang = localStorage.getItem('crew_lang') || 'id';
+  if (window.i18n && window.i18n[lang] && window.i18n[lang][key]) {
+    return window.i18n[lang][key];
+  }
+  if (window.i18n && window.i18n['id'] && window.i18n['id'][key]) {
+    return window.i18n['id'][key];
+  }
+  return key;
+};
