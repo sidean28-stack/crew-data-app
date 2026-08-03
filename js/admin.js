@@ -10,9 +10,9 @@ function loadDirectoryTable() {
 
   const filtered = window.crewDatabase.filter(crew => {
     const matchesSearch = !searchQuery || 
-      crew.fullName.toLowerCase().includes(searchQuery) ||
-      crew.rankPosition.toLowerCase().includes(searchQuery) ||
-      crew.passportNo.toLowerCase().includes(searchQuery);
+      (crew.fullName || "").toLowerCase().includes(searchQuery) ||
+      (crew.rankPosition || "").toLowerCase().includes(searchQuery) ||
+      (crew.passportNo || "").toLowerCase().includes(searchQuery);
     const matchesRank = !filterRank || crew.rankPosition === filterRank;
     return matchesSearch && matchesRank;
   });
@@ -159,8 +159,14 @@ function editCrew(submissionId) {
 
   // Normalize documents from Excel to crew.documents
   if (!crew.documents) {
-    crew.documents = { passport: [], ktp: [], cdc: [], photo: [], medical: [], cert: [] };
+    crew.documents = {};
   }
+  
+  const requiredDocs = ['passport', 'ktp', 'cdc', 'medical', 'cert', 'photo'];
+  requiredDocs.forEach(d => {
+    if (!crew.documents[d]) crew.documents[d] = [];
+  });
+
   const excelDocMap = { docPhoto: 'photo', docPassport: 'passport', docCdc: 'cdc', docMedical: 'medical', docKtp: 'ktp', docCert: 'cert' };
   for (let key in excelDocMap) {
     if (crew[key] && Array.isArray(crew[key])) {

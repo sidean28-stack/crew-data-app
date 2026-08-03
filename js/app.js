@@ -41,7 +41,7 @@ function retryBootstrap() {
   const loader = document.getElementById('appLoadingOverlay');
   if (loader) loader.classList.remove('hidden');
   
-  bootstrap();
+  window.location.reload(true);
 }
 
 function updateLoadingText(text) {
