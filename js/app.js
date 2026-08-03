@@ -50,10 +50,9 @@ function updateLoadingText(text) {
 }
 
 function purgeLegacyLocalCache() {
-  const CURRENT_CACHE_VER = 'v1.0.0_prod_clean';
+  const CURRENT_CACHE_VER = 'v1.0.0_prod_clean_v2';
   if (localStorage.getItem('crew_app_cache_version') !== CURRENT_CACHE_VER) {
     console.log("Purging legacy local cache for clean production boot...");
-    localStorage.removeItem('crew_app_database');
     localStorage.removeItem('crew_app_draft');
     localStorage.removeItem('crew_app_gas_url');
     localStorage.setItem('crew_app_cache_version', CURRENT_CACHE_VER);
