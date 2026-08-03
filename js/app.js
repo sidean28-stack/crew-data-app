@@ -64,13 +64,27 @@ async function bootstrap() {
     await sleep(200);
     checkCriticalSystems();
     
-    // 3. Initialize Services
+    // 3. Initialize Services (Cloud First Architecture)
     updateLoadingText("Loading Services...");
     await sleep(200);
-    if (typeof loadLocalDatabase === 'function') {
-      loadLocalDatabase();
+    
+    updateLoadingText("Verifying Google Apps Script...");
+    await pingGoogleAppsScript();
+
+    updateLoadingText("Connecting to Cloud Database...");
+    if (window.api && typeof window.api.loadCloudDatabase === 'function') {
+      const cloudSuccess = await window.api.loadCloudDatabase();
+      
+      if (!cloudSuccess) {
+        updateLoadingText("Offline Fallback: Loading Local Cache...");
+      }
     } else {
-      throw new Error("api.js failed to load: loadLocalDatabase is undefined");
+      throw new Error("api.js failed to load: window.api is undefined");
+    }
+    
+    // Failsafe: Cloud + Cache Failed
+    if (!window.crewDatabase || window.crewDatabase.length === 0) {
+      throw new Error("No database available. Please check your connection or sync status.");
     }
     
     if (typeof parseUrlParams === 'function') parseUrlParams();
@@ -79,10 +93,6 @@ async function bootstrap() {
     updateLoadingText("Loading User Interface...");
     await sleep(200);
     initializeUI();
-    
-    // 5. Initialize Google Services (Health Ping)
-    updateLoadingText("Verifying Google Apps Script...");
-    await pingGoogleAppsScript();
     
     // Finish Loading
     updateLoadingText("Loading Completed");

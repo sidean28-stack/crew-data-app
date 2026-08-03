@@ -93,17 +93,19 @@ function openCrewDetailModal(submissionId) {
       <div style="display: flex; flex-wrap: wrap; gap: 24px;">
         <!-- Left Column: Details & Docs -->
         <div style="flex: 1 1 300px;">
-          <h3 style="margin-bottom: 10px; color: var(--primary-container);">Informasi Kandidat</h3>
+          <h3 style="margin-bottom: 10px; color: var(--primary-container);">${t('revCandidateInfo')}</h3>
           <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-            <tr><td style="padding: 4px 0; font-weight: bold;">Kode Kru:</td><td>${escapeHTML(crew.submissionId)}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblFullName')}:</td><td>${escapeHTML(displayName)}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">Jabatan:</td><td>${escapeHTML(crew.rankPosition)}</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: bold;">Umur/Tgl Lahir:</td><td>${escapeHTML(crew.dob)}</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: bold;">Pengalaman:</td><td>${escapeHTML(crew.expLongline)}</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: bold;">Kapal Terakhir:</td><td>${escapeHTML(crew.vesselName)} (${escapeHTML(crew.vesselTypeLongline)})</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblDob')}:</td><td>${escapeHTML(crew.dob)}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblHeight')}:</td><td>${crew.heightCm || '-'} cm</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblWeight')}:</td><td>${crew.weightKg || '-'} kg</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblExperience')}:</td><td>${escapeHTML(crew.expLongline)}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t('lblLastVessel')}:</td><td>${escapeHTML(crew.vesselName)} (${escapeHTML(crew.vesselTypeLongline)})</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">Kontak:</td><td>${escapeHTML(displayPhone)}</td></tr>
           </table>
 
-          <h3 style="margin-top: 20px; margin-bottom: 10px; color: var(--primary-container);">Dokumen</h3>
+          <h3 style="margin-top: 20px; margin-bottom: 10px; color: var(--primary-container);">${t('lblDocStatus')}</h3>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             ${generateDocButton(crew, 'photo', 'Foto')}
             ${generateDocButton(crew, 'passport', 'Paspor')}
@@ -114,7 +116,7 @@ function openCrewDetailModal(submissionId) {
 
         <!-- Right Column: Scoring & Selection -->
         <div style="flex: 1 1 300px; background: var(--bg-primary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-          <h3 style="margin-bottom: 16px; color: var(--primary-container);"><i class="fa-solid fa-star-half-stroke"></i> Interview Score (1-10)</h3>
+          <h3 style="margin-bottom: 16px; color: var(--primary-container);"><i class="fa-solid fa-star-half-stroke"></i> ${t('lblInterviewScore')}</h3>
           
           ${generateScoreInput('Communication', 'commScore', selection.commScore)}
           ${generateScoreInput('Skill / Teknik', 'skillScore', selection.skillScore)}
@@ -239,5 +241,5 @@ function saveReviewSelection(submissionId) {
   closeCrewDetailModal();
   renderCatalogGrid();
   if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
-  alert("Review & keputusan berhasil disimpan.");
+  alert(t('alertSaveSuccess'));
 }

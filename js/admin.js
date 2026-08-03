@@ -91,7 +91,7 @@ function closeOneTimeLinkModal() { document.getElementById('otlModal').classList
 
 function generateOtlLink() {
   const ownerName = document.getElementById('otlOwnerName').value.trim();
-  if (!ownerName) { alert("Harap masukkan nama Owner Kapal!"); return; }
+  if (!ownerName) { alert(t('promptOwnerName')); return; }
   const tokenStr = "OTL-" + Math.random().toString(36).substring(2, 10).toUpperCase();
   const currentUrl = window.location.href.split('?')[0];
   const generatedUrl = `${currentUrl}?role=owner&token=${tokenStr}&owner=${encodeURIComponent(ownerName)}`;
@@ -102,7 +102,7 @@ function generateOtlLink() {
 function copyOtlUrl() {
   const input = document.getElementById('otlResultUrl');
   input.select(); document.execCommand('copy');
-  alert(i18n[window.currentLang].copiedLinkAlert);
+  alert(t('copiedLinkAlert'));
 }
 
 function openDeleteModal(submissionId) {
@@ -119,7 +119,7 @@ function executeDeleteCrew() {
     if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
     loadDirectoryTable();
     if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
-    alert("Data kru berhasil dihapus!");
+    alert(t('alertDeleteSuccess'));
   }
   closeDeleteModal();
 }
@@ -131,7 +131,7 @@ function editCrew(submissionId) {
   window.editingSubmissionId = submissionId;
   if(typeof switchTab === 'function') switchTab('form');
 
-  const fields = ['fullName', 'chineseName', 'rankPosition', 'gender', 'pob', 'dob', 'religion', 'maritalStatus', 'bloodType', 'shirtSize', 'shoeSize', 'streetAddress', 'rtRw', 'village', 'district', 'city', 'province', 'phoneNo', 'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry', 'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus', 'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus'];
+  const fields = ['fullName', 'chineseName', 'rankPosition', 'gender', 'pob', 'dob', 'heightCm', 'weightKg', 'religion', 'maritalStatus', 'bloodType', 'shirtSize', 'shoeSize', 'streetAddress', 'rtRw', 'village', 'district', 'city', 'province', 'phoneNo', 'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry', 'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus', 'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus'];
 
   fields.forEach(id => {
     const el = document.getElementById(id);
@@ -163,6 +163,77 @@ function editCrew(submissionId) {
   window.scrollTo(0,0);
 }
 
+const EXCEL_MAPPING = [
+  { header: "Timestamp", key: "timestamp", type: "date" },
+  { header: "ID Submisi", key: "submissionId", type: "string" },
+  { header: "Nama Lengkap", key: "fullName", type: "string" },
+  { header: "Nama Mandarin (中文名)", key: "chineseName", type: "string" },
+  { header: "Jabatan / Posisi", key: "rankPosition", type: "string" },
+  { header: "No. HP / WA", key: "phoneNo", type: "phone" },
+  { header: "Alamat Lengkap (Combined)", key: "combinedAddress", type: "string" },
+  { header: "Kontak Keluarga 1", key: "fam1Name", type: "string" },
+  { header: "Telp Keluarga 1", key: "fam1Phone", type: "phone" },
+  { header: "Kontak Keluarga 2", key: "fam2Name", type: "string" },
+  { header: "Telp Keluarga 2", key: "fam2Phone", type: "phone" },
+  { header: "Pengalaman Longline", key: "expLongline", type: "string" },
+  { header: "Nama Kapal", key: "vesselName", type: "string" },
+  { header: "Jenis Kapal", key: "vesselTypeLongline", type: "string" },
+  { header: "Asal Kapal", key: "vesselOrigin", type: "string" },
+  { header: "Negara Penempatan", key: "placementCountry", type: "string" },
+  { header: "Skill Umum", key: "skillGeneral", type: "array" },
+  { header: "No. Paspor", key: "passportNo", type: "string" },
+  { header: "Expired Paspor", key: "passportExpiry", type: "date" },
+  { header: "No. Seaman Book", key: "cdcNo", type: "string" },
+  { header: "Expired Seaman Book", key: "cdcExpiry", type: "date" },
+  { header: "Expired BST", key: "bstExpiry", type: "date" },
+  { header: "Status KK", key: "kkStatus", type: "string" },
+  { header: "Status Akte", key: "akteStatus", type: "string" },
+  { header: "Status Ijazah", key: "ijazahLevel", type: "string" },
+  { header: "Status MCU", key: "medicalStatus", type: "string" },
+  { header: "Status Surat Wali", key: "waliStatus", type: "string" },
+  { header: "Status SKCK", key: "skckStatus", type: "string" },
+  { header: "Ukuran Baju", key: "shirtSize", type: "string" },
+  { header: "Ukuran Sepatu", key: "shoeSize", type: "string" },
+  { header: "Tanggal Lahir", key: "dob", type: "date" },
+  { header: "Gender", key: "gender", type: "string" },
+  { header: "Agama", key: "religion", type: "string" },
+  { header: "Folder Google Drive", key: "folderUrl", type: "string" },
+  { header: "URL Paspor (Drive)", key: "docPassport", type: "urlArray" },
+  { header: "URL KTP (Drive)", key: "docKtp", type: "urlArray" },
+  { header: "URL Seaman Book (Drive)", key: "docCdc", type: "urlArray" },
+  { header: "URL MCU (Drive)", key: "docMedical", type: "urlArray" },
+  { header: "URL Certificate (Drive)", key: "docCert", type: "urlArray" },
+  { header: "URL Foto Crew (Drive)", key: "docPhoto", type: "urlArray" }
+];
+
+function formatPhone(phone) {
+  if (!phone || phone === "undefined" || phone === "null" || phone === "Ada" || phone === "ada") return "";
+  let p = String(phone).replace(/[^0-9+]/g, '');
+  if (p.length < 5) return "";
+  if (p.startsWith('0')) p = '+62' + p.substring(1);
+  if (p.startsWith('62')) p = '+' + p;
+  if (!p.startsWith('+')) p = '+' + p;
+  return p;
+}
+
+function formatDate(dateVal) {
+  if (!dateVal || dateVal === "undefined" || dateVal === "null" || dateVal === "Ada" || dateVal === "ada") return "";
+  if (typeof dateVal === 'number') {
+    let d = new Date(Math.round((dateVal - 25569) * 86400 * 1000));
+    return d.toISOString().split('T')[0];
+  }
+  let str = String(dateVal).trim();
+  let d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  return d.toISOString().split('T')[0];
+}
+
+function arrayToString(arr) {
+  if (!arr) return "";
+  if (Array.isArray(arr)) return arr.join(", ");
+  return String(arr);
+}
+
 let pendingExcelData = [];
 
 async function handleExcelImport(event) {
@@ -176,43 +247,9 @@ async function handleExcelImport(event) {
   const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
   if (rows.length === 0) {
-    alert("Excel kosong.");
+    alert(t('alertExcelEmpty'));
     return;
   }
-
-  const mapKey = (headerName) => {
-    headerName = headerName.toLowerCase();
-    if (headerName.includes("id submisi") || headerName === "id") return "submissionId";
-    if (headerName.includes("nama lengkap") || headerName.includes("full name") || headerName.includes("nama")) return "fullName";
-    if (headerName.includes("nama mandarin") || headerName.includes("chinese")) return "chineseName";
-    if (headerName.includes("jabatan") || headerName.includes("posisi")) return "rankPosition";
-    if (headerName.includes("hp") || headerName.includes("wa") || headerName.includes("phone")) return "phoneNo";
-    if (headerName.includes("alamat")) return "streetAddress";
-    if (headerName.includes("keluarga 1") && !headerName.includes("telp")) return "fam1Name";
-    if (headerName.includes("telp keluarga 1")) return "fam1Phone";
-    if (headerName.includes("keluarga 2") && !headerName.includes("telp")) return "fam2Name";
-    if (headerName.includes("telp keluarga 2")) return "fam2Phone";
-    if (headerName.includes("pengalaman") || headerName.includes("longline")) return "expLongline";
-    if (headerName.includes("nama kapal")) return "vesselName";
-    if (headerName.includes("jenis kapal")) return "vesselTypeLongline";
-    if (headerName.includes("asal kapal")) return "vesselOrigin";
-    if (headerName.includes("penempatan") || headerName.includes("negara")) return "placementCountry";
-    if (headerName.includes("skill")) return "skillGeneral";
-    if (headerName.includes("paspor") || headerName.includes("passport")) {
-      if (headerName.includes("expired") || headerName.includes("exp")) return "passportExpiry";
-      return "passportNo";
-    }
-    if (headerName.includes("seaman book") || headerName.includes("cdc") || headerName.includes("buku pelaut")) {
-      if (headerName.includes("expired") || headerName.includes("exp")) return "cdcExpiry";
-      return "cdcNo";
-    }
-    if (headerName.includes("bst")) return "bstExpiry";
-    if (headerName.includes("kk")) return "kkStatus";
-    if (headerName.includes("mcu")) return "medicalStatus";
-    if (headerName.includes("baju")) return "shirtSize";
-    if (headerName.includes("sepatu")) return "shoeSize";
-    return null;
-  };
 
   let totalParsed = 0;
   let duplicateCount = 0;
@@ -223,12 +260,21 @@ async function handleExcelImport(event) {
     const row = rows[i];
     let crewData = {};
     
-    for (let key in row) {
-      const mappedKey = mapKey(key);
-      if (mappedKey && row[key]) {
-        crewData[mappedKey] = String(row[key]).trim();
+    EXCEL_MAPPING.forEach(col => {
+      let val = row[col.header];
+      if (val === undefined || val === null || val === "") return;
+      
+      if (col.type === "phone") {
+        val = formatPhone(val);
+      } else if (col.type === "date") {
+        val = formatDate(val);
+      } else if (col.type === "array" || col.type === "urlArray") {
+        val = String(val).split(',').map(s => s.trim()).filter(Boolean);
+      } else {
+        val = String(val).trim();
       }
-    }
+      crewData[col.key] = val;
+    });
     
     if (!crewData.submissionId) crewData.submissionId = "IMP-" + Date.now() + "-" + i;
     if (!crewData.fullName) continue; 
@@ -295,7 +341,6 @@ async function confirmExcelImport() {
        const idx = window.crewDatabase.findIndex(c => c.submissionId === crewData._existingId);
        if (idx !== -1) {
           window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...payload };
-          // the payload sent to GAS should have the full merged data, especially existing submissionId
           payload = { ...window.crewDatabase[idx] };
        }
        action = "update_crew";
@@ -305,7 +350,6 @@ async function confirmExcelImport() {
        window.crewDatabase.unshift(payload);
     }
     
-    // UI Update immediate
     importedCount++;
     const pct = Math.round((importedCount / total) * 100);
     progressBar.style.width = pct + "%";
@@ -314,7 +358,6 @@ async function confirmExcelImport() {
     
     try {
       payload.action = action;
-      // Backup UI changes before sending to backend
       if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
       
       await fetch(getGasUrl(), {
@@ -323,7 +366,6 @@ async function confirmExcelImport() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      // Added a tiny delay to prevent Apps Script concurrent request limitation drop
       await new Promise(resolve => setTimeout(resolve, 300));
     } catch(e) { 
       console.error("GAS Sync Error:", e);
@@ -340,17 +382,37 @@ async function confirmExcelImport() {
 }
 
 function exportDirectoryCSV() {
-  if (window.crewDatabase.length === 0) { alert("Tidak ada data untuk diekspor."); return; }
-  let csvContent = "data:text/csv;charset=utf-8,ID Submisi,Nama Lengkap,Nama Mandarin,Jabatan,No HP,Alamat,Pengalaman Longline,Jenis Kapal,Asal Kapal,Negara Penempatan,Paspor Expired,CDC Expired,Status\n";
-  window.crewDatabase.forEach(c => {
-    const row = [c.submissionId, `"${c.fullName}"`, `"${c.chineseName || ''}"`, `"${c.rankPosition}"`, `"${c.phoneNo}"`, `"${c.combinedAddress || c.streetAddress}"`, `"${c.expLongline}"`, `"${c.vesselTypeLongline}"`, `"${c.vesselOrigin}"`, `"${c.placementCountry}"`, `"${c.passportExpiry}"`, `"${c.cdcExpiry}"`, `"${c.status || 'WAITING'}"`].join(",");
-    csvContent += row + "\n";
+  if (window.crewDatabase.length === 0) { alert(t('alertNoDataExport')); return; }
+  
+  const exportData = window.crewDatabase.map(crew => {
+    let row = {};
+    EXCEL_MAPPING.forEach(col => {
+      let val = crew[col.key];
+      if (val === undefined || val === null || val === "undefined" || val === "null") {
+        val = "";
+      }
+      
+      if (col.type === "phone") {
+        val = formatPhone(val);
+      } else if (col.type === "date") {
+        val = formatDate(val);
+      } else if (col.type === "array" || col.type === "urlArray") {
+        val = arrayToString(val);
+      } else {
+        val = String(val).trim();
+      }
+      row[col.header] = val;
+    });
+    return row;
   });
-  const link = document.createElement("a");
-  link.setAttribute("href", encodeURI(csvContent));
-  link.setAttribute("download", `Crew_Longline_PT_ALINDA_${Date.now()}.csv`);
-  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Data Crew");
+  
+  XLSX.writeFile(workbook, `Crew_Longline_PT_ALINDA_${Date.now()}.xlsx`);
 }
+
 
 // Print CV Pelaut Ikan Layout (Ultimate Trilingual Edition)
 function printCrewCV(submissionId) {
@@ -531,6 +593,22 @@ function printCrewCV(submissionId) {
               <span class="lbl-tw">年齡</span>
             </th>
             <td>${age} Tahun / Years / 歲</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Tinggi Badan</span>
+              <span class="lbl-en">Height</span>
+              <span class="lbl-tw">身高</span>
+            </th>
+            <td>${crew.heightCm || '-'} cm</td>
+          </tr>
+          <tr>
+            <th>
+              <span class="lbl-id">Berat Badan</span>
+              <span class="lbl-en">Weight</span>
+              <span class="lbl-tw">體重</span>
+            </th>
+            <td>${crew.weightKg || '-'} kg</td>
           </tr>
           <tr>
             <th>

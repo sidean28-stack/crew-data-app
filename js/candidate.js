@@ -2,7 +2,7 @@
 
 function goToStep(step) {
   if (step > window.currentStep && !validateStep(window.currentStep)) {
-    alert(i18n[window.currentLang].alertValidationErr);
+    alert(t('alertValidationErr'));
     return;
   }
   window.currentStep = step;
@@ -17,7 +17,7 @@ function nextStep() {
       if (window.currentStep === 5) renderReviewSummary();
     }
   } else {
-    alert(i18n[window.currentLang].alertValidationErr);
+    alert(t('alertValidationErr'));
   }
 }
 
@@ -61,11 +61,23 @@ function validateStep(step) {
     const rank = document.getElementById('rankPosition').value;
     const pob = document.getElementById('pob').value.trim();
     const dob = document.getElementById('dob').value;
+    const heightCm = document.getElementById('heightCm').value;
+    const weightKg = document.getElementById('weightKg').value;
     const phone = document.getElementById('phoneNo').value.trim();
     const fam1Name = document.getElementById('fam1Name').value.trim();
     const fam1Phone = document.getElementById('fam1Phone').value.trim();
     const fam2Name = document.getElementById('fam2Name').value.trim();
     const fam2Phone = document.getElementById('fam2Phone').value.trim();
+    
+    if (!heightCm || heightCm < 130 || heightCm > 220) {
+      alert(t('errHeightRequired'));
+      return false;
+    }
+    if (!weightKg || weightKg < 35 || weightKg > 180) {
+      alert(t('errWeightRequired'));
+      return false;
+    }
+
     return fullName && rank && pob && dob && phone && fam1Name && fam1Phone && fam2Name && fam2Phone;
   }
   if (step === 3) {
@@ -114,6 +126,8 @@ function getFormData() {
     gender: document.getElementById('gender').value,
     pob: document.getElementById('pob').value.trim(),
     dob: document.getElementById('dob').value,
+    heightCm: parseInt(document.getElementById('heightCm').value) || null,
+    weightKg: parseInt(document.getElementById('weightKg').value) || null,
     religion: document.getElementById('religion').value,
     maritalStatus: document.getElementById('maritalStatus').value,
     bloodType: document.getElementById('bloodType').value,
@@ -156,50 +170,53 @@ function getFormData() {
   };
 }
 
-function submitCrewForm() {
+async function submitCrewForm() {
   if (!document.getElementById('agreeTermsCheck').checked) {
-    alert("Harap centang persetujuan keabsahan data.");
+    alert(t('alertValidationErr'));
     return;
   }
   const formData = getFormData();
   
-  if (window.editingSubmissionId) {
-    formData.submissionId = window.editingSubmissionId;
-    formData.action = 'update_crew';
-    const idx = window.crewDatabase.findIndex(c => c.submissionId === window.editingSubmissionId);
-    if (idx !== -1) window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...formData };
-  } else {
-    formData.submissionId = "CRW-" + Date.now();
-    formData.action = 'submit_crew';
-    window.crewDatabase.unshift(formData);
-  }
-  
-  if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
-  
-  if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
-  if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
-
-  fetch(getGasUrl(), {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formData)
-  }).catch(err => console.error("GAS post sync:", err));
-
-  alert(window.editingSubmissionId ? "Data kru berhasil diupdate!" : i18n[window.currentLang].alertSubmitSuccess);
-  
-  window.editingSubmissionId = null;
   const btn = document.querySelector('.btn-submit');
-  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SYNCING TO CLOUD...';
   
-  clearDraft();
-  switchTab('directory');
+  try {
+    if (window.editingSubmissionId) {
+      formData.submissionId = window.editingSubmissionId;
+      formData.action = 'update_crew';
+      const res = await window.api.updateCrew(formData);
+      if (!res.success) throw new Error(res.error || "Update Failed on Cloud");
+    } else {
+      formData.submissionId = "CRW-" + Date.now();
+      formData.action = 'submit_crew';
+      const res = await window.api.submitCrew(formData);
+      if (!res.success) throw new Error(res.error || "Submit Failed on Cloud");
+    }
+    
+    // Cloud Refresh (ensures Cache and UI get the exact latest truth)
+    await window.api.syncNow();
+    
+    if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
+    if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+
+    alert(window.editingSubmissionId ? t('alertUpdateSuccess') : t('alertSaveSuccess'));
+    
+    window.editingSubmissionId = null;
+    clearDraft();
+    switchTab('directory');
+    
+  } catch (err) {
+    console.error("Cloud Sync Error:", err);
+    alert("Submission Failed: " + err.message);
+  } finally {
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
+  }
 }
 
 function saveDraft() {
   const data = getFormData();
   localStorage.setItem('crew_app_draft', JSON.stringify(data));
-  alert("Draf formulir berhasil disimpan!");
+  alert(t('alertSaveSuccess'));
 }
 
 function loadSavedDraft() {
@@ -214,7 +231,23 @@ function loadSavedDraft() {
 
 function clearDraft() {
   localStorage.removeItem('crew_app_draft');
-  document.getElementById('crewForm').reset();
+  const form = document.getElementById('crewForm');
+  if (form) form.reset();
+  
+  window.editingSubmissionId = null;
+  window.uploadedDocuments = { passport: [], ktp: [], cdc: [], medical: [], cert: [], photo: [] };
+  
+  // Clear galleries
+  ['passport', 'ktp', 'cdc', 'medical', 'cert', 'photo'].forEach(doc => {
+    const gal = document.getElementById('gallery' + doc.charAt(0).toUpperCase() + doc.slice(1));
+    if (gal) gal.innerHTML = '';
+  });
+
+  // Reset wizard to step 1
+  window.currentStep = 1;
+  if (typeof updateWizardProgress === 'function') updateWizardProgress();
+  
+  alert(t ? t('alertDeleteSuccess') : 'Draft cleared.');
 }
 
 function setupDragAndDrop() {
@@ -277,7 +310,7 @@ function openCameraModal(docType) {
       window.cameraStream = stream;
       document.getElementById('cameraVideo').srcObject = stream;
     }).catch(err => {
-      alert("Kamera tidak dapat diakses.");
+      alert(t('alertNoCamera'));
       closeCameraModal();
     });
 }
