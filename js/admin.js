@@ -1,6 +1,20 @@
-// js/admin.js
+function deduplicateLocalCrewDatabase() {
+  if (!Array.isArray(window.crewDatabase)) return;
+  const seen = new Set();
+  const clean = [];
+  window.crewDatabase.forEach(crew => {
+    const key = (crew.submissionId || '').trim().toLowerCase() || (crew.fullName || '').trim().toLowerCase();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      clean.push(crew);
+    }
+  });
+  window.crewDatabase = clean;
+  if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+}
 
 function loadDirectoryTable() {
+  deduplicateLocalCrewDatabase();
   const tbody = document.getElementById('directoryTableBody');
   const countText = document.getElementById('totalCrewCountText');
   if (!tbody) return;
@@ -149,6 +163,7 @@ async function executeDeduplicateCrew() {
   }
 
   try {
+    deduplicateLocalCrewDatabase();
     if (window.api && typeof window.api.deduplicateCrew === 'function') {
       const res = await window.api.deduplicateCrew();
       if (res && res.success) {
@@ -158,6 +173,7 @@ async function executeDeduplicateCrew() {
     if (window.api && typeof window.api.syncNow === 'function') {
       await window.api.syncNow();
     }
+    deduplicateLocalCrewDatabase();
     loadDirectoryTable();
     if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
   } catch (e) {

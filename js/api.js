@@ -118,8 +118,17 @@ window.api = {
       
       if (res && res.success) {
         if (res.crew && res.crew.length > 0) {
-          if (statusEl) statusEl.innerText = "Loading " + res.total + " Crew...";
-          window.crewDatabase = res.crew;
+          const seenMap = new Set();
+          const cleanCrew = [];
+          res.crew.forEach(item => {
+            const key = (item.submissionId || '').trim().toLowerCase() || (item.fullName || '').trim().toLowerCase();
+            if (key && !seenMap.has(key)) {
+              seenMap.add(key);
+              cleanCrew.push(item);
+            }
+          });
+          if (statusEl) statusEl.innerText = "Loading " + cleanCrew.length + " Crew...";
+          window.crewDatabase = cleanCrew;
           this.saveLocalDatabase();
         } else {
           console.warn("Cloud returned 0 rows. Keeping previous cache to prevent overwrite.");
