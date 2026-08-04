@@ -988,22 +988,6 @@ function printCrewCV(submissionId) {
     </html>
   `);
   printWindow.document.close();
-}o View Complete Profile</p>
-          <p class="qr-tw">掃描查看完整資料</p>
-        </div>
-      </div>
-
-      ${page2Html}
-
-      <script>
-        window.onload = function() { 
-          setTimeout(() => { window.print(); }, 1200); 
-        }
-      </script>
-    </body>
-    </html>
-  `);
-  printWindow.document.close();
 }
 
 function exportCrewZip(submissionId) { alert(`Download ZIP Berkas Foto Kru (${submissionId}) diproses.`); }
