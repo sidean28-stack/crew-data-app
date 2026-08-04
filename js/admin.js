@@ -111,17 +111,36 @@ function openDeleteModal(submissionId) {
 }
 function closeDeleteModal() { document.getElementById('deleteConfirmModal').classList.remove('active'); }
 
-function executeDeleteCrew() {
+async function executeDeleteCrew() {
   const submissionId = document.getElementById('deleteTargetId').value;
-  const index = window.crewDatabase.findIndex(c => c.submissionId === submissionId);
-  if (index >= 0) {
-    window.crewDatabase.splice(index, 1);
-    if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+  const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
+  const fullName = crew ? crew.fullName : '';
+
+  closeDeleteModal();
+
+  try {
+    if (window.api && typeof window.api.deleteCrew === 'function') {
+      await window.api.deleteCrew({ submissionId: submissionId, fullName: fullName });
+    }
+
+    const index = window.crewDatabase.findIndex(c => c.submissionId === submissionId);
+    if (index >= 0) {
+      window.crewDatabase.splice(index, 1);
+      if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+    }
+
+    if (window.api && typeof window.api.syncNow === 'function') {
+      await window.api.syncNow();
+    }
+
     loadDirectoryTable();
     if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+
     alert(t('alertDeleteSuccess'));
+  } catch (err) {
+    console.error("Delete Error:", err);
+    alert("Gagal menghapus data: " + err.message);
   }
-  closeDeleteModal();
 }
 
 function editCrew(submissionId) {

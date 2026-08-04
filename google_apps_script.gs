@@ -74,6 +74,34 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // ACTION: DELETE CREW FROM GOOGLE SHEET
+    if (action === "delete_crew") {
+      var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
+      var dataRange = sheet.getDataRange();
+      var values = dataRange.getValues();
+      var searchId = String(data.submissionId || "").trim().toLowerCase();
+      var searchName = String(data.fullName || "").trim().toLowerCase();
+      var deleted = false;
+
+      for (var i = values.length - 1; i >= 1; i--) {
+        var rowId = String(values[i][1] || "").trim().toLowerCase();
+        var rowName = String(values[i][2] || "").trim().toLowerCase();
+
+        var isIdMatch = (searchId.length > 0 && (rowId === searchId || rowId.endsWith(searchId) || searchId.endsWith(rowId)));
+        var isNameMatch = (searchName.length > 0 && rowName === searchName);
+
+        if (isIdMatch || isNameMatch) {
+          sheet.deleteRow(i + 1);
+          deleted = true;
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: deleted ? "Crew data deleted successfully from sheet" : "No matching row found"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
 
     // 2. ACTION: CREW REGISTRATION SUBMISSION (Form Wizard)
     var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
