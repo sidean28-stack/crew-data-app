@@ -595,11 +595,26 @@ function resolveImgSrc(docObjOrUrl) {
     if (fileId) {
       return `https://lh3.googleusercontent.com/d/${fileId}`;
     }
+  // Helper for clean date formatting in CV (e.g. 2029-07-15)
+function formatCleanDate(dateStr) {
+  if (!dateStr) return '-';
+  let str = String(dateStr).trim();
+  const matchYMD = str.match(/(19|20)\d{2}-\d{2}-\d{2}/);
+  if (matchYMD) return matchYMD[0];
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    if (year > 1900 && year < 2100) {
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
   }
-  return url;
+  return str.split(' ')[0];
 }
 
-// Print CV Pelaut Ikan Layout (Ultimate Trilingual Edition - A4 Compact)
+// Print CV Pelaut Ikan Layout (Ultimate Trilingual Edition - A4 Ultra-Compact)
 function printCrewCV(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
@@ -607,7 +622,7 @@ function printCrewCV(submissionId) {
   const printWindow = window.open('', '_blank');
   
   // Ambil foto profil (index 0) jika ada, format 4x6
-  let photoHtml = '<div style="margin-top: 60px; font-size: 9pt;">4 x 6 cm</div>';
+  let photoHtml = '<div style="margin-top: 50px; font-size: 8pt;">4 x 6 cm</div>';
   if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
     const photoSrc = resolveImgSrc(crew.documents.photo[0]);
     if (photoSrc) photoHtml = `<img src="${photoSrc}">`;
@@ -620,22 +635,35 @@ function printCrewCV(submissionId) {
     age = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
   }
 
-  // Format Skills dengan Bullet
+  // Format Skills Inline untuk Hemat Tempat
   let skillsHtml = '-';
   if (Array.isArray(crew.skillGeneral) && crew.skillGeneral.length > 0) {
-    skillsHtml = crew.skillGeneral.map(s => `&#10003; ${s}`).join('<br>');
+    skillsHtml = crew.skillGeneral.map(s => `<span style="display:inline-block; margin-right:10px; font-weight:600;">&#10003; ${s}</span>`).join(' ');
   } else if (typeof crew.skillGeneral === 'string' && crew.skillGeneral.trim() !== '') {
-    skillsHtml = crew.skillGeneral.split(',').map(s => `&#10003; ${s.trim()}`).join('<br>');
+    skillsHtml = crew.skillGeneral.split(',').map(s => `<span style="display:inline-block; margin-right:10px; font-weight:600;">&#10003; ${s.trim()}</span>`).join(' ');
   }
 
-  // Validasi Expiry
-  const isDocValid = (dateStr) => {
-    if (!dateStr) return false;
+  // Fallback Sign On/Off Periode
+  let signOnOffDisplay = crew.signOnOff || '-';
+  if (signOnOffDisplay === '-' && crew.vesselName && crew.vesselName.includes('(')) {
+    const matches = crew.vesselName.match(/\(([^)]+)\)/g);
+    if (matches) {
+      signOnOffDisplay = matches.map(m => m.replace(/[()]/g, '')).join(' | ');
+    }
+  }
+
+  // Format Clean Dates
+  const passportExpStr = formatCleanDate(crew.passportExpiry);
+  const cdcExpStr = formatCleanDate(crew.cdcExpiry);
+  const bstExpStr = formatCleanDate(crew.bstExpiry);
+
+  const isDocValidStr = (dateStr) => {
+    if (!dateStr || dateStr === '-') return false;
     return new Date(dateStr) > new Date();
   };
-  const isPassportValid = isDocValid(crew.passportExpiry);
-  const isCdcValid = isDocValid(crew.cdcExpiry);
-  const isBstValid = isDocValid(crew.bstExpiry);
+  const isPassportValid = isDocValidStr(passportExpStr);
+  const isCdcValid = isDocValidStr(cdcExpStr);
+  const isBstValid = isDocValidStr(bstExpStr);
 
   // Generate QR Code URL
   const qrUrl = encodeURIComponent(`https://sidean28-stack.github.io/crew-data-app/?view=${crew.submissionId}`);
@@ -692,40 +720,40 @@ function printCrewCV(submissionId) {
       <title>CV - ${crew.fullName}</title>
       <style>
         @media print {
-          @page { size: A4 portrait; margin: 6mm 8mm; }
+          @page { size: A4 portrait; margin: 4mm 6mm; }
           body { padding: 0 !important; }
         }
-        body { font-family: Arial, sans-serif; padding: 12px; color: #000; line-height: 1.25; font-size: 8.5pt; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
-        .header h1 { margin: 0; font-size: 16pt; font-weight: bold; letter-spacing: 0.5px; }
-        .header h2 { margin: 2px 0 0 0; font-size: 10pt; color: #333; }
-        .header p { margin: 2px 0 0 0; font-size: 10pt; font-weight: bold; }
+        body { font-family: Arial, sans-serif; padding: 6px 10px; color: #000; line-height: 1.15; font-size: 8pt; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 3px; margin-bottom: 6px; }
+        .header h1 { margin: 0; font-size: 14pt; font-weight: bold; letter-spacing: 0.5px; }
+        .header h2 { margin: 1px 0 0 0; font-size: 9.5pt; color: #333; }
+        .header p { margin: 1px 0 0 0; font-size: 9pt; font-weight: bold; }
         
-        .grid { display: grid; grid-template-columns: 1fr auto; gap: 15px; margin-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 6px; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-        th, td { border: 1px solid #000; padding: 4px 6px; font-size: 8.5pt; text-align: left; vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+        th, td { border: 1px solid #000; padding: 2.5px 5px; font-size: 8pt; text-align: left; vertical-align: middle; }
         th { background: #f4f4f4; width: 33%; }
         
         /* Photo 4x6 cm compact */
-        .photo-box { width: 130px; height: 180px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; padding: 2px; }
+        .photo-box { width: 115px; height: 160px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; padding: 2px; }
         .photo-box img { width: 100%; height: 100%; object-fit: cover; }
         
-        .lbl-id { font-size: 8.5pt; display: block; font-weight: bold; }
-        .lbl-en { font-size: 7.5pt; color: #444; display: block; margin-top: 1px; font-weight: normal; }
-        .lbl-tw { font-size: 8pt; font-weight: bold; color: #000; display: block; margin-top: 1px; }
+        .lbl-id { font-size: 8pt; display: block; font-weight: bold; }
+        .lbl-en { font-size: 7pt; color: #444; display: block; margin-top: 1px; font-weight: normal; }
+        .lbl-tw { font-size: 7.5pt; font-weight: bold; color: #000; display: block; margin-top: 1px; }
         
-        .signature-section { display: flex; justify-content: space-between; margin-top: 15px; }
-        .signature-box { text-align: center; width: 220px; }
-        .signature-title { font-size: 8.5pt; font-weight: bold; margin-bottom: 2px; }
-        .signature-tw { font-size: 8pt; color: #333; margin-bottom: 35px; }
+        .signature-section { display: flex; justify-content: space-between; margin-top: 8px; }
+        .signature-box { text-align: center; width: 200px; }
+        .signature-title { font-size: 8pt; font-weight: bold; margin-bottom: 1px; }
+        .signature-tw { font-size: 7.5pt; color: #333; margin-bottom: 22px; }
         .signature-line { border-bottom: 1px solid #000; width: 100%; margin: 0 auto; }
         
-        .footer { margin-top: 10px; text-align: left; font-size: 7.5pt; color: #555; border-top: 1.5px solid #000; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .footer { margin-top: 6px; text-align: left; font-size: 7pt; color: #555; border-top: 1px solid #000; padding-top: 4px; display: flex; justify-content: space-between; align-items: center; }
         
         .qr-container { text-align: center; }
-        .qr-container img { width: 65px; height: 65px; border: 1px solid #ccc; padding: 2px; }
-        .qr-container p { font-size: 7pt; margin: 2px 0 0 0; color: #333; font-weight: bold; }
+        .qr-container img { width: 55px; height: 55px; border: 1px solid #ccc; padding: 1px; }
+        .qr-container p { font-size: 6.5pt; margin: 1px 0 0 0; color: #333; font-weight: bold; }
         .qr-container p.qr-tw { font-weight: normal; margin-top: 1px; }
       </style>
     </head>
@@ -744,7 +772,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Full Name</span>
               <span class="lbl-tw">姓名</span>
             </th>
-            <td style="font-size: 12pt;"><strong>${crew.fullName}</strong></td>
+            <td style="font-size: 11pt;"><strong>${crew.fullName}</strong></td>
           </tr>
           <tr>
             <th>
@@ -752,7 +780,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Chinese Name</span>
               <span class="lbl-tw">中文姓名</span>
             </th>
-            <td style="font-size: 12pt;"><strong>${crew.chineseName || '-'}</strong></td>
+            <td style="font-size: 11pt;"><strong>${crew.chineseName || '-'}</strong></td>
           </tr>
           <tr>
             <th>
@@ -768,7 +796,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Position</span>
               <span class="lbl-tw">職務</span>
             </th>
-            <td style="font-size: 11pt;"><strong>${crew.rankPosition}</strong></td>
+            <td style="font-size: 10pt;"><strong>${crew.rankPosition}</strong></td>
           </tr>
           <tr>
             <th>
@@ -776,7 +804,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Date of Birth</span>
               <span class="lbl-tw">出生日期</span>
             </th>
-            <td>${crew.dob}</td>
+            <td>${formatCleanDate(crew.dob)}</td>
           </tr>
           <tr>
             <th>
@@ -788,19 +816,11 @@ function printCrewCV(submissionId) {
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Tinggi Badan</span>
-              <span class="lbl-en">Height</span>
-              <span class="lbl-tw">身高</span>
+              <span class="lbl-id">Tinggi / Berat</span>
+              <span class="lbl-en">Height / Weight</span>
+              <span class="lbl-tw">身高 / 體重</span>
             </th>
-            <td>${crew.heightCm || '-'} cm</td>
-          </tr>
-          <tr>
-            <th>
-              <span class="lbl-id">Berat Badan</span>
-              <span class="lbl-en">Weight</span>
-              <span class="lbl-tw">體重</span>
-            </th>
-            <td>${crew.weightKg || '-'} kg</td>
+            <td>${crew.heightCm || '-'} cm / ${crew.weightKg || '-'} kg</td>
           </tr>
           <tr>
             <th>
@@ -808,7 +828,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Gender</span>
               <span class="lbl-tw">性別</span>
             </th>
-            <td>${crew.gender === 'Male' ? 'Laki-laki / Male / 男' : (crew.gender === 'Female' ? 'Perempuan / Female / 女' : crew.gender)}</td>
+            <td>${crew.gender === 'Male' ? 'Laki-laki / Male / 男' : (crew.gender === 'Female' ? 'Perempuan / Female / 女' : (crew.gender || '-'))}</td>
           </tr>
           <tr>
             <th>
@@ -816,7 +836,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Religion</span>
               <span class="lbl-tw">宗教</span>
             </th>
-            <td>${crew.religion}</td>
+            <td>${crew.religion || '-'}</td>
           </tr>
           <tr>
             <th>
@@ -824,7 +844,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Address</span>
               <span class="lbl-tw">地址</span>
             </th>
-            <td>${crew.combinedAddress || crew.streetAddress}</td>
+            <td>${crew.combinedAddress || crew.streetAddress || '-'}</td>
           </tr>
           <tr>
             <th>
@@ -832,7 +852,7 @@ function printCrewCV(submissionId) {
               <span class="lbl-en">Emergency Contact</span>
               <span class="lbl-tw">緊急聯絡人</span>
             </th>
-            <td>${crew.fam1Name} (${crew.fam1Relation}): ${crew.fam1Phone}</td>
+            <td>${crew.fam1Name || '-'} (${crew.fam1Relation || '-'}): ${crew.fam1Phone || '-'}</td>
           </tr>
         </table>
         
@@ -843,7 +863,7 @@ function printCrewCV(submissionId) {
         </div>
       </div>
 
-      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">KUALIFIKASI & RIWAYAT KAPAL / QUALIFICATIONS / 資格与船隻履歷</h3>
+      <h3 style="margin-bottom: 4px; border-bottom: 1px solid #ccc; padding-bottom: 2px; font-size: 9.5pt;">KUALIFIKASI & RIWAYAT KAPAL / QUALIFICATIONS / 資格与船隻履歷</h3>
       <table>
         <tr>
           <th>
@@ -851,7 +871,7 @@ function printCrewCV(submissionId) {
             <span class="lbl-en">Years of Experience</span>
             <span class="lbl-tw">工作年資</span>
           </th>
-          <td><strong>${crew.expLongline}</strong></td>
+          <td><strong>${crew.expLongline || '-'}</strong></td>
         </tr>
         <tr>
           <th>
@@ -867,15 +887,15 @@ function printCrewCV(submissionId) {
             <span class="lbl-en">Contract Period (Sign On/Off)</span>
             <span class="lbl-tw">登船/離船 期限</span>
           </th>
-          <td><strong>${crew.signOnOff || '-'}</strong></td>
+          <td><strong>${signOnOffDisplay}</strong></td>
         </tr>
         <tr>
           <th>
-            <span class="lbl-id">Jenis Kapal</span>
-            <span class="lbl-en">Vessel Type</span>
-            <span class="lbl-tw">船型</span>
+            <span class="lbl-id">Jenis & Asal Kapal</span>
+            <span class="lbl-en">Vessel Type & Origin</span>
+            <span class="lbl-tw">船型与來源</span>
           </th>
-          <td>${crew.vesselTypeLongline} (${crew.vesselOrigin})</td>
+          <td>${crew.vesselTypeLongline || '-'} (${crew.vesselOrigin || '-'})</td>
         </tr>
         <tr>
           <th>
@@ -891,26 +911,26 @@ function printCrewCV(submissionId) {
             <span class="lbl-en">General Skills</span>
             <span class="lbl-tw">一般技能</span>
           </th>
-          <td style="line-height: 1.6;">${skillsHtml}</td>
+          <td style="line-height: 1.4;">${skillsHtml}</td>
         </tr>
       </table>
 
-      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">STATUS DOKUMEN / DOCUMENT STATUS / 文件狀態</h3>
+      <h3 style="margin-bottom: 4px; border-bottom: 1px solid #ccc; padding-bottom: 2px; font-size: 9.5pt;">STATUS DOKUMEN / DOCUMENT STATUS / 文件狀態</h3>
       <table style="text-align: center;">
         <tr>
-          <th style="text-align: center; width: 33%;">Document<br><span style="font-weight:normal; font-size:9pt;">文件</span></th>
-          <th style="text-align: center; width: 33%;">Status<br><span style="font-weight:normal; font-size:9pt;">狀態</span></th>
-          <th style="text-align: center; width: 33%;">Chinese<br><span style="font-weight:normal; font-size:9pt;">中文</span></th>
+          <th style="text-align: center; width: 33%;">Document<br><span style="font-weight:normal; font-size:8pt;">文件</span></th>
+          <th style="text-align: center; width: 33%;">Status<br><span style="font-weight:normal; font-size:8pt;">狀態</span></th>
+          <th style="text-align: center; width: 33%;">Chinese<br><span style="font-weight:normal; font-size:8pt;">中文</span></th>
         </tr>
         <tr>
-          <td><strong>Passport</strong><br><span style="font-size: 8pt; color: #555;">${crew.passportNo}</span></td>
-          <td>${isPassportValid ? 'Valid until ' + crew.passportExpiry : 'Expired / None'}</td>
-          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + crew.passportExpiry : '無效'}</td>
+          <td><strong>Passport</strong><br><span style="font-size: 7.5pt; color: #555;">${crew.passportNo || '-'}</span></td>
+          <td>${isPassportValid ? 'Valid until ' + passportExpStr : 'Expired / None'}</td>
+          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + passportExpStr : '無效'}</td>
         </tr>
         <tr>
-          <td><strong>Seaman Book</strong><br><span style="font-size: 8pt; color: #555;">${crew.cdcNo}</span></td>
-          <td>${isCdcValid ? 'Valid until ' + crew.cdcExpiry : 'Expired / None'}</td>
-          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + crew.cdcExpiry : '無效'}</td>
+          <td><strong>Seaman Book</strong><br><span style="font-size: 7.5pt; color: #555;">${crew.cdcNo || '-'}</span></td>
+          <td>${isCdcValid ? 'Valid until ' + cdcExpStr : 'Expired / None'}</td>
+          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + cdcExpStr : '無效'}</td>
         </tr>
         <tr>
           <td><strong>MCU</strong></td>
@@ -919,8 +939,8 @@ function printCrewCV(submissionId) {
         </tr>
         <tr>
           <td><strong>BST</strong></td>
-          <td>${isBstValid ? 'Valid until ' + crew.bstExpiry : 'Expired / None'}</td>
-          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + crew.bstExpiry : '無'}</td>
+          <td>${isBstValid ? 'Valid until ' + bstExpStr : 'Expired / None'}</td>
+          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + bstExpStr : '無效'}</td>
         </tr>
         <tr>
           <td><strong>SKCK / ID Card</strong></td>
@@ -947,12 +967,27 @@ function printCrewCV(submissionId) {
         <div>
           Generated by<br>
           <strong>Longline Crew Management System</strong><br>
-          Version 2.0<br>
-          <strong>PT ALINDA PRIMA SENTOSA</strong>
+          Version 2.0 - PT ALINDA PRIMA SENTOSA
         </div>
         <div class="qr-container">
           ${qrImage}
           <p>Scan to View Complete Profile</p>
+          <p class="qr-tw">掃描查看完整資料</p>
+        </div>
+      </div>
+
+      ${page2Html}
+
+      <script>
+        window.onload = function() { 
+          setTimeout(() => { window.print(); }, 1200); 
+        }
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}o View Complete Profile</p>
           <p class="qr-tw">掃描查看完整資料</p>
         </div>
       </div>
