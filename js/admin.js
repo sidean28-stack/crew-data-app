@@ -465,10 +465,16 @@ function resolveImgSrc(docObjOrUrl) {
   if (!docObjOrUrl) return '';
   let url = typeof docObjOrUrl === 'string' ? docObjOrUrl : (docObjOrUrl.base64 || docObjOrUrl.url || '');
   if (!url) return '';
-  if (url.includes('drive.google.com')) {
-    if (url.includes('open?id=')) return url.replace('open?id=', 'uc?export=view&id=');
-    const match = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  if (url.includes('drive.google.com') || url.includes('googleusercontent.com')) {
+    let fileId = '';
+    const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    const matchId = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (matchD && matchD[1]) fileId = matchD[1];
+    else if (matchId && matchId[1]) fileId = matchId[1];
+    
+    if (fileId) {
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
   }
   return url;
 }
@@ -819,7 +825,7 @@ function printCrewCV(submissionId) {
 
       <script>
         window.onload = function() { 
-          setTimeout(() => { window.print(); }, 500); 
+          setTimeout(() => { window.print(); }, 1200); 
         }
       </script>
     </body>
