@@ -212,12 +212,28 @@ async function executeDeduplicateCrew() {
   }
 }
 
+function formatDateForInput(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    const match = String(dateStr).match(/\d{4}-\d{2}-\d{2}/);
+    return match ? match[0] : '';
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function editCrew(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
 
   window.editingSubmissionId = submissionId;
   if(typeof switchTab === 'function') switchTab('form');
+
+  window.currentStep = 1;
+  if (typeof updateWizardProgress === 'function') updateWizardProgress();
 
   // Address fallback for Excel Import
   if (!crew.streetAddress && crew.combinedAddress) {
@@ -226,9 +242,17 @@ function editCrew(submissionId) {
 
   const fields = ['fullName', 'chineseName', 'rankPosition', 'gender', 'pob', 'dob', 'heightCm', 'weightKg', 'religion', 'maritalStatus', 'bloodType', 'shirtSize', 'shoeSize', 'streetAddress', 'rtRw', 'village', 'district', 'city', 'province', 'phoneNo', 'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry', 'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus', 'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus'];
 
+  const dateFields = ['dob', 'passportExpiry', 'cdcExpiry', 'bstExpiry'];
+
   fields.forEach(id => {
     const el = document.getElementById(id);
-    if (el && crew[id] !== undefined) el.value = crew[id];
+    if (el && crew[id] !== undefined && crew[id] !== null) {
+      if (dateFields.includes(id)) {
+        el.value = formatDateForInput(crew[id]);
+      } else {
+        el.value = crew[id];
+      }
+    }
   });
 
   const expRadios = document.getElementsByName('expLongline');
@@ -259,9 +283,7 @@ function editCrew(submissionId) {
   for (let key in excelDocMap) {
     if (crew[key] && Array.isArray(crew[key])) {
       crew[key].forEach(url => {
-        // Only add if not already present
         if (!crew.documents[excelDocMap[key]].find(d => d.base64 === url || d.url === url)) {
-           // We push as URL string to base64 property to be compatible with renderGallery temporarily
            crew.documents[excelDocMap[key]].push({ name: 'Google Drive Link', base64: url, isDriveUrl: true });
         }
       });
