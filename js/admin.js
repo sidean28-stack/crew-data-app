@@ -2,9 +2,10 @@ function deduplicateLocalCrewDatabase() {
   if (!Array.isArray(window.crewDatabase)) return;
   const seen = new Set();
   const clean = [];
-  window.crewDatabase.forEach(crew => {
-    const key = (crew.submissionId || '').trim().toLowerCase() || (crew.fullName || '').trim().toLowerCase();
-    if (key && !seen.has(key)) {
+  window.crewDatabase.forEach((crew, idx) => {
+    if (!crew || typeof crew !== 'object') return;
+    const key = (crew.submissionId || crew.passportNo || crew.cdcNo || crew.fullName || ('crew_' + idx)).toString().trim().toLowerCase();
+    if (!seen.has(key)) {
       seen.add(key);
       clean.push(crew);
     }

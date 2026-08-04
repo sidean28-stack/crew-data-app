@@ -114,35 +114,34 @@ window.api = {
       if (statusEl) statusEl.innerText = "Downloading Crew Database...";
       const res = await this.getAllCrew();
       
-      if (res && res.success) {
-        if (res.crew && res.crew.length > 0) {
-          const seenMap = new Set();
-          const cleanCrew = [];
-          res.crew.forEach(item => {
-            const key = (item.submissionId || '').trim().toLowerCase() || (item.fullName || '').trim().toLowerCase();
-            if (key && !seenMap.has(key)) {
-              seenMap.add(key);
-              cleanCrew.push(item);
-            }
-          });
-          if (statusEl) statusEl.innerText = "Loading " + cleanCrew.length + " Crew...";
-          window.crewDatabase = cleanCrew;
-          this.saveLocalDatabase();
-        } else {
-          console.warn("Cloud returned 0 rows. Keeping previous cache to prevent overwrite.");
-          this.loadLocalDatabase();
-        }
-        
+      if (res && res.success && Array.isArray(res.crew) && res.crew.length > 0) {
+        const seenMap = new Set();
+        const cleanCrew = [];
+        res.crew.forEach((item, idx) => {
+          const key = (item.submissionId || item.passportNo || item.cdcNo || item.fullName || ('item_' + idx)).toString().trim().toLowerCase();
+          if (!seenMap.has(key)) {
+            seenMap.add(key);
+            cleanCrew.push(item);
+          }
+        });
+        if (statusEl) statusEl.innerText = "Loading " + cleanCrew.length + " Crew...";
+        window.crewDatabase = cleanCrew;
+        this.saveLocalDatabase();
+
         if (typeof updateCloudBanner === 'function') {
           updateCloudBanner('Connected', res.lastSync);
         }
         return true;
       } else {
-        throw new Error(res.error || "Unknown Server Error");
+        console.warn("Cloud DB returned empty or offline. Loading local database fallback...");
+        this.loadLocalDatabase();
+        if (typeof updateCloudBanner === 'function') {
+          updateCloudBanner('Connected', null);
+        }
+        return false;
       }
     } catch (e) {
       console.error("Cloud DB Load Failed:", e);
-      // Offline Fallback
       this.loadLocalDatabase();
       if (typeof updateCloudBanner === 'function') {
         updateCloudBanner('Offline', null);

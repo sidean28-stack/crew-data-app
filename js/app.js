@@ -95,9 +95,8 @@ async function bootstrap() {
       throw new Error("api.js failed to load: window.api is undefined");
     }
     
-    // Failsafe: Cloud + Cache Failed
-    if (!window.crewDatabase || window.crewDatabase.length === 0) {
-      throw new Error("No database available. Please check your connection or sync status.");
+    if (!window.crewDatabase) {
+      window.crewDatabase = [];
     }
     
     if (typeof parseUrlParams === 'function') parseUrlParams();
