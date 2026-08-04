@@ -373,20 +373,23 @@ function doGet(e) {
       // Assumes row 1 is header. Data starts at row 2.
       for (var i = 1; i < values.length; i++) {
         var row = values[i];
-        if (!row[1]) continue; // skip if no submissionId
-        
+        var subId = String(row[1] || "").trim();
+        var fullName = String(row[2] || "").trim();
+        if (!subId && !fullName) continue; // skip only if completely blank row
+        if (!subId) subId = "CREW-LONG-" + (100 + i);
+
         var parseUrls = function(str) {
           if (!str) return [];
           return String(str).split("\\n").map(function(u){ return u.trim(); }).filter(function(u){ return u.length > 0; });
         };
         
-        var fam1 = String(row[7]).split("(");
-        var fam2 = String(row[9]).split("(");
-        var combinedDob = String(row[30]).split("/");
+        var fam1 = String(row[7] || "").split("(");
+        var fam2 = String(row[9] || "").split("(");
+        var combinedDob = String(row[30] || "").split("/");
         
         crewList.push({
-          submissionId: String(row[1]),
-          fullName: String(row[2]),
+          submissionId: subId,
+          fullName: fullName,
           chineseName: String(row[3]),
           rankPosition: String(row[4]),
           phoneNo: String(row[5]),

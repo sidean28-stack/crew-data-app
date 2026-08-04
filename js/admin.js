@@ -20,14 +20,19 @@ function loadDirectoryTable() {
   const countText = document.getElementById('totalCrewCountText');
   if (!tbody) return;
 
-  const searchQuery = (document.getElementById('dirSearchInput')?.value || '').toLowerCase();
+  const searchQuery = (document.getElementById('dirSearchInput')?.value || '').trim().toLowerCase();
   const filterRank = document.getElementById('dirFilterRank')?.value || '';
 
   const filtered = window.crewDatabase.filter(crew => {
     const matchesSearch = !searchQuery || 
       (crew.fullName || "").toLowerCase().includes(searchQuery) ||
+      (crew.chineseName || "").toLowerCase().includes(searchQuery) ||
+      (crew.submissionId || "").toLowerCase().includes(searchQuery) ||
       (crew.rankPosition || "").toLowerCase().includes(searchQuery) ||
-      (crew.passportNo || "").toLowerCase().includes(searchQuery);
+      (crew.passportNo || "").toLowerCase().includes(searchQuery) ||
+      (crew.cdcNo || "").toLowerCase().includes(searchQuery) ||
+      (crew.vesselName || "").toLowerCase().includes(searchQuery) ||
+      (crew.phoneNo || "").toLowerCase().includes(searchQuery);
     const matchesRank = !filterRank || crew.rankPosition === filterRank;
     return matchesSearch && matchesRank;
   });
@@ -35,7 +40,10 @@ function loadDirectoryTable() {
   if (countText) countText.textContent = filtered.length;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px;">Data kru tidak ditemukan.</td></tr>`;
+    const msg = searchQuery 
+      ? `Data kru tidak ditemukan untuk kata pencarian "${escapeHTML(searchQuery)}". Hapus kata kunci untuk menampilkan semua kru (${window.crewDatabase.length} kru terdaftar).` 
+      : 'Belum ada data kru terdaftar.';
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">${msg}</td></tr>`;
     return;
   }
 
