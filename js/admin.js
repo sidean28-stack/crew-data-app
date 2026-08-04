@@ -604,7 +604,11 @@ function resolveImgSrc(docObjOrUrl) {
     if (fileId) {
       return `https://lh3.googleusercontent.com/d/${fileId}`;
     }
-  // Helper for clean date formatting in CV (e.g. 2029-07-15)
+  }
+  return url;
+}
+
+// Helper for clean date formatting in CV (e.g. 2029-07-15)
 function formatCleanDate(dateStr) {
   if (!dateStr) return '-';
   let str = String(dateStr).trim();
