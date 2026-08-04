@@ -70,10 +70,14 @@ function populateDropdowns() {
     vesselOriginSelect.innerHTML += `<option value="${o.nameId}">${o.nameId}</option>`;
   });
 
-  const placementSelect = document.getElementById('placementCountry');
-  placementSelect.innerHTML = `<option value="">-- Pilih Negara Penempatan --</option>`;
-  placementCountryOptions.forEach(p => {
-    placementSelect.innerHTML += `<option value="${p.nameId}">${p.nameId}</option>`;
+  ['placementCountry', 'placementCountry1', 'placementCountry2', 'placementCountry3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.innerHTML = `<option value="">-- Pilih Negara Penempatan --</option>`;
+      placementCountryOptions.forEach(p => {
+        el.innerHTML += `<option value="${p.nameId}">${p.nameId}</option>`;
+      });
+    }
   });
 }
 

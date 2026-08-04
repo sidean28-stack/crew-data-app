@@ -148,10 +148,41 @@ function getFormData() {
     fam2Relation: document.getElementById('fam2Relation').value.trim(),
     fam2Phone: document.getElementById('fam2Phone').value.trim(),
     expLongline: expRadio ? expRadio.value : "",
-    vesselName: document.getElementById('vesselName').value.trim(),
+    vesselName1: (document.getElementById('vesselName1')?.value || '').trim(),
+    vesselName2: (document.getElementById('vesselName2')?.value || '').trim(),
+    vesselName3: (document.getElementById('vesselName3')?.value || '').trim(),
+    signOnOff1: (document.getElementById('signOnOff1')?.value || '').trim(),
+    signOnOff2: (document.getElementById('signOnOff2')?.value || '').trim(),
+    signOnOff3: (document.getElementById('signOnOff3')?.value || '').trim(),
+    placementCountry1: document.getElementById('placementCountry1')?.value || '',
+    placementCountry2: document.getElementById('placementCountry2')?.value || '',
+    placementCountry3: document.getElementById('placementCountry3')?.value || '',
+    vesselName: (() => {
+      const v1 = (document.getElementById('vesselName1')?.value || '').trim();
+      const v2 = (document.getElementById('vesselName2')?.value || '').trim();
+      const v3 = (document.getElementById('vesselName3')?.value || '').trim();
+      const s1 = (document.getElementById('signOnOff1')?.value || '').trim();
+      const s2 = (document.getElementById('signOnOff2')?.value || '').trim();
+      const s3 = (document.getElementById('signOnOff3')?.value || '').trim();
+      const list = [];
+      if (v1 || s1) list.push(`${v1}${s1 ? ' (' + s1 + ')' : ''}`);
+      if (v2 || s2) list.push(`${v2}${s2 ? ' (' + s2 + ')' : ''}`);
+      if (v3 || s3) list.push(`${v3}${s3 ? ' (' + s3 + ')' : ''}`);
+      if (list.length === 0) return (document.getElementById('vesselName')?.value || '').trim();
+      return list.length === 1 ? list[0] : list.map((v, i) => `${i+1}. ${v}`).join(' | ');
+    })(),
+    signOnOff: [
+      (document.getElementById('signOnOff1')?.value || '').trim(),
+      (document.getElementById('signOnOff2')?.value || '').trim(),
+      (document.getElementById('signOnOff3')?.value || '').trim()
+    ].filter(s => s.length > 0).map((s, i, arr) => arr.length === 1 ? s : `${i+1}. ${s}`).join(' | '),
     vesselTypeLongline: document.getElementById('vesselTypeLongline').value,
     vesselOrigin: document.getElementById('vesselOrigin').value,
-    placementCountry: document.getElementById('placementCountry').value,
+    placementCountry: [
+      document.getElementById('placementCountry1')?.value || '',
+      document.getElementById('placementCountry2')?.value || '',
+      document.getElementById('placementCountry3')?.value || ''
+    ].filter(p => p.length > 0).map((p, i, arr) => arr.length === 1 ? p : `${i+1}. ${p}`).join(' | ') || (document.getElementById('placementCountry')?.value || ''),
     skillGeneral: skillsChecked,
     passportNo: document.getElementById('passportNo').value.trim(),
     passportExpiry: document.getElementById('passportExpiry').value,

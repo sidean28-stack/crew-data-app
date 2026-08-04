@@ -367,36 +367,92 @@
               </div>
             </div>
 
-            <!-- Sailing History Section -->
+            <!-- Sailing History Section (Riwayat 3 Kapal) -->
             <div class="col-12" style="margin-top: 12px;">
-              <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 10px;" data-i18n="sailingHistoryTitle">PENGALAMAN BERLAYAR 航海经验</h3>
+              <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 10px;" data-i18n="sailingHistoryTitle">PENGALAMAN BERLAYAR (RIWAYAT 3 KAPAL TERAKHIR) 航海经验</h3>
             </div>
 
             <div class="form-group col-6">
-              <label data-i18n="vesselName">12. Nama Kapal 舰船名称 :</label>
-              <input type="text" id="vesselName" class="form-control" placeholder="E.g. FU YUAN YU 888 / TAI WAN 12">
-            </div>
-
-            <div class="form-group col-6">
-              <label data-i18n="vesselTypeLongline">13. Jenis Kapal 船舶类型:</label>
+              <label data-i18n="vesselTypeLongline">Jenis Kapal 船舶类型:</label>
               <select id="vesselTypeLongline" class="form-control">
                 <!-- Populated dynamically -->
               </select>
             </div>
 
             <div class="form-group col-6">
-              <label data-i18n="vesselOrigin">14. Asal Kapal 船只的来源:</label>
+              <label data-i18n="vesselOrigin">Asal Kapal 船只的来源:</label>
               <select id="vesselOrigin" class="form-control">
                 <!-- Populated dynamically -->
               </select>
             </div>
 
-            <div class="form-group col-6">
-              <label data-i18n="placementCountry">15. Negara Penempatan 工作地点:</label>
-              <select id="placementCountry" class="form-control">
-                <!-- Populated dynamically -->
-              </select>
+            <!-- KAPAL 1 -->
+            <div class="col-12" style="background: var(--bg-primary); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 8px;">
+              <h4 style="font-size: 0.85rem; color: var(--primary); font-weight: 700; margin-bottom: 8px;"><i class="fa-solid fa-ship"></i> KAPAL 1 / 第1艘船</h4>
+              <div class="form-grid">
+                <div class="form-group col-4">
+                  <label>Nama Kapal 1 舰船名称 1:</label>
+                  <input type="text" id="vesselName1" class="form-control" placeholder="E.g. SHENG BAO FA">
+                </div>
+                <div class="form-group col-4">
+                  <label>Sign On / Sign Off 1 (Periode 登船/离船):</label>
+                  <input type="text" id="signOnOff1" class="form-control" placeholder="E.g. 2021 - 2023 / 2 Tahun">
+                </div>
+                <div class="form-group col-4">
+                  <label>Negara Penempatan 1 工作地点 1:</label>
+                  <select id="placementCountry1" class="form-control placement-country-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+              </div>
             </div>
+
+            <!-- KAPAL 2 -->
+            <div class="col-12" style="background: var(--bg-primary); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 8px;">
+              <h4 style="font-size: 0.85rem; color: var(--primary); font-weight: 700; margin-bottom: 8px;"><i class="fa-solid fa-ship"></i> KAPAL 2 / 第2艘船</h4>
+              <div class="form-grid">
+                <div class="form-group col-4">
+                  <label>Nama Kapal 2 舰船名称 2:</label>
+                  <input type="text" id="vesselName2" class="form-control" placeholder="E.g. FU YUAN YU 888">
+                </div>
+                <div class="form-group col-4">
+                  <label>Sign On / Sign Off 2 (Periode 登船/离船):</label>
+                  <input type="text" id="signOnOff2" class="form-control" placeholder="E.g. 2018 - 2020 / 2 Tahun">
+                </div>
+                <div class="form-group col-4">
+                  <label>Negara Penempatan 2 工作地点 2:</label>
+                  <select id="placementCountry2" class="form-control placement-country-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- KAPAL 3 -->
+            <div class="col-12" style="background: var(--bg-primary); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 8px;">
+              <h4 style="font-size: 0.85rem; color: var(--primary); font-weight: 700; margin-bottom: 8px;"><i class="fa-solid fa-ship"></i> KAPAL 3 / 第3艘船</h4>
+              <div class="form-grid">
+                <div class="form-group col-4">
+                  <label>Nama Kapal 3 舰船名称 3:</label>
+                  <input type="text" id="vesselName3" class="form-control" placeholder="E.g. CHUAN SHYANG 22">
+                </div>
+                <div class="form-group col-4">
+                  <label>Sign On / Sign Off 3 (Periode 登船/离船):</label>
+                  <input type="text" id="signOnOff3" class="form-control" placeholder="E.g. 2015 - 2017 / 2 Tahun">
+                </div>
+                <div class="form-group col-4">
+                  <label>Negara Penempatan 3 工作地点 3:</label>
+                  <select id="placementCountry3" class="form-control placement-country-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden Inputs to maintain single column compatibility -->
+            <input type="hidden" id="vesselName">
+            <input type="hidden" id="placementCountry">
+            <input type="hidden" id="signOnOff">
 
             <!-- Skill Umum Checkboxes -->
             <div class="form-group col-12" style="margin-top: 12px; background: var(--bg-primary); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
@@ -896,11 +952,11 @@
   <script src="js/i18n.js?v=9"></script>
   <script src="js/config.js"></script>
   <script src="js/api.js?v=14"></script>
-  <script src="js/ui-components.js?v=4"></script>
+  <script src="js/ui-components.js?v=5"></script>
   <script src="js/auth.js"></script>
-  <script src="js/candidate.js?v=5"></script>
+  <script src="js/candidate.js?v=6"></script>
   <script src="js/owner.js?v=4"></script>
-  <script src="js/admin.js?v=14"></script>
+  <script src="js/admin.js?v=15"></script>
   <script src="js/app.js?v=4"></script>
 </body>
 </html>

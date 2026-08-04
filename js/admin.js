@@ -255,6 +255,35 @@ function editCrew(submissionId) {
     }
   });
 
+  const extraFields = ['vesselName1', 'vesselName2', 'vesselName3', 'signOnOff1', 'signOnOff2', 'signOnOff3', 'placementCountry1', 'placementCountry2', 'placementCountry3'];
+  extraFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && crew[id] !== undefined && crew[id] !== null) {
+      el.value = crew[id];
+    }
+  });
+
+  if (crew.vesselName && !crew.vesselName1) {
+    const parts = String(crew.vesselName).split('|').map(s => s.replace(/^\d+\.\s*/, '').trim());
+    if (parts[0]) { const el = document.getElementById('vesselName1'); if (el) el.value = parts[0]; }
+    if (parts[1]) { const el = document.getElementById('vesselName2'); if (el) el.value = parts[1]; }
+    if (parts[2]) { const el = document.getElementById('vesselName3'); if (el) el.value = parts[2]; }
+  }
+
+  if (crew.signOnOff && !crew.signOnOff1) {
+    const parts = String(crew.signOnOff).split('|').map(s => s.replace(/^\d+\.\s*/, '').trim());
+    if (parts[0]) { const el = document.getElementById('signOnOff1'); if (el) el.value = parts[0]; }
+    if (parts[1]) { const el = document.getElementById('signOnOff2'); if (el) el.value = parts[1]; }
+    if (parts[2]) { const el = document.getElementById('signOnOff3'); if (el) el.value = parts[2]; }
+  }
+
+  if (crew.placementCountry && !crew.placementCountry1) {
+    const parts = String(crew.placementCountry).split('|').map(s => s.replace(/^\d+\.\s*/, '').trim());
+    if (parts[0]) { const el = document.getElementById('placementCountry1'); if (el) el.value = parts[0]; }
+    if (parts[1]) { const el = document.getElementById('placementCountry2'); if (el) el.value = parts[1]; }
+    if (parts[2]) { const el = document.getElementById('placementCountry3'); if (el) el.value = parts[2]; }
+  }
+
   const expRadios = document.getElementsByName('expLongline');
   for(let i=0; i<expRadios.length; i++){
     if(expRadios[i].value === crew.expLongline) {
@@ -814,7 +843,7 @@ function printCrewCV(submissionId) {
         </div>
       </div>
 
-      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">KUALIFIKASI / QUALIFICATIONS / 資格</h3>
+      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">KUALIFIKASI & RIWAYAT KAPAL / QUALIFICATIONS / 資格与船隻履歷</h3>
       <table>
         <tr>
           <th>
@@ -823,6 +852,22 @@ function printCrewCV(submissionId) {
             <span class="lbl-tw">工作年資</span>
           </th>
           <td><strong>${crew.expLongline}</strong></td>
+        </tr>
+        <tr>
+          <th>
+            <span class="lbl-id">Nama Kapal (Riwayat)</span>
+            <span class="lbl-en">Vessel Name History</span>
+            <span class="lbl-tw">船隻名稱履歷</span>
+          </th>
+          <td><strong>${crew.vesselName || '-'}</strong></td>
+        </tr>
+        <tr>
+          <th>
+            <span class="lbl-id">Periode Kontrak (Sign On/Off)</span>
+            <span class="lbl-en">Contract Period (Sign On/Off)</span>
+            <span class="lbl-tw">登船/離船 期限</span>
+          </th>
+          <td><strong>${crew.signOnOff || '-'}</strong></td>
         </tr>
         <tr>
           <th>
