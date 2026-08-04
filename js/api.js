@@ -1,10 +1,8 @@
-// js/api.js
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzhlv6FzrFLSIuhOQ5lsHIuOwn8dG1WrYCHvJJnJQ1aMaOwFXaoM6cc1GYlPXeO0J2A/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwf8iObaafOe69BE0h4rD59ujKMLV8Yr4HH9osx-L7SnMhKNEWvApJd50Asc9DdXDfu/exec";
 
 function getGasUrl() {
   const cachedUrl = localStorage.getItem('crew_app_gas_url');
   if (cachedUrl && cachedUrl !== DEFAULT_GAS_URL) {
-    // Clear stale overrides from previous sessions to prevent failures across different devices
     localStorage.removeItem('crew_app_gas_url');
   }
   return DEFAULT_GAS_URL;
