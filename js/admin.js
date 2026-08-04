@@ -92,12 +92,42 @@ function filterDirectory() {
 }
 
 function getDocExpiryStatus(crew) {
-  if (!crew.passportExpiry) return { text: "No Date", badgeClass: "badge-expiry-yellow" };
-  const expDate = new Date(crew.passportExpiry);
-  const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 90) return { text: `🔴 Expired / < 90 Hari (${diffDays} hr)`, badgeClass: "badge-expiry-red" };
-  if (diffDays < 180) return { text: `🟡 Warning (< 180 Hari)`, badgeClass: "badge-expiry-yellow" };
-  return { text: `🟢 Valid (${diffDays} hr)`, badgeClass: "badge-expiry-green" };
+  const dates = [];
+  
+  if (crew.passportExpiry) {
+    const pDate = new Date(crew.passportExpiry);
+    if (!isNaN(pDate.getTime())) dates.push({ name: 'Passport', date: pDate });
+  }
+  if (crew.cdcExpiry) {
+    const cDate = new Date(crew.cdcExpiry);
+    if (!isNaN(cDate.getTime())) dates.push({ name: 'Seaman Book', date: cDate });
+  }
+  if (crew.bstExpiry) {
+    const bDate = new Date(crew.bstExpiry);
+    if (!isNaN(bDate.getTime())) dates.push({ name: 'BST', date: bDate });
+  }
+
+  if (dates.length === 0) {
+    const hasDocs = crew.documents && Object.values(crew.documents).some(arr => Array.isArray(arr) && arr.length > 0);
+    if (hasDocs) {
+      return { text: "🟡 Dokumen Ada (Tgl Proses)", badgeClass: "badge-expiry-yellow" };
+    }
+    return { text: "⚪ Belum Ada Expiry", badgeClass: "badge-expiry-yellow" };
+  }
+
+  dates.sort((a, b) => a.date - b.date);
+  const earliest = dates[0];
+  const diffDays = Math.ceil((earliest.date - new Date()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return { text: `🔴 Expired (${earliest.name})`, badgeClass: "badge-expiry-red" };
+  } else if (diffDays < 90) {
+    return { text: `🔴 Expired < 90 Hari (${diffDays} hr)`, badgeClass: "badge-expiry-red" };
+  } else if (diffDays < 180) {
+    return { text: `🟡 Warning < 180 Hari (${diffDays} hr)`, badgeClass: "badge-expiry-yellow" };
+  } else {
+    return { text: `🟢 Valid (${diffDays} hr)`, badgeClass: "badge-expiry-green" };
+  }
 }
 
 function openOneTimeLinkModal() { document.getElementById('otlModal').classList.add('active'); }
