@@ -69,6 +69,10 @@ window.api = {
     return this.postData(data);
   },
 
+  deduplicateCrew: function () {
+    return this.postData({ action: "deduplicate_crew" });
+  },
+
   booking: function (data) {
     data.action = "booking_request";
     return this.postData(data);

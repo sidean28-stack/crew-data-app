@@ -143,6 +143,29 @@ async function executeDeleteCrew() {
   }
 }
 
+async function executeDeduplicateCrew() {
+  if (!confirm("Apakah Anda yakin ingin menghapus semua baris duplikat di Google Sheets secara otomatis?")) {
+    return;
+  }
+
+  try {
+    if (window.api && typeof window.api.deduplicateCrew === 'function') {
+      const res = await window.api.deduplicateCrew();
+      if (res && res.success) {
+        alert("Berhasil membersihkan " + (res.removedCount || 0) + " baris duplikat dari Google Sheets!");
+      }
+    }
+    if (window.api && typeof window.api.syncNow === 'function') {
+      await window.api.syncNow();
+    }
+    loadDirectoryTable();
+    if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+  } catch (e) {
+    console.error("Deduplicate Error:", e);
+    alert("Gagal membersihkan duplikat: " + e.message);
+  }
+}
+
 function editCrew(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;

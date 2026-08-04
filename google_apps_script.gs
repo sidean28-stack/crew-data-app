@@ -102,6 +102,23 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // ACTION: DEDUPLICATE CREW ROWS (Remove duplicate entries)
+    if (action === "deduplicate_crew") {
+      var count = deduplicateSheetRows();
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: "Successfully removed " + count + " duplicate rows from sheet",
+        removedCount: count
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action !== "submit_crew" && action !== "update_crew") {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        message: "Unknown action ignored: " + action
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
 
     // 2. ACTION: CREW REGISTRATION SUBMISSION (Form Wizard)
     var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
@@ -485,4 +502,32 @@ function onInstall(e) {
 }
 function onOpen(e) {
   initializeSampleData();
+}
+
+function deduplicateSheetRows() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
+  var values = sheet.getDataRange().getValues();
+  var seenMap = {};
+  var rowsToDelete = [];
+
+  for (var i = values.length - 1; i >= 1; i--) {
+    var subId = String(values[i][1] || "").trim().toLowerCase();
+    var name = String(values[i][2] || "").trim().toLowerCase();
+    var key = subId ? subId : name;
+
+    if (!key) continue;
+
+    if (seenMap[key]) {
+      rowsToDelete.push(i + 1);
+    } else {
+      seenMap[key] = true;
+    }
+  }
+
+  rowsToDelete.forEach(function(rIndex) {
+    sheet.deleteRow(rIndex);
+  });
+
+  return rowsToDelete.length;
 }
