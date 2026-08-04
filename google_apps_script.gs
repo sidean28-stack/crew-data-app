@@ -363,6 +363,7 @@ function doGet(e) {
   
   if (action === "getAllCrew") {
     try {
+      deduplicateSheetRows();
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
       var dataRange = sheet.getDataRange();
@@ -502,6 +503,14 @@ function onInstall(e) {
 }
 function onOpen(e) {
   initializeSampleData();
+  deduplicateSheetRows();
+  try {
+    SpreadsheetApp.getUi().createMenu('🚢 Crew Management System')
+      .addItem('🧹 Bersihkan Semua Baris Duplikat', 'deduplicateSheetRows')
+      .addToUi();
+  } catch (err) {
+    Logger.log("Menu UI notice: " + err.toString());
+  }
 }
 
 function deduplicateSheetRows() {
