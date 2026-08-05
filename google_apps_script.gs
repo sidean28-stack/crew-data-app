@@ -121,7 +121,7 @@ function doPost(e) {
     // Ensure Header Row Exists (AppSheet Compatible)
     if (sheet.getLastRow() === 0) {
       sheet.appendRow(getCrewHeaders_());
-      sheet.getRange(1, 1, 1, 47).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
+      sheet.getRange(1, 1, 1, getCrewHeaders_().length).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
     }
     
     // Format Combined Address
@@ -224,16 +224,33 @@ function doPost(e) {
       data.flightDate || "",
       data.finishDate || "",
       data.historyStatus || "",
-      data.adminNotes || ""
+      data.adminNotes || "",
+      data.pob || "",
+      data.dob || "",
+      data.gender || "",
+      data.religion || "",
+      data.maritalStatus || "",
+      data.bloodType || "",
+      data.streetAddress || "",
+      data.rtRw || "",
+      data.village || "",
+      data.district || "",
+      data.city || "",
+      data.province || "",
+      data.fam1Name || "",
+      data.fam1Relation || "",
+      data.fam2Name || "",
+      data.fam2Relation || "",
+      data.submittedAt || ""
     ];
 
     if (isUpdate && updateRowIndex !== -1) {
       var maxCol = sheet.getMaxColumns();
-      if (maxCol < 47) {
-        sheet.insertColumnsAfter(maxCol, 47 - maxCol);
+      if (maxCol < 64) {
+        sheet.insertColumnsAfter(maxCol, 64 - maxCol);
       }
       
-      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 47).getValues()[0];
+      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 64).getValues()[0];
       for (var c = 32; c <= 37; c++) {
         if (rowValues[c] === "" && oldValues[c] !== "") {
           rowValues[c] = oldValues[c];
@@ -250,7 +267,12 @@ function doPost(e) {
         [43, "flightDate"],
         [44, "finishDate"],
         [45, "historyStatus"],
-        [46, "adminNotes"]
+        [46, "adminNotes"],
+        [47, "pob"], [48, "dob"], [49, "gender"], [50, "religion"],
+        [51, "maritalStatus"], [52, "bloodType"], [53, "streetAddress"],
+        [54, "rtRw"], [55, "village"], [56, "district"], [57, "city"],
+        [58, "province"], [59, "fam1Name"], [60, "fam1Relation"],
+        [61, "fam2Name"], [62, "fam2Relation"], [63, "submittedAt"]
       ];
       preservedFields.forEach(function(field) {
         if (!Object.prototype.hasOwnProperty.call(data, field[1])) {
@@ -258,7 +280,7 @@ function doPost(e) {
         }
       });
       rowValues[0] = oldValues[0];
-      sheet.getRange(updateRowIndex, 1, 1, 47).setValues([rowValues]);
+      sheet.getRange(updateRowIndex, 1, 1, 64).setValues([rowValues]);
     } else {
       sheet.appendRow(rowValues);
     }
@@ -301,7 +323,11 @@ function getCrewHeaders_() {
     "URL KTP (Drive)", "URL Seaman Book (Drive)", "URL MCU (Drive)",
     "URL Certificate (Drive)", "URL Foto Crew (Drive)", "Tinggi Badan (cm)",
     "Berat Badan (kg)", "Status Operasional", "Kandidat Kapal",
-    "Nama Kapal Penempatan", "Tgl Terbang", "Tgl Finish", "Riwayat Status", "Catatan Admin"
+    "Nama Kapal Penempatan", "Tgl Terbang", "Tgl Finish", "Riwayat Status", "Catatan Admin",
+    "Tempat Lahir", "Tanggal Lahir", "Jenis Kelamin", "Agama", "Status Perkawinan",
+    "Golongan Darah", "Alamat Jalan", "RT/RW", "Kelurahan / Desa", "Kecamatan",
+    "Kabupaten / Kota", "Provinsi", "Nama Keluarga 1", "Hubungan Keluarga 1",
+    "Nama Keluarga 2", "Hubungan Keluarga 2", "Waktu Submit"
   ];
 }
 
@@ -333,19 +359,29 @@ function isOperationalStatus_(value) {
 }
 
 function migrateCrewSchema_(sheet) {
-  var requiredColumns = 47;
+  var headers = getCrewHeaders_();
+  var requiredColumns = headers.length;
   if (sheet.getMaxColumns() < requiredColumns) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredColumns - sheet.getMaxColumns());
   }
 
-  var headers = getCrewHeaders_();
   var currentHeaders = sheet.getRange(1, 39, 1, 9).getDisplayValues()[0];
   var alreadyCanonical = String(currentHeaders[0] || "").trim() === headers[38] &&
     String(currentHeaders[1] || "").trim() === headers[39] &&
     String(currentHeaders[2] || "").trim() === headers[40];
 
   if (alreadyCanonical) {
-    return { migrated: false, shiftedStatusRows: 0, retainedMeasurementRows: 0 };
+    var extendedHeaders = headers.slice(47);
+    var currentExtendedHeaders = sheet.getRange(1, 48, 1, extendedHeaders.length).getDisplayValues()[0];
+    var needsExtension = extendedHeaders.some(function(header, index) {
+      return String(currentExtendedHeaders[index] || "").trim() !== header;
+    });
+    if (needsExtension) {
+      sheet.getRange(1, 48, 1, extendedHeaders.length).setValues([extendedHeaders]);
+      sheet.getRange(1, 48, 1, extendedHeaders.length)
+        .setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
+    }
+    return { migrated: needsExtension, extendedFields: needsExtension, shiftedStatusRows: 0, retainedMeasurementRows: 0 };
   }
 
   var lastRow = sheet.getLastRow();
@@ -564,11 +600,11 @@ function doGet(e) {
           rankPosition: String(row[4] || ""),
           phoneNo: String(row[5] || ""),
           combinedAddress: String(row[6] || ""),
-          fam1Name: fam1[0] ? fam1[0].trim() : "",
-          fam1Relation: fam1[1] ? fam1[1].replace(")","").trim() : "",
+          fam1Name: String(row[59] || (fam1[0] ? fam1[0].trim() : "")),
+          fam1Relation: String(row[60] || (fam1[1] ? fam1[1].replace(")","").trim() : "")),
           fam1Phone: String(row[8] || ""),
-          fam2Name: fam2[0] ? fam2[0].trim() : "",
-          fam2Relation: fam2[1] ? fam2[1].replace(")","").trim() : "",
+          fam2Name: String(row[61] || (fam2[0] ? fam2[0].trim() : "")),
+          fam2Relation: String(row[62] || (fam2[1] ? fam2[1].replace(")","").trim() : "")),
           fam2Phone: String(row[10] || ""),
           expLongline: String(row[11] || ""),
           vesselName: String(row[12] || ""),
@@ -589,9 +625,19 @@ function doGet(e) {
           skckStatus: String(row[27] || ""),
           shirtSize: String(row[28] || ""),
           shoeSize: String(row[29] || ""),
-          dob: combinedDob[0] ? combinedDob[0].trim() : "",
-          gender: combinedDob[1] ? combinedDob[1].trim() : "",
-          religion: combinedDob[2] ? combinedDob[2].trim() : "",
+          pob: String(row[47] || ""),
+          dob: String(row[48] || (combinedDob[0] ? combinedDob[0].trim() : "")),
+          gender: String(row[49] || (combinedDob[1] ? combinedDob[1].trim() : "")),
+          religion: String(row[50] || (combinedDob[2] ? combinedDob[2].trim() : "")),
+          maritalStatus: String(row[51] || ""),
+          bloodType: String(row[52] || ""),
+          streetAddress: String(row[53] || ""),
+          rtRw: String(row[54] || ""),
+          village: String(row[55] || ""),
+          district: String(row[56] || ""),
+          city: String(row[57] || ""),
+          province: String(row[58] || ""),
+          submittedAt: String(row[63] || ""),
           folderUrl: String(row[31] || ""),
           documents: {
             passport: parseUrls(row[32]),

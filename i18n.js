@@ -38,6 +38,10 @@ const i18n = {
     // Section 1 Personal & Position
     fullName: "Nama Lengkap Crew (全名)",
     chineseName: "Nama Mandarin (中文姓名 - Opsional)",
+    heightCm: "Tinggi Badan (cm)",
+    heightCmPlaceholder: "Contoh: 170",
+    weightKg: "Berat Badan (kg)",
+    weightKgPlaceholder: "Contoh: 65",
     rankPosition: "Jabatan / Posisi Longline (职务)",
     selectRank: "-- Pilih Jabatan Longline --",
     gender: "Jenis Kelamin (性别)",
@@ -226,6 +230,10 @@ const i18n = {
     // Section 1 Personal & Position
     fullName: "船员英文全名 (Full Name)",
     chineseName: "中文姓名 (Chinese Name)",
+    heightCm: "身高（厘米）",
+    heightCmPlaceholder: "例如：170",
+    weightKg: "体重（公斤）",
+    weightKgPlaceholder: "例如：65",
     rankPosition: "延绳钓职务/岗位 (Position)",
     selectRank: "-- 请选择职务 --",
     gender: "性别 (Gender)",

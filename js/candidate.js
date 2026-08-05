@@ -99,6 +99,7 @@ function renderReviewSummary() {
       <h3 style="color: var(--accent-teal); margin-bottom: 12px;">Data Pendaftaran Crew</h3>
       <p><strong>Nama Lengkap:</strong> ${escapeHTML(data.fullName)} (${escapeHTML(data.chineseName || '-')})</p>
       <p><strong>Jabatan:</strong> ${escapeHTML(data.rankPosition)}</p>
+      <p><strong>${window.currentLang === 'zh' ? '身高 / 体重' : 'Tinggi / Berat'}:</strong> ${escapeHTML(data.heightCm)} ${window.currentLang === 'zh' ? '厘米' : 'cm'} / ${escapeHTML(data.weightKg)} ${window.currentLang === 'zh' ? '公斤' : 'kg'}</p>
       <p><strong>Kontak:</strong> ${escapeHTML(data.phoneNo)}</p>
       <p><strong>Alamat:</strong> ${escapeHTML(data.streetAddress)}, ${escapeHTML(data.city)}</p>
       <p><strong>Kualifikasi Longline:</strong> ${escapeHTML(data.expLongline)}</p>
@@ -125,6 +126,8 @@ function getFormData() {
     bloodType: document.getElementById('bloodType').value,
     shirtSize: document.getElementById('shirtSize').value,
     shoeSize: document.getElementById('shoeSize').value,
+    heightCm: document.getElementById('heightCm').value,
+    weightKg: document.getElementById('weightKg').value,
     streetAddress: document.getElementById('streetAddress').value.trim(),
     rtRw: document.getElementById('rtRw').value.trim(),
     village: document.getElementById('village').value.trim(),
@@ -214,7 +217,7 @@ async function submitCrewForm() {
         'expLongline', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry',
         'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus',
         'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus',
-        'shirtSize', 'shoeSize', 'dob', 'gender', 'religion'
+        'shirtSize', 'shoeSize', 'heightCm', 'weightKg', 'dob', 'gender', 'religion'
       ];
       const hasMismatch = verificationFields.some(field =>
         String(cloudCrew[field] || '').trim() !== String(cloudPayload[field] || '').trim()
@@ -266,6 +269,8 @@ function loadSavedDraft() {
     const data = JSON.parse(draft);
     if (data.fullName) document.getElementById('fullName').value = data.fullName;
     if (data.phoneNo) document.getElementById('phoneNo').value = data.phoneNo;
+    if (data.heightCm) document.getElementById('heightCm').value = data.heightCm;
+    if (data.weightKg) document.getElementById('weightKg').value = data.weightKg;
   } catch(e) {}
 }
 
