@@ -13,11 +13,20 @@ function switchLanguage(lang) {
     }
   });
 
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (i18n[lang] && i18n[lang][key]) el.placeholder = i18n[lang][key];
+  });
+
   populateDropdowns();
   renderDynamicRadioAndCheckboxes();
   if (typeof updateUploadBadges === 'function') updateUploadBadges();
   if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
   if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+  const detailModal = document.getElementById('crewDetailModal');
+  if (detailModal?.classList.contains('active') && window.currentDetailSubmissionId && typeof openCrewDetailModal === 'function') {
+    openCrewDetailModal(window.currentDetailSubmissionId);
+  }
 }
 
 function initLanguage() {
@@ -251,3 +260,98 @@ function escapeHTML(value) {
     }
   });
 }
+
+function inferNotificationType(message) {
+  const text = String(message || '').toLowerCase();
+  if (/gagal|error|tidak tersedia|belum tersimpan|tidak ditemukan|failed|失败|错误/.test(text)) return 'error';
+  if (/harap|pastikan|periksa|belum ada|kosong|warning|注意|请选择|请填写/.test(text)) return 'warning';
+  if (/berhasil|success|tersimpan|terhubung|selesai|saved|成功|已保存|已连接/.test(text)) return 'success';
+  return 'info';
+}
+
+function getNotificationCopy(type) {
+  const isZh = window.currentLang === 'zh';
+  const copy = {
+    success: { icon: 'fa-circle-check', id: 'Berhasil', zh: '操作成功' },
+    error: { icon: 'fa-circle-xmark', id: 'Terjadi Kendala', zh: '操作失败' },
+    warning: { icon: 'fa-triangle-exclamation', id: 'Perlu Perhatian', zh: '请注意' },
+    info: { icon: 'fa-circle-info', id: 'Informasi', zh: '信息' }
+  };
+  const selected = copy[type] || copy.info;
+  return { icon: selected.icon, title: isZh ? selected.zh : selected.id };
+}
+
+function closeAppNotification(notification) {
+  if (!notification || notification.classList.contains('is-leaving')) return;
+  notification.classList.add('is-leaving');
+  setTimeout(() => notification.remove(), 220);
+}
+
+function showAppNotification(message, type, options) {
+  const region = document.getElementById('appNotificationRegion');
+  if (!region) return;
+
+  const resolvedType = type || inferNotificationType(message);
+  const copy = getNotificationCopy(resolvedType);
+  const duration = options?.duration || (resolvedType === 'error' ? 8000 : 5200);
+  const notification = document.createElement('section');
+  notification.className = `app-notification app-notification--${resolvedType}`;
+  notification.setAttribute('role', resolvedType === 'error' ? 'alert' : 'status');
+  notification.innerHTML = `
+    <div class="app-notification__art" aria-hidden="true">
+      <img src="assets/notification-crew.png" alt="">
+      <span class="app-notification__status"><i class="fa-solid ${copy.icon}"></i></span>
+    </div>
+    <div class="app-notification__content">
+      <strong class="app-notification__title"></strong>
+      <p class="app-notification__message"></p>
+    </div>
+    <button type="button" class="app-notification__close" aria-label="${window.currentLang === 'zh' ? '关闭通知' : 'Tutup notifikasi'}" title="${window.currentLang === 'zh' ? '关闭' : 'Tutup'}">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <span class="app-notification__timer" style="animation-duration:${duration}ms"></span>
+  `;
+  notification.querySelector('.app-notification__title').textContent = copy.title;
+  notification.querySelector('.app-notification__message').textContent = String(message || '');
+  notification.querySelector('.app-notification__close').addEventListener('click', () => closeAppNotification(notification));
+
+  region.prepend(notification);
+  while (region.children.length > 3) region.lastElementChild.remove();
+  setTimeout(() => closeAppNotification(notification), duration);
+  return notification;
+}
+
+window.showAppNotification = showAppNotification;
+window.notifySuccess = (message, options) => showAppNotification(message, 'success', options);
+window.notifyError = (message, options) => showAppNotification(message, 'error', options);
+window.notifyWarning = (message, options) => showAppNotification(message, 'warning', options);
+window.notifyInfo = (message, options) => showAppNotification(message, 'info', options);
+
+const nativeAlert = window.alert.bind(window);
+window.alert = function (message) {
+  if (!document.getElementById('appNotificationRegion')) return nativeAlert(message);
+  showAppNotification(message);
+};
+
+document.addEventListener('click', function (event) {
+  const button = event.target.closest?.('button');
+  if (!button || button.disabled || button.classList.contains('app-notification__close')) return;
+
+  button.classList.add('is-processing');
+  button.setAttribute('aria-busy', 'true');
+  const startedAt = Date.now();
+  const release = function () {
+    const elapsed = Date.now() - startedAt;
+    if (button.isConnected && button.disabled && elapsed < 120000) {
+      setTimeout(release, 180);
+      return;
+    }
+    if (elapsed < 520) {
+      setTimeout(release, 520 - elapsed);
+      return;
+    }
+    button.classList.remove('is-processing');
+    button.removeAttribute('aria-busy');
+  };
+  setTimeout(release, 520);
+}, true);

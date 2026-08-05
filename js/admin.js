@@ -592,6 +592,15 @@ function printCrewCV(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
 
+  const isZh = window.currentLang === 'zh';
+  const cvLabel = (id, en, zh) => isZh
+    ? `<span class="lbl-id">${zh}</span><span class="lbl-en">${en}</span><span class="lbl-tw">${id}</span>`
+    : `<span class="lbl-id">${id}</span><span class="lbl-en">${en}</span><span class="lbl-tw">${zh}</span>`;
+  const validUntilText = date => isZh ? `有效至 ${formatDateForInput(date) || date}` : `Valid until ${formatDateForInput(date) || date}`;
+  const unavailableText = isZh ? '無效或未提供' : 'Expired / None';
+  const availableText = isZh ? '已提供' : 'Available';
+  const noneText = isZh ? '無' : 'None';
+
   const printWindow = window.open('', '_blank');
   
   // Ambil foto profil (index 0) jika ada, format 4x6
@@ -664,8 +673,8 @@ function printCrewCV(submissionId) {
     page2Html = `
       <div style="page-break-before: always;"></div>
       <div class="header">
-        <h1>DOCUMENT ATTACHMENTS</h1>
-        <p>附件文件 - ${crew.fullName} (${crew.submissionId})</p>
+        <h1>${isZh ? '附件文件' : 'DOCUMENT ATTACHMENTS'}</h1>
+        <p>${isZh ? '船員證件' : 'Lampiran Berkas'} - ${escapeHTML(crew.fullName)} (${escapeHTML(crew.submissionId)})</p>
       </div>
       <div class="attachments-container">
         ${attachmentsHtml}
@@ -677,11 +686,11 @@ function printCrewCV(submissionId) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>CV - ${crew.fullName}</title>
+      <title>${isZh ? '船員履歷表' : 'CV'} - ${escapeHTML(crew.fullName)}</title>
       <style>
-        body { font-family: Arial, sans-serif; padding: 30px; color: #000; line-height: 1.4; }
+        body { font-family: "Microsoft YaHei", "Noto Sans SC", Arial, sans-serif; padding: 30px; color: #000; line-height: 1.4; }
         .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 22pt; font-weight: bold; letter-spacing: 1px; }
+        .header h1 { margin: 0; font-size: 22pt; font-weight: bold; letter-spacing: 0; }
         .header h2 { margin: 5px 0 0 0; font-size: 14pt; color: #333; }
         .header p { margin: 5px 0 0 0; font-size: 14pt; font-weight: bold; }
         
@@ -715,92 +724,72 @@ function printCrewCV(submissionId) {
     </head>
     <body>
       <div class="header">
-        <h1>CURRICULUM VITAE</h1>
-        <h2>LONGLINE FISHING CREW</h2>
-        <p>遠洋延繩釣船員履歷表</p>
+        <h1>${isZh ? '船員履歷表' : 'CURRICULUM VITAE'}</h1>
+        <h2>${isZh ? '遠洋延繩釣船員' : 'LONGLINE FISHING CREW'}</h2>
+        <p>${isZh ? 'Longline Fishing Crew Curriculum Vitae' : '遠洋延繩釣船員履歷表'}</p>
       </div>
 
       <div class="grid">
         <table>
           <tr>
             <th>
-              <span class="lbl-id">Nama Lengkap</span>
-              <span class="lbl-en">Full Name</span>
-              <span class="lbl-tw">姓名</span>
+              ${cvLabel('Nama Lengkap', 'Full Name', '姓名')}
             </th>
-            <td style="font-size: 12pt;"><strong>${crew.fullName}</strong></td>
+            <td style="font-size: 12pt;"><strong>${escapeHTML(crew.fullName)}</strong></td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Nama Mandarin</span>
-              <span class="lbl-en">Chinese Name</span>
-              <span class="lbl-tw">中文姓名</span>
+              ${cvLabel('Nama Mandarin', 'Chinese Name', '中文姓名')}
             </th>
-            <td style="font-size: 12pt;"><strong>${crew.chineseName || '-'}</strong></td>
+            <td style="font-size: 12pt;"><strong>${escapeHTML(crew.chineseName || '-')}</strong></td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">ID Kru</span>
-              <span class="lbl-en">Crew ID</span>
-              <span class="lbl-tw">船員編號</span>
+              ${cvLabel('ID Kru', 'Crew ID', '船員編號')}
             </th>
-            <td>${crew.submissionId}</td>
+            <td>${escapeHTML(crew.submissionId)}</td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Jabatan</span>
-              <span class="lbl-en">Position</span>
-              <span class="lbl-tw">職務</span>
+              ${cvLabel('Jabatan', 'Position', '職務')}
             </th>
-            <td style="font-size: 11pt;"><strong>${crew.rankPosition}</strong></td>
+            <td style="font-size: 11pt;"><strong>${escapeHTML(crew.rankPosition || '-')}</strong></td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Tanggal Lahir</span>
-              <span class="lbl-en">Date of Birth</span>
-              <span class="lbl-tw">出生日期</span>
+              ${cvLabel('Tanggal Lahir', 'Date of Birth', '出生日期')}
             </th>
-            <td>${crew.dob}</td>
+            <td>${escapeHTML(crew.dob || '-')}</td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Umur</span>
-              <span class="lbl-en">Age</span>
-              <span class="lbl-tw">年齡</span>
+              ${cvLabel('Umur', 'Age', '年齡')}
             </th>
-            <td>${age} Tahun / Years / 歲</td>
+            <td>${age} ${isZh ? '歲 / Years / Tahun' : 'Tahun / Years / 歲'}</td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Jenis Kelamin</span>
-              <span class="lbl-en">Gender</span>
-              <span class="lbl-tw">性別</span>
+              ${cvLabel('Jenis Kelamin', 'Gender', '性別')}
             </th>
-            <td>${crew.gender === 'Male' ? 'Laki-laki / Male / 男' : (crew.gender === 'Female' ? 'Perempuan / Female / 女' : crew.gender)}</td>
+            <td>${escapeHTML(crew.gender === 'Male' ? (isZh ? '男 / Male / Laki-laki' : 'Laki-laki / Male / 男') : (crew.gender === 'Female' ? (isZh ? '女 / Female / Perempuan' : 'Perempuan / Female / 女') : (crew.gender || '-')))}</td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Agama</span>
-              <span class="lbl-en">Religion</span>
-              <span class="lbl-tw">宗教</span>
+              ${cvLabel('Agama', 'Religion', '宗教')}
             </th>
-            <td>${crew.religion}</td>
+            <td>${escapeHTML(crew.religion || '-')}</td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Alamat</span>
-              <span class="lbl-en">Address</span>
-              <span class="lbl-tw">地址</span>
+              ${cvLabel('Alamat', 'Address', '地址')}
             </th>
-            <td>${crew.combinedAddress || crew.streetAddress}</td>
+            <td>${escapeHTML(crew.combinedAddress || crew.streetAddress || '-')}</td>
           </tr>
           <tr>
             <th>
-              <span class="lbl-id">Kontak Darurat</span>
-              <span class="lbl-en">Emergency Contact</span>
-              <span class="lbl-tw">緊急聯絡人</span>
+              ${cvLabel('Kontak Darurat', 'Emergency Contact', '緊急聯絡人')}
             </th>
-            <td>${crew.fam1Name} (${crew.fam1Relation}): ${crew.fam1Phone}</td>
+            <td>${escapeHTML(crew.fam1Name || '-')} (${escapeHTML(crew.fam1Relation || '-')}): ${escapeHTML(crew.fam1Phone || '-')}</td>
           </tr>
         </table>
         
@@ -811,101 +800,93 @@ function printCrewCV(submissionId) {
         </div>
       </div>
 
-      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">KUALIFIKASI / QUALIFICATIONS / 資格</h3>
+      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${isZh ? '資格與航海經驗 / QUALIFICATIONS' : 'KUALIFIKASI / QUALIFICATIONS / 資格'}</h3>
       <table>
         <tr>
           <th>
-            <span class="lbl-id">Pengalaman Longline</span>
-            <span class="lbl-en">Years of Experience</span>
-            <span class="lbl-tw">工作年資</span>
+            ${cvLabel('Pengalaman Longline', 'Longline Experience', '延繩釣經驗')}
           </th>
-          <td><strong>${crew.expLongline}</strong></td>
+          <td><strong>${escapeHTML(crew.expLongline || '-')}</strong></td>
         </tr>
         <tr>
           <th>
-            <span class="lbl-id">Jenis Kapal</span>
-            <span class="lbl-en">Vessel Type</span>
-            <span class="lbl-tw">船型</span>
+            ${cvLabel('Jenis Kapal', 'Vessel Type', '船型')}
           </th>
-          <td>${crew.vesselTypeLongline} (${crew.vesselOrigin})</td>
+          <td>${escapeHTML(crew.vesselTypeLongline || '-')} (${escapeHTML(crew.vesselOrigin || '-')})</td>
         </tr>
         <tr>
           <th>
-            <span class="lbl-id">Negara Penempatan</span>
-            <span class="lbl-en">Available for</span>
-            <span class="lbl-tw">可派遣地區</span>
+            ${cvLabel('Negara Penempatan', 'Available For', '可派遣地區')}
           </th>
           <td><strong>${crew.placementCountry || '-'}</strong></td>
         </tr>
         <tr>
           <th>
-            <span class="lbl-id">Skill Umum</span>
-            <span class="lbl-en">General Skills</span>
-            <span class="lbl-tw">一般技能</span>
+            ${cvLabel('Skill Umum', 'General Skills', '一般技能')}
           </th>
           <td style="line-height: 1.6;">${skillsHtml}</td>
         </tr>
       </table>
 
-      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">STATUS DOKUMEN / DOCUMENT STATUS / 文件狀態</h3>
+      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${isZh ? '文件狀態 / DOCUMENT STATUS' : 'STATUS DOKUMEN / DOCUMENT STATUS / 文件狀態'}</h3>
       <table style="text-align: center;">
         <tr>
-          <th style="text-align: center; width: 33%;">Document<br><span style="font-weight:normal; font-size:9pt;">文件</span></th>
-          <th style="text-align: center; width: 33%;">Status<br><span style="font-weight:normal; font-size:9pt;">狀態</span></th>
-          <th style="text-align: center; width: 33%;">Chinese<br><span style="font-weight:normal; font-size:9pt;">中文</span></th>
+          <th style="text-align: center; width: 33%;">${isZh ? '文件' : 'Document'}<br><span style="font-weight:normal; font-size:9pt;">${isZh ? 'Document' : '文件'}</span></th>
+          <th style="text-align: center; width: 33%;">${isZh ? '狀態' : 'Status'}<br><span style="font-weight:normal; font-size:9pt;">${isZh ? 'Status' : '狀態'}</span></th>
+          <th style="text-align: center; width: 33%;">${isZh ? '有效期限' : 'Chinese'}<br><span style="font-weight:normal; font-size:9pt;">${isZh ? 'Validity' : '中文'}</span></th>
         </tr>
         <tr>
-          <td><strong>Passport</strong><br><span style="font-size: 8pt; color: #555;">${crew.passportNo}</span></td>
-          <td>${isPassportValid ? 'Valid until ' + crew.passportExpiry : 'Expired / None'}</td>
-          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + crew.passportExpiry : '無效'}</td>
+          <td><strong>${isZh ? '護照' : 'Passport'}</strong><br><span style="font-size: 8pt; color: #555;">${escapeHTML(crew.passportNo || '-')}</span></td>
+          <td>${isPassportValid ? validUntilText(crew.passportExpiry) : unavailableText}</td>
+          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + (formatDateForInput(crew.passportExpiry) || escapeHTML(crew.passportExpiry)) : '無效'}</td>
         </tr>
         <tr>
-          <td><strong>Seaman Book</strong><br><span style="font-size: 8pt; color: #555;">${crew.cdcNo}</span></td>
-          <td>${isCdcValid ? 'Valid until ' + crew.cdcExpiry : 'Expired / None'}</td>
-          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + crew.cdcExpiry : '無效'}</td>
+          <td><strong>${isZh ? '船員手冊' : 'Seaman Book'}</strong><br><span style="font-size: 8pt; color: #555;">${escapeHTML(crew.cdcNo || '-')}</span></td>
+          <td>${isCdcValid ? validUntilText(crew.cdcExpiry) : unavailableText}</td>
+          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + (formatDateForInput(crew.cdcExpiry) || escapeHTML(crew.cdcExpiry)) : '無效'}</td>
         </tr>
         <tr>
-          <td><strong>MCU</strong></td>
-          <td>${crew.medicalStatus === 'Ada' ? 'Available' : 'Expired / None'}</td>
+          <td><strong>${isZh ? '體檢證明' : 'MCU'}</strong></td>
+          <td>${crew.medicalStatus === 'Ada' ? availableText : unavailableText}</td>
           <td style="font-weight: bold;">${crew.medicalStatus === 'Ada' ? '已提供' : '無'}</td>
         </tr>
         <tr>
           <td><strong>BST</strong></td>
-          <td>${isBstValid ? 'Valid until ' + crew.bstExpiry : 'Expired / None'}</td>
-          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + crew.bstExpiry : '無'}</td>
+          <td>${isBstValid ? validUntilText(crew.bstExpiry) : unavailableText}</td>
+          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + (formatDateForInput(crew.bstExpiry) || escapeHTML(crew.bstExpiry)) : '無'}</td>
         </tr>
         <tr>
           <td><strong>SKCK / ID Card</strong></td>
-          <td>${(crew.kkStatus === 'Ada' || crew.akteStatus === 'Ada') ? 'Available' : 'None'}</td>
+          <td>${(crew.kkStatus === 'Ada' || crew.akteStatus === 'Ada') ? availableText : noneText}</td>
           <td style="font-weight: bold;">${(crew.kkStatus === 'Ada' || crew.akteStatus === 'Ada') ? '已提供' : '無'}</td>
         </tr>
       </table>
 
       <div class="signature-section">
         <div class="signature-box">
-          <div class="signature-title">Crew Signature</div>
-          <div class="signature-tw">船員簽名</div>
+          <div class="signature-title">${isZh ? '船員簽名' : 'Crew Signature'}</div>
+          <div class="signature-tw">${isZh ? 'Crew Signature' : '船員簽名'}</div>
           <div class="signature-line"></div>
         </div>
         
         <div class="signature-box">
-          <div class="signature-title">Authorized Manning Agency</div>
-          <div class="signature-tw">PT ALINDA PRIMA SENTOSA<br>合法船員派遣公司</div>
+          <div class="signature-title">${isZh ? '合法船員派遣公司' : 'Authorized Manning Agency'}</div>
+          <div class="signature-tw">PT ALINDA PRIMA SENTOSA<br>${isZh ? 'Authorized Manning Agency' : '合法船員派遣公司'}</div>
           <div class="signature-line"></div>
         </div>
       </div>
       
       <div class="footer">
         <div>
-          Generated by<br>
+          ${isZh ? '系統產生' : 'Generated by'}<br>
           <strong>Longline Crew Management System</strong><br>
           Version 2.0<br>
           <strong>PT ALINDA PRIMA SENTOSA</strong>
         </div>
         <div class="qr-container">
           ${qrImage}
-          <p>Scan to View Complete Profile</p>
-          <p class="qr-tw">掃描查看完整資料</p>
+          <p>${isZh ? '掃描查看完整資料' : 'Scan to View Complete Profile'}</p>
+          <p class="qr-tw">${isZh ? 'Scan to View Complete Profile' : '掃描查看完整資料'}</p>
         </div>
       </div>
 
@@ -933,12 +914,31 @@ function openCrewDetailModal(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
 
+  const isZh = window.currentLang === 'zh';
+  const detailText = isZh ? {
+    title: '船員資料與運營狀態', fullName: '姓名：', chineseName: '中文姓名：', position: '職務：',
+    birthAge: '出生日期 / 年齡：', years: '歲', gender: '性別：', religion: '宗教：',
+    heightWeight: '身高 / 體重：', shirtShoe: '工作服 / 鞋碼：', phone: '電話 / WhatsApp：',
+    address: '完整地址：', emergency1: '緊急聯絡人 1：', emergency2: '緊急聯絡人 2：',
+    qualification: '資格與航海經驗', experience: '延繩釣經驗：', vesselHistory: '船舶經歷：',
+    signOnOff: '上船 / 下船：', vesselTypeOrigin: '船型 / 船籍：', placement: '派遣地區：',
+    skills: '一般技能：', noDocuments: '尚未上傳證件照片。'
+  } : {
+    title: 'Profil & Status Operasional', fullName: 'Nama Lengkap:', chineseName: 'Nama Mandarin:', position: 'Jabatan:',
+    birthAge: 'Tgl Lahir / Umur:', years: 'Tahun', gender: 'Jenis Kelamin:', religion: 'Agama:',
+    heightWeight: 'Tinggi / Berat:', shirtShoe: 'Ukuran Baju/Sepatu:', phone: 'No. HP / WA:',
+    address: 'Alamat Lengkap:', emergency1: 'Kontak Darurat 1:', emergency2: 'Kontak Darurat 2:',
+    qualification: 'Kualifikasi & Pengalaman Berlayar', experience: 'Pengalaman:', vesselHistory: 'Riwayat Kapal:',
+    signOnOff: 'Sign On / Off:', vesselTypeOrigin: 'Jenis & Asal Kapal:', placement: 'Negara Penempatan:',
+    skills: 'Skill Umum:', noDocuments: 'Belum ada foto berkas terunggah.'
+  };
+
   window.currentDetailSubmissionId = submissionId;
 
   const modalTitle = document.getElementById('detailModalTitle');
   const modalBadge = document.getElementById('detailSubmisiBadge');
-  if (modalTitle) modalTitle.innerText = `Profile & Operational Status: ${crew.fullName}`;
-  if (modalBadge) modalBadge.innerText = `ID: ${crew.submissionId}`;
+  if (modalTitle) modalTitle.innerText = `${detailText.title}: ${crew.fullName}`;
+  if (modalBadge) modalBadge.innerText = `${isZh ? '船員編號' : 'ID'}: ${crew.submissionId}`;
 
   // Hitung Umur
   let age = '-';
@@ -957,29 +957,30 @@ function openCrewDetailModal(submissionId) {
 
   // Left Column Content: Data Lengkap Kandidat
   const infoHtml = `
-    <div style="display: grid; grid-template-columns: 110px 1fr; gap: 4px; margin-bottom: 8px;">
-      <strong>Nama Lengkap:</strong> <span><strong>${escapeHTML(crew.fullName)}</strong> ${crew.chineseName ? `(${escapeHTML(crew.chineseName)})` : ''}</span>
-      <strong>Jabatan:</strong> <span><span class="rank-badge">${escapeHTML(crew.rankPosition)}</span></span>
-      <strong>Tgl Lahir / Umur:</strong> <span>${escapeHTML(crew.dob || '-')} (${age} Tahun)</span>
-      <strong>Jenis Kelamin:</strong> <span>${escapeHTML(crew.gender === 'Male' ? 'Laki-laki (男)' : (crew.gender === 'Female' ? 'Perempuan (女)' : (crew.gender || '-')))}</span>
-      <strong>Agama:</strong> <span>${escapeHTML(crew.religion || '-')}</span>
-      <strong>Tinggi / Berat:</strong> <span>${escapeHTML(crew.heightCm || '-')} cm / ${escapeHTML(crew.weightKg || '-')} kg</span>
-      <strong>Ukuran Baju/Sepatu:</strong> <span>${escapeHTML(crew.shirtSize || '-')} / ${escapeHTML(crew.shoeSize || '-')}</span>
-      <strong>No. HP / WA:</strong> <span>${escapeHTML(crew.phoneNo || '-')}</span>
-      <strong>Alamat Lengkap:</strong> <span>${escapeHTML(crew.combinedAddress || crew.streetAddress || '-')}</span>
-      <strong>Kontak Darurat 1:</strong> <span>${escapeHTML(crew.fam1Name || '-')} (${escapeHTML(crew.fam1Relation || '-')}): ${escapeHTML(crew.fam1Phone || '-')}</span>
-      <strong>Kontak Darurat 2:</strong> <span>${escapeHTML(crew.fam2Name || '-')} (${escapeHTML(crew.fam2Relation || '-')}): ${escapeHTML(crew.fam2Phone || '-')}</span>
+    <div class="crew-detail-data-grid" style="display: grid; grid-template-columns: minmax(118px, 150px) minmax(0, 1fr); gap: 4px 10px; margin-bottom: 8px;">
+      <strong>${detailText.fullName}</strong> <span><strong>${escapeHTML(crew.fullName)}</strong></span>
+      <strong>${detailText.chineseName}</strong> <span lang="zh">${escapeHTML(crew.chineseName || '-')}</span>
+      <strong>${detailText.position}</strong> <span><span class="rank-badge">${escapeHTML(crew.rankPosition)}</span></span>
+      <strong>${detailText.birthAge}</strong> <span>${escapeHTML(crew.dob || '-')} (${age} ${detailText.years})</span>
+      <strong>${detailText.gender}</strong> <span>${escapeHTML(crew.gender === 'Male' ? (isZh ? '男 (Male)' : 'Laki-laki (男)') : (crew.gender === 'Female' ? (isZh ? '女 (Female)' : 'Perempuan (女)') : (crew.gender || '-')))}</span>
+      <strong>${detailText.religion}</strong> <span>${escapeHTML(crew.religion || '-')}</span>
+      <strong>${detailText.heightWeight}</strong> <span>${escapeHTML(crew.heightCm || '-')} cm / ${escapeHTML(crew.weightKg || '-')} kg</span>
+      <strong>${detailText.shirtShoe}</strong> <span>${escapeHTML(crew.shirtSize || '-')} / ${escapeHTML(crew.shoeSize || '-')}</span>
+      <strong>${detailText.phone}</strong> <span>${escapeHTML(crew.phoneNo || '-')}</span>
+      <strong>${detailText.address}</strong> <span>${escapeHTML(crew.combinedAddress || crew.streetAddress || '-')}</span>
+      <strong>${detailText.emergency1}</strong> <span>${escapeHTML(crew.fam1Name || '-')} (${escapeHTML(crew.fam1Relation || '-')}): ${escapeHTML(crew.fam1Phone || '-')}</span>
+      <strong>${detailText.emergency2}</strong> <span>${escapeHTML(crew.fam2Name || '-')} (${escapeHTML(crew.fam2Relation || '-')}): ${escapeHTML(crew.fam2Phone || '-')}</span>
     </div>
     
     <div style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
-      <h5 style="margin: 0 0 6px 0; font-size: 0.85rem; color: var(--primary);">Kualifikasi & Pengalaman Berlayar:</h5>
-      <div style="display: grid; grid-template-columns: 120px 1fr; gap: 4px;">
-        <strong>Pengalaman:</strong> <span>${escapeHTML(crew.expLongline || '-')}</span>
-        <strong>Riwayat Kapal:</strong> <span>${escapeHTML(crew.vesselName || '-')}</span>
-        <strong>Sign On / Off:</strong> <span>${escapeHTML(crew.signOnOff || '-')}</span>
-        <strong>Jenis & Asal Kapal:</strong> <span>${escapeHTML(crew.vesselTypeLongline || '-')} (${escapeHTML(crew.vesselOrigin || '-')})</span>
-        <strong>Negara Penempatan:</strong> <span>${escapeHTML(crew.placementCountry || '-')}</span>
-        <strong>Skill Umum:</strong> <span>${escapeHTML(skillsText)}</span>
+      <h5 style="margin: 0 0 6px 0; font-size: 0.85rem; color: var(--primary);">${detailText.qualification}</h5>
+      <div class="crew-detail-data-grid" style="display: grid; grid-template-columns: minmax(118px, 150px) minmax(0, 1fr); gap: 4px 10px;">
+        <strong>${detailText.experience}</strong> <span>${escapeHTML(crew.expLongline || '-')}</span>
+        <strong>${detailText.vesselHistory}</strong> <span>${escapeHTML(crew.vesselName || '-')}</span>
+        <strong>${detailText.signOnOff}</strong> <span>${escapeHTML(crew.signOnOff || '-')}</span>
+        <strong>${detailText.vesselTypeOrigin}</strong> <span>${escapeHTML(crew.vesselTypeLongline || '-')} (${escapeHTML(crew.vesselOrigin || '-')})</span>
+        <strong>${detailText.placement}</strong> <span>${escapeHTML(crew.placementCountry || '-')}</span>
+        <strong>${detailText.skills}</strong> <span>${escapeHTML(skillsText)}</span>
       </div>
     </div>
   `;
@@ -988,7 +989,10 @@ function openCrewDetailModal(submissionId) {
 
   // Left Column Document Buttons
   let docButtonsHtml = '';
-  const docLabels = {
+  const docLabels = isZh ? {
+    passport: '護照', ktp: '身份證', cdc: '船員手冊', medical: '體檢證明',
+    bst: '基本安全訓練', kk: '戶口名簿', akte: '出生證明', skck: '良民證', cert: '證書', photo: '照片'
+  } : {
     passport: 'Paspor', ktp: 'KTP', cdc: 'Buku Pelaut', medical: 'MCU',
     bst: 'BST', kk: 'KK', akte: 'Akte', skck: 'SKCK', cert: 'Sertifikat', photo: 'Foto'
   };
@@ -1008,7 +1012,7 @@ function openCrewDetailModal(submissionId) {
       }
     }
   }
-  if (!docButtonsHtml) docButtonsHtml = '<span style="color: var(--text-muted); font-size: 0.8rem;">Belum ada foto berkas terunggah.</span>';
+  if (!docButtonsHtml) docButtonsHtml = `<span style="color: var(--text-muted); font-size: 0.8rem;">${detailText.noDocuments}</span>`;
   const docEl = document.getElementById('detailDocList');
   if (docEl) docEl.innerHTML = docButtonsHtml;
 

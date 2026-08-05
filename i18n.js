@@ -166,7 +166,30 @@ const i18n = {
     confirmDeleteTitle: "Konfirmasi Hapus Data Kru 2-Langkah",
     confirmDeleteDesc: "Apakah Anda yakin ingin menghapus data kru ini secara permanen?",
     gasStatusConnected: "✓ Terhubung dengan Google Cloud / Apps Script API (Live Production)",
-    gasStatusLocal: "Mode Pratinjau Lokal (Data disimpan di Browser)"
+    gasStatusLocal: "Mode Pratinjau Lokal (Data disimpan di Browser)",
+
+    // Crew Detail & Operational Modal
+    detailCandidateData: "Data Lengkap Kandidat",
+    detailUploadedDocs: "Berkas Dokumen Terunggah",
+    detailOperationalManagement: "Status Operasional & Manajemen Admin",
+    detailCrewStatus: "Status Kru (Penempatan / Keberadaan):",
+    detailStatusStandby: "🟢 Stand By",
+    detailStatusOnBoat: "🔵 On Boat",
+    detailStatusSelected: "🟣 Terpilih",
+    detailStatusBlacklist: "🔴 Blacklist",
+    detailVesselCandidate: "Kandidat Kapal (Plotting Owner):",
+    detailVesselAssigned: "Nama Kapal Aktif / Penempatan:",
+    detailFlightDate: "Tanggal Terbang (Sign On):",
+    detailFinishDate: "Tanggal Finish (Sign Off):",
+    detailHistory: "Riwayat Status (History Record):",
+    detailHistoryPlaceholder: "-- Pilih Riwayat Status --",
+    detailHistoryFinish: "Finish (Selesai Kontrak)",
+    detailHistoryBroken: "Broken (Putus Kontrak / Retur)",
+    detailHistoryBlacklist: "Blacklist (Bermasalah / Cekal)",
+    detailAdminNotes: "Catatan Khusus Admin:",
+    detailAdminNotesPlaceholder: "Catatan riwayat performa, perilaku, medis...",
+    detailPrintCv: "Cetak CV",
+    detailSaveStatus: "Simpan Status"
   },
 
   zh: {
@@ -330,7 +353,30 @@ const i18n = {
     confirmDeleteTitle: "确认删除船员数据 (两步确认)",
     confirmDeleteDesc: "您确定要永久删除此船员的数据吗？",
     gasStatusConnected: "✓ 已连接谷歌云 Google Cloud / Apps Script API (生产环境)",
-    gasStatusLocal: "本地预览模式 (数据保存在浏览器中)"
+    gasStatusLocal: "本地预览模式 (数据保存在浏览器中)",
+
+    // Crew Detail & Operational Modal
+    detailCandidateData: "船员完整资料",
+    detailUploadedDocs: "已上传证件",
+    detailOperationalManagement: "运营状态与管理员管理",
+    detailCrewStatus: "船员状态（派遣 / 所在位置）：",
+    detailStatusStandby: "🟢 待命",
+    detailStatusOnBoat: "🔵 在船",
+    detailStatusSelected: "🟣 已选中",
+    detailStatusBlacklist: "🔴 黑名单",
+    detailVesselCandidate: "候选船舶（船东安排）：",
+    detailVesselAssigned: "当前派遣船舶：",
+    detailFlightDate: "出发日期（Sign On）：",
+    detailFinishDate: "结束日期（Sign Off）：",
+    detailHistory: "状态记录：",
+    detailHistoryPlaceholder: "-- 请选择状态记录 --",
+    detailHistoryFinish: "完成（合同结束）",
+    detailHistoryBroken: "中断（退回 / 解约）",
+    detailHistoryBlacklist: "黑名单（问题 / 禁止派遣）",
+    detailAdminNotes: "管理员特别备注：",
+    detailAdminNotesPlaceholder: "绩效、行为、医疗等历史备注...",
+    detailPrintCv: "打印履历表",
+    detailSaveStatus: "保存状态"
   }
 };
 
