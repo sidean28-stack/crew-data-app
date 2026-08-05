@@ -203,6 +203,53 @@ function resolveImgSrc(source) {
   return url;
 }
 
+function transliterateNameToChinese(name) {
+  const normalized = String(name || '').toLowerCase().replace(/[^a-z\s'-]/g, ' ').trim();
+  if (!normalized) return '';
+  const syllables = {
+    a:'阿', adi:'阿迪', agus:'阿古斯', ahmad:'艾哈迈德', ali:'阿里', andi:'安迪', arif:'阿里夫',
+    ba:'巴', bambang:'班邦', bayu:'巴尤', be:'贝', bi:'比', bo:'博', bu:'布', budi:'布迪',
+    ca:'查', ce:'切', ci:'奇', co:'乔', cu:'楚', da:'达', de:'德', di:'迪', do:'多', du:'杜',
+    e:'埃', fa:'法', fe:'费', fi:'菲', fo:'福', fu:'富', ga:'加', ge:'格', gi:'吉', go:'戈', gu:'古',
+    ha:'哈', hadi:'哈迪', hendri:'亨德里', hi:'希', ho:'霍', hu:'胡', i:'伊', ja:'贾', joko:'佐科',
+    ka:'卡', ke:'克', ki:'基', ko:'科', ku:'库', la:'拉', le:'勒', li:'利', lo:'洛', lu:'卢',
+    ma:'马', me:'梅', mi:'米', mo:'莫', mu:'穆', muhammad:'穆罕默德', na:'纳', ne:'内', ni:'尼', no:'诺', nu:'努',
+    pa:'帕', pe:'佩', pi:'皮', po:'波', pu:'普', ra:'拉', re:'雷', ri:'里', ro:'罗', ru:'鲁',
+    sa:'萨', santoso:'桑托索', se:'塞', si:'西', so:'索', su:'苏', ta:'塔', te:'特', ti:'蒂', to:'托', tu:'图',
+    u:'乌', wa:'瓦', wahyu:'瓦尤', we:'韦', wi:'维', wo:'沃', ya:'亚', ye:'耶', yi:'伊', yo:'约', yu:'尤', za:'扎', zi:'齐'
+  };
+  const fallback = {a:'阿',b:'布',c:'奇',d:'德',e:'埃',f:'夫',g:'格',h:'赫',i:'伊',j:'杰',k:'克',l:'尔',m:'姆',n:'恩',o:'奥',p:'普',q:'库',r:'尔',s:'斯',t:'特',u:'乌',v:'维',w:'瓦',x:'克斯',y:'伊',z:'兹'};
+  return normalized.split(/\s+/).map(word => {
+    if (syllables[word]) return syllables[word];
+    let result = '';
+    for (let i = 0; i < word.length;) {
+      const chunk3 = word.slice(i, i + 3);
+      const chunk2 = word.slice(i, i + 2);
+      if (syllables[chunk3]) { result += syllables[chunk3]; i += 3; }
+      else if (syllables[chunk2]) { result += syllables[chunk2]; i += 2; }
+      else { result += fallback[word[i]] || ''; i += 1; }
+    }
+    return result;
+  }).join('');
+}
+
+window.transliterateNameToChinese = transliterateNameToChinese;
+
+function syncChineseNameFromFullName() {
+  const fullName = document.getElementById('fullName');
+  const chineseName = document.getElementById('chineseName');
+  if (!fullName || !chineseName) return;
+  if (!chineseName.dataset.manualName) {
+    chineseName.value = transliterateNameToChinese(fullName.value);
+    chineseName.dataset.autoValue = chineseName.value;
+  }
+}
+
+document.getElementById('fullName')?.addEventListener('input', syncChineseNameFromFullName);
+document.getElementById('chineseName')?.addEventListener('input', function () {
+  this.dataset.manualName = this.value.trim() && this.value !== this.dataset.autoValue ? 'true' : '';
+});
+
 function openImagePreview(source) {
   const src = resolveImgSrc(source);
   if (!src) return;
@@ -217,13 +264,16 @@ function openImagePreview(source) {
   } else {
     watermark.style.display = 'none';
   }
-  document.getElementById('imagePreviewModal').classList.add('active');
+  const previewModal = document.getElementById('imagePreviewModal');
+  previewModal.classList.add('active');
+  document.body.classList.add('image-preview-open');
 }
 
 function closeImagePreview() {
   const modal = document.getElementById('imagePreviewModal');
   const image = document.getElementById('enlargedImage');
   modal.classList.remove('active');
+  document.body.classList.remove('image-preview-open');
   image.removeAttribute('src');
 }
 

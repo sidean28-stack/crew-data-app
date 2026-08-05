@@ -10,7 +10,7 @@ function parseUrlParams() {
     window.tokenOwnerName = urlParams.get('owner') || "Ship Owner";
     window.currentRole = 'owner';
     document.getElementById('userRoleSelect').value = 'owner';
-    showSecurityBanner(`One-Time Access Link Aktif: Terverifikasi untuk ${window.tokenOwnerName}. Data Unmasked & Watermarked.`);
+    showSecurityBanner(`船东专用一次性访问链接已验证：${window.tokenOwnerName}。资料已解锁并加水印。`);
   } else if (roleParam) {
     window.currentRole = roleParam;
     document.getElementById('userRoleSelect').value = roleParam;
@@ -32,6 +32,7 @@ function updateRoleUI() {
   if (window.currentRole === 'candidate') {
     switchTab('form');
   } else if (window.currentRole === 'owner') {
+    if (window.currentLang !== 'zh' && typeof switchLanguage === 'function') switchLanguage('zh');
     switchTab('catalog');
   } else if (window.currentRole === 'admin') {
     switchTab('directory');

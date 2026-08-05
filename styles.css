@@ -1191,6 +1191,20 @@ select.form-control {
   to { transform: rotate(360deg); }
 }
 
+#imagePreviewModal {
+  z-index: 15000;
+  background: rgba(0, 0, 0, 0.88);
+}
+
+#imagePreviewModal .modal-card {
+  overflow: visible;
+}
+
+body.image-preview-open > #crewDetailModal,
+body.image-preview-open > #ownerCrewDetailModal {
+  pointer-events: none;
+}
+
 /* ================= BUTTON FEEDBACK & NOTIFICATIONS ================= */
 button {
   position: relative;

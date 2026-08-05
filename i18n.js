@@ -189,7 +189,8 @@ const i18n = {
     detailAdminNotes: "Catatan Khusus Admin:",
     detailAdminNotesPlaceholder: "Catatan riwayat performa, perilaku, medis...",
     detailPrintCv: "Cetak CV",
-    detailSaveStatus: "Simpan Status"
+    detailSaveStatus: "Simpan Status",
+    catalogSearchPlaceholder: "Cari nama, skill, paspor..."
   },
 
   zh: {
@@ -376,7 +377,8 @@ const i18n = {
     detailAdminNotes: "管理员特别备注：",
     detailAdminNotesPlaceholder: "绩效、行为、医疗等历史备注...",
     detailPrintCv: "打印履历表",
-    detailSaveStatus: "保存状态"
+    detailSaveStatus: "保存状态",
+    catalogSearchPlaceholder: "搜索姓名、技能或护照号码..."
   }
 };
 
