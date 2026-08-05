@@ -139,8 +139,7 @@ function closeGasModal() {
   document.getElementById('gasSetupModal').classList.remove('active');
 }
 function saveGasUrl() {
-  const url = document.getElementById('gasUrlInput').value.trim();
-  if (url) localStorage.setItem('crew_app_gas_url', url);
+  document.getElementById('gasUrlInput').value = getGasUrl();
   closeGasModal();
   updateGasStatusUI();
 }

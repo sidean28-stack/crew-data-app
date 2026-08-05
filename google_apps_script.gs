@@ -576,6 +576,25 @@ function doGet(e) {
       var dataRange = sheet.getDataRange();
       var values = dataRange.getValues();
       var crewList = [];
+      var latestReviews = {};
+      var reviewSheet = ss.getSheetByName("Review Owner");
+      if (reviewSheet && reviewSheet.getLastRow() > 1) {
+        var reviewValues = reviewSheet.getRange(2, 1, reviewSheet.getLastRow() - 1, 10).getValues();
+        reviewValues.forEach(function(reviewRow) {
+          var reviewId = String(reviewRow[1] || "").trim();
+          if (!reviewId) return;
+          latestReviews[reviewId] = {
+            status: String(reviewRow[3] || "WAITING"),
+            commScore: reviewRow[4] === "" ? 0 : Number(reviewRow[4]),
+            skillScore: reviewRow[5] === "" ? 0 : Number(reviewRow[5]),
+            expScore: reviewRow[6] === "" ? 0 : Number(reviewRow[6]),
+            attitudeScore: reviewRow[7] === "" ? 0 : Number(reviewRow[7]),
+            leadershipScore: reviewRow[8] === "" ? 0 : Number(reviewRow[8]),
+            notes: String(reviewRow[9] || ""),
+            updatedAt: reviewRow[0] instanceof Date ? reviewRow[0].toISOString() : String(reviewRow[0] || "")
+          };
+        });
+      }
       
       for (var i = 1; i < values.length; i++) {
         var row = values[i];
@@ -656,7 +675,8 @@ function doGet(e) {
           finishDate: row[44] ? String(row[44]) : "",
           historyStatus: row[45] ? String(row[45]) : "",
           adminNotes: row[46] ? String(row[46]) : "",
-          status: row[40] ? String(row[40]) : "STAND_BY"
+          status: row[40] ? String(row[40]) : "STAND_BY",
+          ownerReview: latestReviews[subId] || null
         });
       }
       

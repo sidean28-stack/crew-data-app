@@ -65,15 +65,13 @@ async function bootstrap() {
     checkCriticalSystems();
     
     // 3. Initialize Services. Local storage is an offline cache; cloud is authoritative.
-    updateLoadingText("Loading Local Cache...");
+    updateLoadingText("Connecting to Production Cloud...");
     await sleep(200);
-    if (!window.api || typeof window.api.loadLocalDatabase !== 'function') {
+    if (!window.api || typeof window.api.loadCloudDatabase !== 'function') {
       throw new Error("api.js failed to load: window.api is undefined");
     }
-    window.api.loadLocalDatabase();
-
-    updateLoadingText("Synchronizing Crew Database...");
-    await window.api.loadCloudDatabase();
+    const cloudReady = await window.api.loadCloudDatabase();
+    if (!cloudReady) throw new Error('Data produksi tidak dapat dimuat. Periksa koneksi internet lalu coba lagi.');
     
     if (typeof parseUrlParams === 'function') parseUrlParams();
     
@@ -81,6 +79,7 @@ async function bootstrap() {
     updateLoadingText("Loading User Interface...");
     await sleep(200);
     initializeUI();
+    window.api.startLiveSync();
     
     // Finish Loading
     updateLoadingText("Loading Completed");

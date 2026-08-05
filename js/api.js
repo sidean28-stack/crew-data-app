@@ -5,14 +5,7 @@ const LEGACY_GAS_DEPLOYMENT_IDS = [
 ];
 
 function getGasUrl() {
-  const cachedUrl = localStorage.getItem('crew_app_gas_url');
-  if (!cachedUrl) return DEFAULT_GAS_URL;
-
-  if (LEGACY_GAS_DEPLOYMENT_IDS.some(id => cachedUrl.includes(id))) {
-    localStorage.removeItem('crew_app_gas_url');
-    return DEFAULT_GAS_URL;
-  }
-  return cachedUrl;
+  return DEFAULT_GAS_URL;
 }
 
 window.api = {
@@ -133,7 +126,8 @@ window.api = {
       }
       return true;
     } catch (error) {
-      console.warn('Cloud database unavailable; using local cache:', error);
+      console.warn('Cloud database unavailable:', error);
+      window.crewDatabase = [];
       if (typeof updateCloudBanner === 'function') updateCloudBanner('Offline', null);
       return false;
     }
@@ -141,6 +135,19 @@ window.api = {
 
   syncNow: function () {
     return this.loadCloudDatabase();
+  },
+
+  startLiveSync: function () {
+    if (this.liveSyncTimer) clearInterval(this.liveSyncTimer);
+    const refresh = () => {
+      if (document.visibilityState === 'visible') this.loadCloudDatabase().then(() => {
+        if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
+        if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+      });
+    };
+    this.liveSyncTimer = setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
   }
 };
 

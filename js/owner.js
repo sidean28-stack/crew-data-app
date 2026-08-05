@@ -43,7 +43,7 @@ function renderCatalogGrid() {
       photoUrl = resolveImgSrc(crew.documents.photo[0]) || photoUrl;
     }
     
-    let currentStatus = crew.status || 'WAITING';
+    let currentStatus = crew.ownerReview?.status || crew.status || 'WAITING';
     const statusText = {WAITING:text.waiting, SELECTED:text.selected, PRIORITY:text.priority, REJECTED:text.rejected}[currentStatus] || currentStatus;
     const chineseName = crew.chineseName || transliterateNameToChinese(crew.fullName);
     let statusStyle = "color: var(--text-muted); border-color: var(--text-muted);";
@@ -101,9 +101,9 @@ function openCrewDetailModal(submissionId) {
   const chineseName = crew.chineseName || transliterateNameToChinese(crew.fullName);
 
   window.ownerSelections = window.ownerSelections || {};
-  let selection = window.ownerSelections[submissionId] || {
-    status: crew.status || 'WAITING',
-    commScore: 0, skillScore: 0, expScore: 0, attitudeScore: 0, leadershipScore: 0, notes: ''
+  let selection = window.ownerSelections[submissionId] || crew.ownerReview || {
+    status: crew.status || 'WAITING', commScore: 0, skillScore: 0, expScore: 0,
+    attitudeScore: 0, leadershipScore: 0, notes: ''
   };
 
   let modalHtml = `
@@ -222,7 +222,7 @@ function setReviewStatus(submissionId, status) {
   openCrewDetailModal(submissionId);
 }
 
-function saveReviewSelection(submissionId) {
+async function saveReviewSelection(submissionId) {
   if (!window.ownerSelections[submissionId]) return;
 
   const notes = document.getElementById('reviewNotes').value;
@@ -245,9 +245,7 @@ function saveReviewSelection(submissionId) {
   const crewIndex = window.crewDatabase.findIndex(c => c.submissionId === submissionId);
   if (crewIndex >= 0) {
     window.crewDatabase[crewIndex].status = status;
-    if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
-    
-    // Sync with backend
+    // Sync with the production backend, then confirm from a fresh cloud snapshot.
     const payload = {
       action: 'submit_review',
       submissionId: submissionId,
@@ -256,12 +254,18 @@ function saveReviewSelection(submissionId) {
       timestamp: new Date().toISOString()
     };
 
-    fetch(getGasUrl(), {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    }).catch(err => console.error("Gas review sync notice:", err));
+    try {
+      await window.api.review(payload);
+      const cloudSynced = await window.api.syncNow();
+      const syncedCrew = window.crewDatabase.find(item => item.submissionId === submissionId);
+      if (!cloudSynced || !syncedCrew?.ownerReview || syncedCrew.ownerReview.status !== status) {
+        throw new Error('Review belum terkonfirmasi pada snapshot produksi.');
+      }
+    } catch (error) {
+      console.error('Review production sync failed:', error);
+      alert(window.currentLang === 'zh' ? '审核尚未同步到生产云端，请重试。' : 'Review belum tersinkron ke cloud produksi. Silakan coba lagi.');
+      return;
+    }
   }
 
   closeCrewDetailModal();
