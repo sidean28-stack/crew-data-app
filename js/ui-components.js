@@ -170,8 +170,9 @@ function maskString(str, visibleCount) {
 }
 
 function createDummySvgDataUrl(title) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="100%" height="100%" fill="#152036"/><text x="50%" y="50%" fill="#2dd4bf" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">${title}</text></svg>`;
-  return "data:image/svg+xml;base64," + btoa(svg);
+  const safeTitle = escapeHTML(title || 'CREW PHOTO');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="100%" height="100%" fill="#152036"/><text x="50%" y="50%" fill="#2dd4bf" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">${safeTitle}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 function getGoogleDriveFileId(url) {
