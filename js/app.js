@@ -41,7 +41,7 @@ function retryBootstrap() {
   const loader = document.getElementById('appLoadingOverlay');
   if (loader) loader.classList.remove('hidden');
   
-  window.location.reload(true);
+  bootstrap();
 }
 
 function updateLoadingText(text) {
@@ -49,24 +49,11 @@ function updateLoadingText(text) {
   if (el) el.textContent = text;
 }
 
-function purgeLegacyLocalCache() {
-  const CURRENT_CACHE_VER = 'v1.0.0_prod_clean_v2';
-  if (localStorage.getItem('crew_app_cache_version') !== CURRENT_CACHE_VER) {
-    console.log("Purging legacy local cache for clean production boot...");
-    localStorage.removeItem('crew_app_draft');
-    localStorage.removeItem('crew_app_gas_url');
-    localStorage.setItem('crew_app_cache_version', CURRENT_CACHE_VER);
-  }
-}
-
 /**
  * PHASE 2: REFACTOR APPLICATION BOOTSTRAP
  */
 async function bootstrap() {
   try {
-    // Automatic Cache Purge for Clean Production Boot
-    purgeLegacyLocalCache();
-
     // 1. Initialize Configuration
     updateLoadingText("Loading Configuration...");
     await sleep(200);
@@ -77,26 +64,13 @@ async function bootstrap() {
     await sleep(200);
     checkCriticalSystems();
     
-    // 3. Initialize Services (Cloud First Architecture)
+    // 3. Initialize Services
     updateLoadingText("Loading Services...");
     await sleep(200);
-    
-    updateLoadingText("Verifying Google Apps Script...");
-    await pingGoogleAppsScript();
-
-    updateLoadingText("Connecting to Cloud Database...");
-    if (window.api && typeof window.api.loadCloudDatabase === 'function') {
-      const cloudSuccess = await window.api.loadCloudDatabase();
-      
-      if (!cloudSuccess) {
-        updateLoadingText("Offline Fallback: Loading Local Cache...");
-      }
+    if (typeof loadLocalDatabase === 'function') {
+      loadLocalDatabase();
     } else {
-      throw new Error("api.js failed to load: window.api is undefined");
-    }
-    
-    if (!window.crewDatabase) {
-      window.crewDatabase = [];
+      throw new Error("api.js failed to load: loadLocalDatabase is undefined");
     }
     
     if (typeof parseUrlParams === 'function') parseUrlParams();
@@ -105,6 +79,10 @@ async function bootstrap() {
     updateLoadingText("Loading User Interface...");
     await sleep(200);
     initializeUI();
+    
+    // 5. Initialize Google Services (Health Ping)
+    updateLoadingText("Verifying Google Apps Script...");
+    await pingGoogleAppsScript();
     
     // Finish Loading
     updateLoadingText("Loading Completed");

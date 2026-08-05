@@ -42,7 +42,7 @@ function doPost(e) {
         selectedList
       ]);
 
-      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Booking order registered successfully!" }))
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Booking order registered successfully!" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (action === "edit_crew") {
@@ -70,53 +70,8 @@ function doPost(e) {
         review.notes || ""
       ]);
 
-      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Review saved" }))
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Review saved" }))
         .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // ACTION: DELETE CREW FROM GOOGLE SHEET
-    if (action === "delete_crew") {
-      var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
-      var dataRange = sheet.getDataRange();
-      var values = dataRange.getValues();
-      var searchId = String(data.submissionId || "").trim().toLowerCase();
-      var searchName = String(data.fullName || "").trim().toLowerCase();
-      var deleted = false;
-
-      for (var i = values.length - 1; i >= 1; i--) {
-        var rowId = String(values[i][1] || "").trim().toLowerCase();
-        var rowName = String(values[i][2] || "").trim().toLowerCase();
-
-        var isIdMatch = (searchId.length > 0 && (rowId === searchId || rowId.endsWith(searchId) || searchId.endsWith(rowId)));
-        var isNameMatch = (searchName.length > 0 && rowName === searchName);
-
-        if (isIdMatch || isNameMatch) {
-          sheet.deleteRow(i + 1);
-          deleted = true;
-        }
-      }
-
-      return ContentService.createTextOutput(JSON.stringify({
-        success: true,
-        message: deleted ? "Crew data deleted successfully from sheet" : "No matching row found"
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // ACTION: DEDUPLICATE CREW ROWS (Remove duplicate entries)
-    if (action === "deduplicate_crew") {
-      var count = deduplicateSheetRows();
-      return ContentService.createTextOutput(JSON.stringify({
-        success: true,
-        message: "Successfully removed " + count + " duplicate rows from sheet",
-        removedCount: count
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    if (action !== "submit_crew" && action !== "update_crew") {
-      return ContentService.createTextOutput(JSON.stringify({
-        success: false,
-        message: "Unknown action ignored: " + action
-      })).setMimeType(ContentService.MimeType.JSON);
     }
 
 
@@ -184,17 +139,8 @@ function doPost(e) {
     if (isUpdate) {
       var dataRange = sheet.getDataRange();
       var values = dataRange.getValues();
-      var searchId = String(data.submissionId || "").trim().toLowerCase();
-      var searchName = String(data.fullName || "").trim().toLowerCase();
-
       for (var i = 1; i < values.length; i++) {
-        var rowId = String(values[i][1] || "").trim().toLowerCase();
-        var rowName = String(values[i][2] || "").trim().toLowerCase();
-
-        var isIdMatch = (searchId.length > 0 && (rowId === searchId || rowId.endsWith(searchId) || searchId.endsWith(rowId)));
-        var isNameMatch = (searchName.length > 0 && rowName === searchName);
-
-        if (isIdMatch || isNameMatch) {
+        if (String(values[i][1]) === String(data.submissionId)) {
           updateRowIndex = i + 1;
           existingFolderUrl = values[i][31] || "";
           break;
@@ -282,25 +228,12 @@ function doPost(e) {
       docUrls.cdc.join(" \n"),
       docUrls.medical.join(" \n"),
       docUrls.cert.join(" \n"),
-      docUrls.photo.join(" \n"),
-      data.heightCm || "",
-      data.weightKg || ""
+      docUrls.photo.join(" \n")
     ];
 
-    if (isUpdate) {
-      if (updateRowIndex === -1) {
-        // Fallback: If no match found by ID/Name, update the last row to prevent duplicate creation
-        updateRowIndex = sheet.getLastRow() > 1 ? sheet.getLastRow() : 2;
-      }
-      
-      // Ensure the sheet has at least 40 columns before getting range to prevent "outside the dimensions" error
-      var maxCol = sheet.getMaxColumns();
-      if (maxCol < 40) {
-        sheet.insertColumnsAfter(maxCol, 40 - maxCol);
-      }
-      
+    if (isUpdate && updateRowIndex !== -1) {
       // For updates, we keep the original URLs if the new one is empty (meaning no new file was uploaded)
-      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 40).getValues()[0];
+      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 38).getValues()[0];
       for (var c = 32; c <= 37; c++) {
         if (rowValues[c] === "" && oldValues[c] !== "") {
           rowValues[c] = oldValues[c]; // retain old links
@@ -309,25 +242,23 @@ function doPost(e) {
         }
       }
       rowValues[0] = oldValues[0]; // Retain original timestamp
-      sheet.getRange(updateRowIndex, 1, 1, 40).setValues([rowValues]);
+      sheet.getRange(updateRowIndex, 1, 1, 38).setValues([rowValues]);
     } else {
       sheet.appendRow(rowValues);
     }
     
     return ContentService
       .createTextOutput(JSON.stringify({
-        success: true,
+        status: "success",
         message: "Data crew Longline Wantaifeng / PT ALINDA berhasil " + (isUpdate ? "diupdate!" : "disimpan!"),
         folderUrl: crewFolder.getUrl(),
-        submissionId: data.submissionId,
-        total: sheet.getLastRow() - 1,
-        lastSync: new Date().toISOString()
+        submissionId: data.submissionId
       }))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
     return ContentService
-      .createTextOutput(JSON.stringify({ success: false, message: error.toString() }))
+      .createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
@@ -359,131 +290,6 @@ function saveBase64FileToDrive(folder, fileObj, fileTag) {
 }
 
 function doGet(e) {
-  var action = e.parameter.action;
-  
-  if (action === "getAllCrew") {
-    try {
-      deduplicateSheetRows();
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
-      var dataRange = sheet.getDataRange();
-      var values = dataRange.getValues();
-      var crewList = [];
-      
-      // Assumes row 1 is header. Data starts at row 2.
-      for (var i = 1; i < values.length; i++) {
-        var row = values[i];
-        var subId = String(row[1] || "").trim();
-        var fullName = String(row[2] || "").trim();
-        if (!subId && !fullName) continue; // skip only if completely blank row
-        if (!subId) subId = "CREW-LONG-" + (100 + i);
-
-        var parseUrls = function(str) {
-          if (!str) return [];
-          return String(str).split("\\n").map(function(u){ return u.trim(); }).filter(function(u){ return u.length > 0; });
-        };
-        
-        var fam1 = String(row[7] || "").split("(");
-        var fam2 = String(row[9] || "").split("(");
-        var combinedDob = String(row[30] || "").split("/");
-        
-        crewList.push({
-          submissionId: subId,
-          fullName: fullName,
-          chineseName: String(row[3]),
-          rankPosition: String(row[4]),
-          phoneNo: String(row[5]),
-          combinedAddress: String(row[6]),
-          fam1Name: fam1[0].trim(),
-          fam1Relation: fam1[1] ? fam1[1].replace(")","").trim() : "",
-          fam1Phone: String(row[8]),
-          fam2Name: fam2[0].trim(),
-          fam2Relation: fam2[1] ? fam2[1].replace(")","").trim() : "",
-          fam2Phone: String(row[10]),
-          expLongline: String(row[11]),
-          vesselName: String(row[12]),
-          vesselTypeLongline: String(row[13]),
-          vesselOrigin: String(row[14]),
-          placementCountry: String(row[15]),
-          skillGeneral: String(row[16]),
-          passportNo: String(row[17]),
-          passportExpiry: String(row[18]),
-          cdcNo: String(row[19]),
-          cdcExpiry: String(row[20]),
-          bstExpiry: String(row[21]),
-          kkStatus: String(row[22]),
-          akteStatus: String(row[23]),
-          ijazahLevel: String(row[24]),
-          medicalStatus: String(row[25]),
-          waliStatus: String(row[26]),
-          skckStatus: String(row[27]),
-          shirtSize: String(row[28]),
-          shoeSize: String(row[29]),
-          dob: combinedDob[0] ? combinedDob[0].trim() : "",
-          gender: combinedDob[1] ? combinedDob[1].trim() : "",
-          religion: combinedDob[2] ? combinedDob[2].trim() : "",
-          folderUrl: String(row[31]),
-          documents: {
-            passport: parseUrls(row[32]),
-            ktp: parseUrls(row[33]),
-            cdc: parseUrls(row[34]),
-            medical: parseUrls(row[35]),
-            cert: parseUrls(row[36]),
-            photo: parseUrls(row[37])
-          },
-          heightCm: row[38] ? parseInt(row[38]) : null,
-          weightKg: row[39] ? parseInt(row[39]) : null,
-          status: "WAITING"
-        });
-      }
-      
-      var reviewSheet = ss.getSheetByName("Review Owner");
-      if (reviewSheet) {
-        var reviewValues = reviewSheet.getDataRange().getValues();
-        var reviewMap = {};
-        for (var j = 1; j < reviewValues.length; j++) {
-          var rRow = reviewValues[j];
-          var sId = String(rRow[1]);
-          if (sId) {
-             reviewMap[sId] = {
-               status: String(rRow[3]),
-               commScore: String(rRow[4]),
-               skillScore: String(rRow[5]),
-               expScore: String(rRow[6]),
-               attitudeScore: String(rRow[7]),
-               leadershipScore: String(rRow[8]),
-               notes: String(rRow[9])
-             };
-          }
-        }
-        for (var k = 0; k < crewList.length; k++) {
-           var cId = crewList[k].submissionId;
-           if (reviewMap[cId]) {
-              crewList[k].status = reviewMap[cId].status;
-              crewList[k].review = reviewMap[cId];
-           }
-        }
-      }
-      
-      return ContentService
-        .createTextOutput(JSON.stringify({
-          success: true,
-          total: crewList.length,
-          lastSync: new Date().toISOString(),
-          crew: crewList
-        }))
-        .setMimeType(ContentService.MimeType.JSON);
-        
-    } catch (e) {
-      return ContentService
-        .createTextOutput(JSON.stringify({
-          success: false,
-          error: e.toString()
-        }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-  }
-
   return ContentService.createTextOutput("Crew Data System Endpoint (PT ALINDA PRIMA SENTOSA) is Active.");
 }
 
@@ -506,40 +312,4 @@ function onInstall(e) {
 }
 function onOpen(e) {
   initializeSampleData();
-  deduplicateSheetRows();
-  try {
-    SpreadsheetApp.getUi().createMenu('🚢 Crew Management System')
-      .addItem('🧹 Bersihkan Semua Baris Duplikat', 'deduplicateSheetRows')
-      .addToUi();
-  } catch (err) {
-    Logger.log("Menu UI notice: " + err.toString());
-  }
-}
-
-function deduplicateSheetRows() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
-  var values = sheet.getDataRange().getValues();
-  var seenMap = {};
-  var rowsToDelete = [];
-
-  for (var i = values.length - 1; i >= 1; i--) {
-    var subId = String(values[i][1] || "").trim().toLowerCase();
-    var name = String(values[i][2] || "").trim().toLowerCase();
-    var key = subId ? subId : name;
-
-    if (!key) continue;
-
-    if (seenMap[key]) {
-      rowsToDelete.push(i + 1);
-    } else {
-      seenMap[key] = true;
-    }
-  }
-
-  rowsToDelete.forEach(function(rIndex) {
-    sheet.deleteRow(rIndex);
-  });
-
-  return rowsToDelete.length;
 }

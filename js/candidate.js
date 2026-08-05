@@ -2,7 +2,7 @@
 
 function goToStep(step) {
   if (step > window.currentStep && !validateStep(window.currentStep)) {
-    alert(t('alertValidationErr'));
+    alert(i18n[window.currentLang].alertValidationErr);
     return;
   }
   window.currentStep = step;
@@ -17,7 +17,7 @@ function nextStep() {
       if (window.currentStep === 5) renderReviewSummary();
     }
   } else {
-    alert(t('alertValidationErr'));
+    alert(i18n[window.currentLang].alertValidationErr);
   }
 }
 
@@ -61,23 +61,11 @@ function validateStep(step) {
     const rank = document.getElementById('rankPosition').value;
     const pob = document.getElementById('pob').value.trim();
     const dob = document.getElementById('dob').value;
-    const heightCm = document.getElementById('heightCm').value;
-    const weightKg = document.getElementById('weightKg').value;
     const phone = document.getElementById('phoneNo').value.trim();
     const fam1Name = document.getElementById('fam1Name').value.trim();
     const fam1Phone = document.getElementById('fam1Phone').value.trim();
     const fam2Name = document.getElementById('fam2Name').value.trim();
     const fam2Phone = document.getElementById('fam2Phone').value.trim();
-    
-    if (!heightCm || heightCm < 130 || heightCm > 220) {
-      alert(t('errHeightRequired'));
-      return false;
-    }
-    if (!weightKg || weightKg < 35 || weightKg > 180) {
-      alert(t('errWeightRequired'));
-      return false;
-    }
-
     return fullName && rank && pob && dob && phone && fam1Name && fam1Phone && fam2Name && fam2Phone;
   }
   if (step === 3) {
@@ -126,8 +114,6 @@ function getFormData() {
     gender: document.getElementById('gender').value,
     pob: document.getElementById('pob').value.trim(),
     dob: document.getElementById('dob').value,
-    heightCm: parseInt(document.getElementById('heightCm').value) || null,
-    weightKg: parseInt(document.getElementById('weightKg').value) || null,
     religion: document.getElementById('religion').value,
     maritalStatus: document.getElementById('maritalStatus').value,
     bloodType: document.getElementById('bloodType').value,
@@ -148,41 +134,10 @@ function getFormData() {
     fam2Relation: document.getElementById('fam2Relation').value.trim(),
     fam2Phone: document.getElementById('fam2Phone').value.trim(),
     expLongline: expRadio ? expRadio.value : "",
-    vesselName1: (document.getElementById('vesselName1')?.value || '').trim(),
-    vesselName2: (document.getElementById('vesselName2')?.value || '').trim(),
-    vesselName3: (document.getElementById('vesselName3')?.value || '').trim(),
-    signOnOff1: (document.getElementById('signOnOff1')?.value || '').trim(),
-    signOnOff2: (document.getElementById('signOnOff2')?.value || '').trim(),
-    signOnOff3: (document.getElementById('signOnOff3')?.value || '').trim(),
-    placementCountry1: document.getElementById('placementCountry1')?.value || '',
-    placementCountry2: document.getElementById('placementCountry2')?.value || '',
-    placementCountry3: document.getElementById('placementCountry3')?.value || '',
-    vesselName: (() => {
-      const v1 = (document.getElementById('vesselName1')?.value || '').trim();
-      const v2 = (document.getElementById('vesselName2')?.value || '').trim();
-      const v3 = (document.getElementById('vesselName3')?.value || '').trim();
-      const s1 = (document.getElementById('signOnOff1')?.value || '').trim();
-      const s2 = (document.getElementById('signOnOff2')?.value || '').trim();
-      const s3 = (document.getElementById('signOnOff3')?.value || '').trim();
-      const list = [];
-      if (v1 || s1) list.push(`${v1}${s1 ? ' (' + s1 + ')' : ''}`);
-      if (v2 || s2) list.push(`${v2}${s2 ? ' (' + s2 + ')' : ''}`);
-      if (v3 || s3) list.push(`${v3}${s3 ? ' (' + s3 + ')' : ''}`);
-      if (list.length === 0) return (document.getElementById('vesselName')?.value || '').trim();
-      return list.length === 1 ? list[0] : list.map((v, i) => `${i+1}. ${v}`).join(' | ');
-    })(),
-    signOnOff: [
-      (document.getElementById('signOnOff1')?.value || '').trim(),
-      (document.getElementById('signOnOff2')?.value || '').trim(),
-      (document.getElementById('signOnOff3')?.value || '').trim()
-    ].filter(s => s.length > 0).map((s, i, arr) => arr.length === 1 ? s : `${i+1}. ${s}`).join(' | '),
+    vesselName: document.getElementById('vesselName').value.trim(),
     vesselTypeLongline: document.getElementById('vesselTypeLongline').value,
     vesselOrigin: document.getElementById('vesselOrigin').value,
-    placementCountry: [
-      document.getElementById('placementCountry1')?.value || '',
-      document.getElementById('placementCountry2')?.value || '',
-      document.getElementById('placementCountry3')?.value || ''
-    ].filter(p => p.length > 0).map((p, i, arr) => arr.length === 1 ? p : `${i+1}. ${p}`).join(' | ') || (document.getElementById('placementCountry')?.value || ''),
+    placementCountry: document.getElementById('placementCountry').value,
     skillGeneral: skillsChecked,
     passportNo: document.getElementById('passportNo').value.trim(),
     passportExpiry: document.getElementById('passportExpiry').value,
@@ -201,53 +156,50 @@ function getFormData() {
   };
 }
 
-async function submitCrewForm() {
+function submitCrewForm() {
   if (!document.getElementById('agreeTermsCheck').checked) {
-    alert(t('alertValidationErr'));
+    alert("Harap centang persetujuan keabsahan data.");
     return;
   }
   const formData = getFormData();
   
-  const btn = document.querySelector('.btn-submit');
-  if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SYNCING TO CLOUD...';
-  
-  try {
-    if (window.editingSubmissionId) {
-      formData.submissionId = window.editingSubmissionId;
-      formData.action = 'update_crew';
-      const res = await window.api.updateCrew(formData);
-      if (!res.success) throw new Error(res.error || "Update Failed on Cloud");
-    } else {
-      formData.submissionId = "CRW-" + Date.now();
-      formData.action = 'submit_crew';
-      const res = await window.api.submitCrew(formData);
-      if (!res.success) throw new Error(res.error || "Submit Failed on Cloud");
-    }
-    
-    // Cloud Refresh (ensures Cache and UI get the exact latest truth)
-    await window.api.syncNow();
-    
-    if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
-    if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
-
-    alert(window.editingSubmissionId ? t('alertUpdateSuccess') : t('alertSaveSuccess'));
-    
-    window.editingSubmissionId = null;
-    clearDraft(true);
-    switchTab('directory');
-    
-  } catch (err) {
-    console.error("Cloud Sync Error:", err);
-    alert("Submission Failed: " + err.message);
-  } finally {
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
+  if (window.editingSubmissionId) {
+    formData.submissionId = window.editingSubmissionId;
+    formData.action = 'update_crew';
+    const idx = window.crewDatabase.findIndex(c => c.submissionId === window.editingSubmissionId);
+    if (idx !== -1) window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...formData };
+  } else {
+    formData.submissionId = "CRW-" + Date.now();
+    formData.action = 'submit_crew';
+    window.crewDatabase.unshift(formData);
   }
+  
+  if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+  
+  if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
+  if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+
+  fetch(getGasUrl(), {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(formData)
+  }).catch(err => console.error("GAS post sync:", err));
+
+  alert(window.editingSubmissionId ? "Data kru berhasil diupdate!" : i18n[window.currentLang].alertSubmitSuccess);
+  
+  window.editingSubmissionId = null;
+  const btn = document.querySelector('.btn-submit');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
+  
+  clearDraft();
+  switchTab('directory');
 }
 
 function saveDraft() {
   const data = getFormData();
   localStorage.setItem('crew_app_draft', JSON.stringify(data));
-  alert(t('alertSaveSuccess'));
+  alert("Draf formulir berhasil disimpan!");
 }
 
 function loadSavedDraft() {
@@ -260,27 +212,9 @@ function loadSavedDraft() {
   } catch(e) {}
 }
 
-function clearDraft(silent = false) {
+function clearDraft() {
   localStorage.removeItem('crew_app_draft');
-  const form = document.getElementById('crewForm');
-  if (form) form.reset();
-  
-  window.editingSubmissionId = null;
-  window.uploadedDocuments = { passport: [], ktp: [], cdc: [], medical: [], cert: [], photo: [] };
-  
-  // Clear galleries
-  ['passport', 'ktp', 'cdc', 'medical', 'cert', 'photo'].forEach(doc => {
-    const gal = document.getElementById('gallery' + doc.charAt(0).toUpperCase() + doc.slice(1));
-    if (gal) gal.innerHTML = '';
-  });
-
-  // Reset wizard to step 1
-  window.currentStep = 1;
-  if (typeof updateWizardProgress === 'function') updateWizardProgress();
-  
-  if (!silent) {
-    alert(t ? t('alertDeleteSuccess') : 'Draft cleared.');
-  }
+  document.getElementById('crewForm').reset();
 }
 
 function setupDragAndDrop() {
@@ -299,73 +233,27 @@ function setupDragAndDrop() {
 function triggerFileInput(id) { document.getElementById(id).click(); }
 function handleFileSelect(e, docType) { handleFiles(e.target.files, docType); }
 
-function compressAndReadImage(file, callback) {
-  if (!file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => callback(e.target.result);
-    reader.readAsDataURL(file);
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      const maxDim = 1200;
-      let width = img.width;
-      let height = img.height;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.75));
-    };
-    img.onerror = () => callback(e.target.result);
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
 function handleFiles(files, docType) {
   Array.from(files).forEach(file => {
-    compressAndReadImage(file, (compressedBase64) => {
-      window.uploadedDocuments[docType].push({ name: file.name, base64: compressedBase64 });
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      window.uploadedDocuments[docType].push({ name: file.name, base64: event.target.result });
       renderGallery(docType);
-    });
+    };
+    reader.readAsDataURL(file);
   });
 }
 
 function renderGallery(docType) {
   const container = document.getElementById(`gallery${docType.charAt(0).toUpperCase() + docType.slice(1)}`);
   if (!container) return;
-  container.innerHTML = window.uploadedDocuments[docType].map((doc, idx) => {
-    let imgSrc = doc.base64;
-    let clickAction = `onclick="openImagePreview('${doc.base64}')"`;
-    if (doc.isDriveUrl) {
-      if (imgSrc.includes('open?id=')) imgSrc = imgSrc.replace('open?id=', 'uc?export=view&id=');
-      if (imgSrc.includes('file/d/')) {
-         const match = imgSrc.match(/file\/d\/([a-zA-Z0-9_-]+)/);
-         if (match) imgSrc = `https://drive.google.com/uc?export=view&id=${match[1]}`;
-      }
-      clickAction = `onclick="window.open('${doc.base64}', '_blank')"`;
-    }
-    return `
+  container.innerHTML = window.uploadedDocuments[docType].map((doc, idx) => `
     <div class="thumb-item">
-      <img src="${imgSrc}" ${clickAction} onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'50\\' height=\\'50\\'><text x=\\'5\\' y=\\'25\\' font-size=\\'10\\'>Drive Link</text></svg>';">
+      <img src="${doc.base64}" onclick="openImagePreview('${doc.base64}')">
       <button class="thumb-remove-btn" onclick="removeDoc('${docType}', ${idx})">&times;</button>
       <div class="thumb-label">${escapeHTML(doc.name)}</div>
     </div>
-    `;
-  }).join('');
+  `).join('');
 
   const card = document.getElementById(`docCard${docType.charAt(0).toUpperCase() + docType.slice(1)}`);
   if (card) {
@@ -389,7 +277,7 @@ function openCameraModal(docType) {
       window.cameraStream = stream;
       document.getElementById('cameraVideo').srcObject = stream;
     }).catch(err => {
-      alert(t('alertNoCamera'));
+      alert("Kamera tidak dapat diakses.");
       closeCameraModal();
     });
 }
@@ -402,21 +290,9 @@ function closeCameraModal() {
 function takeCameraSnap() {
   const video = document.getElementById('cameraVideo');
   const canvas = document.getElementById('cameraCanvas');
-  const maxDim = 1200;
-  let width = video.videoWidth || 1280;
-  let height = video.videoHeight || 720;
-  if (width > maxDim || height > maxDim) {
-    if (width > height) {
-      height = Math.round((height * maxDim) / width);
-      width = maxDim;
-    } else {
-      width = Math.round((width * maxDim) / height);
-      height = maxDim;
-    }
-  }
-  canvas.width = width; canvas.height = height;
-  canvas.getContext('2d').drawImage(video, 0, 0, width, height);
-  window.uploadedDocuments[window.activeCameraDocType].push({ name: `camera_${Date.now()}.jpg`, base64: canvas.toDataURL('image/jpeg', 0.75) });
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  window.uploadedDocuments[window.activeCameraDocType].push({ name: `camera_${Date.now()}.jpg`, base64: canvas.toDataURL('image/jpeg') });
   renderGallery(window.activeCameraDocType);
   closeCameraModal();
 }
