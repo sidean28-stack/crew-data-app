@@ -355,7 +355,7 @@ async function handleExcelImport(event) {
   const workbook = XLSX.read(data, { type: 'array' });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
-  const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+  const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: "yyyy-mm-dd" });
 
   if (rows.length === 0) {
     alert("Excel kosong.");
@@ -363,36 +363,57 @@ async function handleExcelImport(event) {
   }
 
   const mapKey = (headerName) => {
-    headerName = headerName.toLowerCase();
+    headerName = String(headerName || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    if (headerName.includes("nama mandarin") || headerName.includes("chinese name") || headerName.includes("中文姓名")) return "chineseName";
     if (headerName.includes("id submisi") || headerName === "id") return "submissionId";
-    if (headerName.includes("nama lengkap") || headerName.includes("full name") || headerName.includes("nama")) return "fullName";
-    if (headerName.includes("nama mandarin") || headerName.includes("chinese")) return "chineseName";
+    if ((headerName.includes("nama lengkap") && !headerName.includes("keluarga")) || headerName.includes("full name")) return "fullName";
     if (headerName.includes("jabatan") || headerName.includes("posisi")) return "rankPosition";
-    if (headerName.includes("hp") || headerName.includes("wa") || headerName.includes("phone")) return "phoneNo";
-    if (headerName.includes("alamat")) return "streetAddress";
-    if (headerName.includes("keluarga 1") && !headerName.includes("telp")) return "fam1Name";
-    if (headerName.includes("telp keluarga 1")) return "fam1Phone";
-    if (headerName.includes("keluarga 2") && !headerName.includes("telp")) return "fam2Name";
-    if (headerName.includes("telp keluarga 2")) return "fam2Phone";
-    if (headerName.includes("pengalaman") || headerName.includes("longline")) return "expLongline";
+    if (headerName.includes("tempat lahir") || headerName.includes("出生地")) return "pob";
+    if (headerName.includes("tanggal lahir") || headerName.includes("出生日期")) return "dob";
+    if (headerName.includes("jenis kelamin") || headerName.includes("性别")) return "gender";
+    if (headerName.includes("agama") || headerName.includes("宗教")) return "religion";
+    if (headerName.includes("status perkawinan") || headerName.includes("婚姻状况")) return "maritalStatus";
+    if (headerName.includes("golongan darah") || headerName.includes("血型")) return "bloodType";
+    if (headerName.includes("tinggi badan") || headerName.includes("身高")) return "heightCm";
+    if (headerName.includes("berat badan") || headerName.includes("体重")) return "weightKg";
+    if (headerName.includes("ukuran baju") || headerName.includes("服装尺寸")) return "shirtSize";
+    if (headerName.includes("ukuran sepatu") || headerName.includes("鞋码")) return "shoeSize";
+    if (headerName.includes("rt/rw") || headerName.includes("社区编号")) return "rtRw";
+    if (headerName.includes("kelurahan") || headerName.includes("desa") || headerName.includes("村镇")) return "village";
+    if (headerName.includes("kecamatan") || headerName === "区") return "district";
+    if (headerName.includes("kabupaten") || headerName.includes("kota") || headerName.includes("市县")) return "city";
+    if (headerName.includes("provinsi") || headerName === "省") return "province";
+    if (headerName.includes("alamat jalan") || headerName.includes("street address") || headerName.includes("街道地址")) return "streetAddress";
+    if (headerName.includes("keluarga 2") || headerName.includes("第二紧急联系人姓名")) {
+      if (headerName.includes("nomor") || headerName.includes("telp") || headerName.includes("电话")) return "fam2Phone";
+      if (headerName.includes("hubungan") || headerName.includes("关系")) return "fam2Relation";
+      return "fam2Name";
+    }
+    if (headerName.includes("nama lengkap keluarga") || headerName.includes("家庭联系1")) return "fam1Name";
+    if (headerName.includes("status dalam keluarga") || headerName.includes("家庭地位")) return "fam1Relation";
+    if (headerName.includes("nomor telp / whatsapp aktif") || headerName.includes("有效手机号码")) return "fam1Phone";
+    if (headerName.includes("nomor telp") || headerName.includes("nomor whatsapp") || headerName.includes("phone")) return "phoneNo";
+    if (headerName.includes("exp longline") || headerName.includes("pengalaman longline")) return "expLongline";
     if (headerName.includes("nama kapal")) return "vesselName";
     if (headerName.includes("jenis kapal")) return "vesselTypeLongline";
     if (headerName.includes("asal kapal")) return "vesselOrigin";
     if (headerName.includes("penempatan") || headerName.includes("negara")) return "placementCountry";
     if (headerName.includes("skill")) return "skillGeneral";
-    if (headerName.includes("paspor") || headerName.includes("passport")) {
-      if (headerName.includes("expired") || headerName.includes("exp")) return "passportExpiry";
+    if (headerName.includes("paspor") || headerName.includes("passpor") || headerName.includes("passport")) {
+      if (headerName.includes("expired") || headerName.includes("exp") || headerName.includes("masa berlaku") || headerName.includes("有效期") || headerName.includes("到期日")) return "passportExpiry";
       return "passportNo";
     }
     if (headerName.includes("seaman book") || headerName.includes("cdc") || headerName.includes("buku pelaut")) {
-      if (headerName.includes("expired") || headerName.includes("exp")) return "cdcExpiry";
+      if (headerName.includes("expired") || headerName.includes("exp") || headerName.includes("masa berlaku") || headerName.includes("有效期")) return "cdcExpiry";
       return "cdcNo";
     }
-    if (headerName.includes("bst")) return "bstExpiry";
-    if (headerName.includes("kk")) return "kkStatus";
-    if (headerName.includes("mcu")) return "medicalStatus";
-    if (headerName.includes("baju")) return "shirtSize";
-    if (headerName.includes("sepatu")) return "shoeSize";
+    if (headerName.includes("bst") && (headerName.includes("masa berlaku") || headerName.includes("expired") || headerName.includes("有效期"))) return "bstExpiry";
+    if (headerName.includes("status kartu keluarga") || headerName.includes("户口簿状态")) return "kkStatus";
+    if (headerName.includes("status akte") || headerName.includes("出生证明状态")) return "akteStatus";
+    if (headerName.includes("status ijazah") || headerName.includes("学历证明状态")) return "ijazahLevel";
+    if (headerName.includes("status medical") || headerName.includes("体检状态")) return "medicalStatus";
+    if (headerName.includes("status surat izin wali") || headerName.includes("监护人同意书状态")) return "waliStatus";
+    if (headerName.includes("status skck") || headerName.includes("无犯罪记录证明状态")) return "skckStatus";
     return null;
   };
 
@@ -407,7 +428,7 @@ async function handleExcelImport(event) {
     
     for (let key in row) {
       const mappedKey = mapKey(key);
-      if (mappedKey && row[key]) {
+      if (mappedKey && row[key] && !crewData[mappedKey]) {
         crewData[mappedKey] = String(row[key]).trim();
       }
     }
