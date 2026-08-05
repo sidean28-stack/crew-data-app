@@ -11,10 +11,10 @@ function renderCatalogGrid() {
 
   const zh = window.currentLang === 'zh';
   const text = zh ? {
-    empty:'没有符合条件的船员候选人。', photo:'船员照片', code:'船员编号：', experience:'延绳钓经验：', vessel:'船型：',
+    empty:'没有符合条件的船员候选人。', photo:'船员照片', code:'船员编号：', experience:'延绳钓经验：', vessel:'船型：', physique:'身高 / 体重：',
     view:'查看资料与评分', waiting:'待审核', selected:'已选中', priority:'优先', rejected:'未选中'
   } : {
-    empty:'Tidak ada kandidat kru yang cocok.', photo:'CREW PHOTO', code:'Kode Kru:', experience:'Pengalaman:', vessel:'Kapal:',
+    empty:'Tidak ada kandidat kru yang cocok.', photo:'CREW PHOTO', code:'Kode Kru:', experience:'Pengalaman:', vessel:'Kapal:', physique:'Tinggi / Berat:',
     view:'Lihat Profil & Nilai', waiting:'Menunggu', selected:'Terpilih', priority:'Prioritas', rejected:'Ditolak'
   };
   const filtered = window.crewDatabase.filter(crew => {
@@ -65,6 +65,7 @@ function renderCatalogGrid() {
           <div class="crew-spec-item"><span class="crew-spec-label">${text.code}</span><span class="crew-spec-value">${escapeHTML(crew.submissionId)}</span></div>
           <div class="crew-spec-item"><span class="crew-spec-label">${text.experience}</span><span class="crew-spec-value" style="color: var(--accent-amber);">${escapeHTML(crew.expLongline || '-')}</span></div>
           <div class="crew-spec-item"><span class="crew-spec-label">${text.vessel}</span><span class="crew-spec-value">${escapeHTML(crew.vesselTypeLongline || '-')} (${escapeHTML(crew.vesselOrigin || '-')})</span></div>
+          <div class="crew-spec-item"><span class="crew-spec-label">${text.physique}</span><span class="crew-spec-value">${escapeHTML(crew.heightCm || '-')} ${zh ? '厘米' : 'cm'} / ${escapeHTML(crew.weightKg || '-')} ${zh ? '公斤' : 'kg'}</span></div>
         </div>
         <div class="crew-card-footer" style="display: flex; justify-content: space-between; gap: 8px;">
           <div style="padding: 6px 12px; border: 1px solid; border-radius: 4px; font-size: 0.8rem; font-weight: bold; ${escapeHTML(statusStyle)}">${escapeHTML(statusText)}</div>
@@ -87,12 +88,12 @@ function openCrewDetailModal(submissionId) {
   const address = isUnmasked ? crew.combinedAddress : '*** Masked ***';
   const zh = window.currentLang === 'zh';
   const t = zh ? {
-    profile:'船员资料与审核', info:'候选人资料', code:'船员编号：', chineseName:'中文姓名：', rank:'职务：', dob:'出生日期：',
+    profile:'船员资料与审核', info:'候选人资料', code:'船员编号：', chineseName:'中文姓名：', rank:'职务：', dob:'出生日期：', physique:'身高 / 体重：',
     experience:'延绳钓经验：', vessel:'最近船舶：', contact:'联系方式：', docs:'证件资料', photo:'照片', passport:'护照', cdc:'船员手册', medical:'体检证明',
     score:'面试评分（1-10）', communication:'沟通能力', skill:'专业技能', exp:'工作经验', attitude:'工作态度', leadership:'领导能力',
     notes:'面试备注：', notesPlaceholder:'请填写面试备注...', status:'选拔状态：', waiting:'待审核', selected:'已选中', priority:'优先', rejected:'未选中', save:'保存审核与决定'
   } : {
-    profile:'Profil & Penilaian', info:'Informasi Kandidat', code:'Kode Kru:', chineseName:'Nama Mandarin:', rank:'Jabatan:', dob:'Umur/Tgl Lahir:',
+    profile:'Profil & Penilaian', info:'Informasi Kandidat', code:'Kode Kru:', chineseName:'Nama Mandarin:', rank:'Jabatan:', dob:'Umur/Tgl Lahir:', physique:'Tinggi / Berat:',
     experience:'Pengalaman:', vessel:'Kapal Terakhir:', contact:'Kontak:', docs:'Dokumen', photo:'Foto', passport:'Paspor', cdc:'Buku Pelaut', medical:'MCU',
     score:'Nilai Interview (1-10)', communication:'Komunikasi', skill:'Skill / Teknik', exp:'Pengalaman', attitude:'Sikap', leadership:'Kepemimpinan',
     notes:'Catatan Interview:', notesPlaceholder:'Tambahkan catatan interview di sini...', status:'Status Seleksi:', waiting:'Menunggu', selected:'Terpilih', priority:'Prioritas', rejected:'Ditolak', save:'Simpan Review & Keputusan'
@@ -122,6 +123,7 @@ function openCrewDetailModal(submissionId) {
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.chineseName}</td><td lang="zh">${escapeHTML(chineseName || '-')}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.rank}</td><td>${escapeHTML(crew.rankPosition)}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.dob}</td><td>${escapeHTML(crew.dob)}</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t.physique}</td><td>${escapeHTML(crew.heightCm || '-')} ${zh ? '厘米' : 'cm'} / ${escapeHTML(crew.weightKg || '-')} ${zh ? '公斤' : 'kg'}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.experience}</td><td>${escapeHTML(crew.expLongline)}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.vessel}</td><td>${escapeHTML(crew.vesselName)} (${escapeHTML(crew.vesselTypeLongline)})</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.contact}</td><td>${escapeHTML(displayPhone)}</td></tr>
