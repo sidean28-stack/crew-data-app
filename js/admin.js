@@ -150,43 +150,164 @@ function executeDeleteCrew() {
   closeDeleteModal();
 }
 
+function populateAddressFieldsForEdit(crew) {
+  const streetInput = document.getElementById('streetAddress');
+  const rtRwInput = document.getElementById('rtRw');
+  const villageInput = document.getElementById('village');
+  const districtInput = document.getElementById('district');
+  const cityInput = document.getElementById('city');
+  const provinceInput = document.getElementById('province');
+
+  let street = crew.streetAddress || '';
+  let rtRw = crew.rtRw || '';
+  let village = crew.village || '';
+  let district = crew.district || '';
+  let city = crew.city || '';
+  let province = crew.province || '';
+
+  const combined = (crew.combinedAddress || '').trim();
+
+  if ((!street || street === '') && combined !== '') {
+    let remaining = combined;
+
+    if (remaining.includes(' Prov: ')) {
+      const parts = remaining.split(' Prov: ');
+      province = parts[1].trim();
+      remaining = parts[0];
+    }
+    if (remaining.includes(' Kab/Kota: ')) {
+      const parts = remaining.split(' Kab/Kota: ');
+      city = parts[1].trim();
+      remaining = parts[0];
+    }
+    if (remaining.includes(' Kec: ')) {
+      const parts = remaining.split(' Kec: ');
+      district = parts[1].trim();
+      remaining = parts[0];
+    }
+    if (remaining.includes(' Kel/Desa: ')) {
+      const parts = remaining.split(' Kel/Desa: ');
+      village = parts[1].trim();
+      remaining = parts[0];
+    }
+    if (remaining.includes(' RT/RW: ')) {
+      const parts = remaining.split(' RT/RW: ');
+      rtRw = parts[1].trim();
+      remaining = parts[0];
+    }
+
+    street = remaining.trim() || combined;
+  }
+
+  if (streetInput) streetInput.value = street;
+  if (rtRwInput) rtRwInput.value = rtRw;
+  if (villageInput) villageInput.value = village;
+  if (districtInput) districtInput.value = district;
+  if (cityInput) cityInput.value = city;
+  if (provinceInput) provinceInput.value = province;
+}
+
 function editCrew(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
 
   window.editingSubmissionId = submissionId;
-  if(typeof switchTab === 'function') switchTab('form');
+  if (typeof switchTab === 'function') switchTab('form');
 
-  const fields = ['fullName', 'chineseName', 'rankPosition', 'gender', 'pob', 'dob', 'religion', 'maritalStatus', 'bloodType', 'shirtSize', 'shoeSize', 'streetAddress', 'rtRw', 'village', 'district', 'city', 'province', 'phoneNo', 'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry', 'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus', 'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus'];
+  const fields = ['fullName', 'chineseName', 'rankPosition', 'gender', 'pob', 'dob', 'religion', 'maritalStatus', 'bloodType', 'shirtSize', 'shoeSize', 'streetAddress', 'rtRw', 'village', 'district', 'city', 'province', 'phoneNo', 'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone', 'vesselName1', 'signOnOff1', 'placementCountry1', 'vesselName2', 'signOnOff2', 'placementCountry2', 'vesselName3', 'signOnOff3', 'placementCountry3', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry', 'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus', 'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus', 'heightCm', 'weightKg'];
 
   fields.forEach(id => {
     const el = document.getElementById(id);
-    if (el && crew[id] !== undefined) el.value = crew[id];
+    if (el && crew[id] !== undefined && crew[id] !== null) {
+      if (el.type === 'date') {
+        el.value = typeof formatDateForInput === 'function' ? formatDateForInput(crew[id]) : crew[id];
+      } else {
+        el.value = crew[id];
+      }
+    }
   });
 
+  // Presisi Alamat (BUG 2 Fix)
+  populateAddressFieldsForEdit(crew);
+
   const expRadios = document.getElementsByName('expLongline');
-  for(let i=0; i<expRadios.length; i++){
-    if(expRadios[i].value === crew.expLongline) {
-       expRadios[i].checked = true;
-       break;
+  for (let i = 0; i < expRadios.length; i++) {
+    if (expRadios[i].value === crew.expLongline) {
+      expRadios[i].checked = true;
+      break;
     }
   }
 
   const skillCheckboxes = document.getElementsByName('skillGeneral');
-  const skills = Array.isArray(crew.skillGeneral) ? crew.skillGeneral : (crew.skillGeneral ? crew.skillGeneral.split(',').map(s=>s.trim()) : []);
-  for(let i=0; i<skillCheckboxes.length; i++){
+  const skills = Array.isArray(crew.skillGeneral) ? crew.skillGeneral : (crew.skillGeneral ? crew.skillGeneral.split(',').map(s => s.trim()) : []);
+  for (let i = 0; i < skillCheckboxes.length; i++) {
     skillCheckboxes[i].checked = skills.includes(skillCheckboxes[i].value);
   }
 
+  // Presisi Berkas Upload Gambar (BUG 4 Fix)
   if (crew.documents) {
-    window.uploadedDocuments = JSON.parse(JSON.stringify(crew.documents));
-    const docTypes = ['passport', 'ktp', 'cdc', 'photo', 'medical', 'bst', 'skck', 'kk', 'akte', 'cert1', 'cert2'];
-    docTypes.forEach(dt => { if(typeof renderGallery === 'function' && window.uploadedDocuments[dt]) renderGallery(dt); });
+    window.uploadedDocuments = {
+      passport: [], ktp: [], cdc: [], photo: [], medical: [], cert: [], bst: [], skck: [], kk: [], akte: []
+    };
+
+    Object.keys(crew.documents).forEach(dk => {
+      const list = crew.documents[dk];
+      if (Array.isArray(list)) {
+        window.uploadedDocuments[dk] = list.map(item => {
+          if (typeof item === 'string') {
+            return { name: dk.toUpperCase() + ' File', url: item, base64: item };
+          } else if (item && typeof item === 'object') {
+            return {
+              name: item.name || (dk.toUpperCase() + ' File'),
+              url: item.url || item.base64 || '',
+              base64: item.base64 || item.url || ''
+            };
+          }
+          return null;
+        }).filter(Boolean);
+      }
+    });
+
+    ['passport', 'ktp', 'cdc', 'photo', 'medical', 'cert'].forEach(dt => {
+      if (typeof renderGallery === 'function') renderGallery(dt);
+    });
   }
 
+  // Reset wizard ke Step 1 & Update UI
+  window.currentStep = 1;
+  if (typeof updateWizardProgress === 'function') updateWizardProgress();
+
   const btn = document.querySelector('.btn-submit');
-  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> UPDATE DATA';
-  window.scrollTo(0,0);
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> UPDATE DATA KRU';
+
+  // Mode Edit Banner (BUG 3 Fix)
+  let banner = document.getElementById('editModeBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'editModeBanner';
+    banner.style.cssText = 'background: #fef3c7; color: #92400e; padding: 12px 16px; border-radius: 8px; font-weight: 600; margin-bottom: 16px; border-left: 4px solid #f59e0b; display: flex; justify-content: space-between; align-items: center;';
+    const formCard = document.querySelector('#formTabSection .form-card');
+    if (formCard) formCard.prepend(banner);
+  }
+  if (banner) {
+    banner.style.display = 'flex';
+    banner.innerHTML = `
+      <span><i class="fa-solid fa-pen-to-square"></i> <strong>Mode Edit Admin Aktif (ID: ${crew.submissionId})</strong> — Anda bebas mengubah data di Step 1 - Step 5 tanpa batasan.</span>
+      <button onclick="cancelEditMode()" style="background: transparent; border: none; color: #92400e; font-size: 1.1rem; cursor: pointer; font-weight: bold;">&times;</button>
+    `;
+  }
+
+  window.scrollTo(0, 0);
+}
+
+function cancelEditMode() {
+  window.editingSubmissionId = null;
+  const banner = document.getElementById('editModeBanner');
+  if (banner) banner.style.display = 'none';
+  const btn = document.querySelector('.btn-submit');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
+  if (typeof clearDraft === 'function') clearDraft();
+  if (typeof switchTab === 'function') switchTab('directory');
 }
 
 let pendingExcelData = [];
@@ -365,17 +486,70 @@ async function confirmExcelImport() {
   }, 2000);
 }
 
-function exportDirectoryCSV() {
-  if (window.crewDatabase.length === 0) { alert("Tidak ada data untuk diekspor."); return; }
-  let csvContent = "data:text/csv;charset=utf-8,ID Submisi,Nama Lengkap,Nama Mandarin,Jabatan,No HP,Alamat,Pengalaman Longline,Jenis Kapal,Asal Kapal,Negara Penempatan,Paspor Expired,CDC Expired,Status\n";
-  window.crewDatabase.forEach(c => {
-    const row = [c.submissionId, `"${c.fullName}"`, `"${c.chineseName || ''}"`, `"${c.rankPosition}"`, `"${c.phoneNo}"`, `"${c.combinedAddress || c.streetAddress}"`, `"${c.expLongline}"`, `"${c.vesselTypeLongline}"`, `"${c.vesselOrigin}"`, `"${c.placementCountry}"`, `"${c.passportExpiry}"`, `"${c.cdcExpiry}"`, `"${c.status || 'WAITING'}"`].join(",");
-    csvContent += row + "\n";
+function exportDirectoryExcel() {
+  if (!window.crewDatabase || window.crewDatabase.length === 0) { 
+    alert("Tidak ada data kru untuk diekspor."); 
+    return; 
+  }
+
+  const exportData = window.crewDatabase.map(c => {
+    let skillsText = '-';
+    if (Array.isArray(c.skillGeneral) && c.skillGeneral.length > 0) {
+      skillsText = c.skillGeneral.join(', ');
+    } else if (c.skillGeneral) {
+      skillsText = c.skillGeneral;
+    }
+
+    return {
+      "ID Submisi": c.submissionId || '',
+      "Nama Lengkap": c.fullName || '',
+      "Nama Mandarin (中文名)": c.chineseName || '',
+      "Jabatan / Posisi": c.rankPosition || '',
+      "No. HP / WA": c.phoneNo || '',
+      "Alamat Lengkap": c.combinedAddress || c.streetAddress || '',
+      "Kontak Darurat 1": (c.fam1Name || '') + (c.fam1Relation ? ' (' + c.fam1Relation + ')' : ''),
+      "Telp Darurat 1": c.fam1Phone || '',
+      "Kontak Darurat 2": (c.fam2Name || '') + (c.fam2Relation ? ' (' + c.fam2Relation + ')' : ''),
+      "Telp Darurat 2": c.fam2Phone || '',
+      "Pengalaman Longline": c.expLongline || '',
+      "Nama Kapal 1-3": c.vesselName || '',
+      "Sign On/Off 1-3": c.signOnOff || '',
+      "Jenis Kapal": c.vesselTypeLongline || '',
+      "Asal Kapal": c.vesselOrigin || '',
+      "Negara Penempatan 1-3": c.placementCountry || '',
+      "Skill Umum": skillsText,
+      "No. Paspor": c.passportNo || '',
+      "Expired Paspor": c.passportExpiry || '',
+      "No. Buku Pelaut": c.cdcNo || '',
+      "Expired Buku Pelaut": c.cdcExpiry || '',
+      "Expired BST": c.bstExpiry || '',
+      "Status KK": c.kkStatus || '',
+      "Status Akte": c.akteStatus || '',
+      "Status Ijazah": c.ijazahLevel || '',
+      "Status MCU": c.medicalStatus || '',
+      "Status Surat Wali": c.waliStatus || '',
+      "Status SKCK": c.skckStatus || '',
+      "Ukuran Baju": c.shirtSize || '',
+      "Ukuran Sepatu": c.shoeSize || '',
+      "Tgl Lahir": c.dob || '',
+      "Jenis Kelamin": c.gender || '',
+      "Agama": c.religion || '',
+      "Status Operasional": c.operationalStatus || c.status || 'STAND_BY',
+      "Kandidat Kapal": c.vesselCandidate || '',
+      "Nama Kapal Penempatan": c.vesselAssigned || '',
+      "Tgl Terbang": c.flightDate || '',
+      "Tgl Finish": c.finishDate || '',
+      "Riwayat Status": c.historyStatus || '',
+      "Catatan Admin": c.adminNotes || ''
+    };
   });
-  const link = document.createElement("a");
-  link.setAttribute("href", encodeURI(csvContent));
-  link.setAttribute("download", `Crew_Longline_PT_ALINDA_${Date.now()}.csv`);
-  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Data Crew Longline");
+  
+  const fileName = `Data_Crew_Longline_PT_ALINDA_${Date.now()}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
 }
 
 // Print CV Pelaut Ikan Layout (Ultimate Trilingual Edition)

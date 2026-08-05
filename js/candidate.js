@@ -1,12 +1,13 @@
 // js/candidate.js
 
 function goToStep(step) {
-  if (step > window.currentStep && !validateStep(window.currentStep)) {
+  if (!window.editingSubmissionId && window.currentRole !== 'admin' && step > window.currentStep && !validateStep(window.currentStep)) {
     alert(i18n[window.currentLang].alertValidationErr);
     return;
   }
   window.currentStep = step;
   updateWizardProgress();
+  if (window.currentStep === 5) renderReviewSummary();
 }
 
 function nextStep() {
@@ -56,6 +57,11 @@ function updateWizardProgress() {
 }
 
 function validateStep(step) {
+  // Free step navigation for Admin or during Edit Mode
+  if (window.editingSubmissionId || window.currentRole === 'admin') {
+    return true;
+  }
+
   if (step === 1) {
     const fullName = document.getElementById('fullName').value.trim();
     const rank = document.getElementById('rankPosition').value;
@@ -247,13 +253,34 @@ function handleFiles(files, docType) {
 function renderGallery(docType) {
   const container = document.getElementById(`gallery${docType.charAt(0).toUpperCase() + docType.slice(1)}`);
   if (!container) return;
-  container.innerHTML = window.uploadedDocuments[docType].map((doc, idx) => `
-    <div class="thumb-item">
-      <img src="${doc.base64}" onclick="openImagePreview('${doc.base64}')">
-      <button class="thumb-remove-btn" onclick="removeDoc('${docType}', ${idx})">&times;</button>
-      <div class="thumb-label">${escapeHTML(doc.name)}</div>
-    </div>
-  `).join('');
+
+  if (!Array.isArray(window.uploadedDocuments[docType])) {
+    window.uploadedDocuments[docType] = [];
+  }
+
+  container.innerHTML = window.uploadedDocuments[docType].map((doc, idx) => {
+    let imgSrc = '';
+    let name = docType.toUpperCase() + ' File';
+
+    if (typeof doc === 'string') {
+      imgSrc = typeof resolveImgSrc === 'function' ? resolveImgSrc(doc) : doc;
+      name = docType.toUpperCase() + ' Uploaded';
+    } else if (doc && typeof doc === 'object') {
+      const rawSrc = doc.base64 || doc.url || doc.link || '';
+      imgSrc = typeof resolveImgSrc === 'function' ? resolveImgSrc(rawSrc) : rawSrc;
+      name = doc.name || (docType.toUpperCase() + ' File');
+    }
+
+    if (!imgSrc) return '';
+
+    return `
+      <div class="thumb-item">
+        <img src="${imgSrc}" onclick="openImagePreview('${imgSrc}')" alt="${escapeHTML(name)}">
+        <button class="thumb-remove-btn" onclick="removeDoc('${docType}', ${idx})">&times;</button>
+        <div class="thumb-label">${escapeHTML(name)}</div>
+      </div>
+    `;
+  }).join('');
 
   const card = document.getElementById(`docCard${docType.charAt(0).toUpperCase() + docType.slice(1)}`);
   if (card) {
