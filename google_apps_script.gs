@@ -6,9 +6,32 @@
  * ==============================================================================
  */
 
+var CREW_SPREADSHEET_ID = "1VY0gIxIyA4mf7yKNwXprgUaDvLIZuBeABlF8MVNMJlA";
+
+function getCrewSpreadsheet_() {
+  return SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(CREW_SPREADSHEET_ID);
+}
+
+function authorizeProduction() {
+  var sheet = getCrewSheet_(getCrewSpreadsheet_());
+  return { spreadsheetId: CREW_SPREADSHEET_ID, sheetName: sheet.getName() };
+}
+
+function migrateProductionSchema() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error("Server sedang sibuk. Silakan coba lagi.");
+  try {
+    return migrateCrewSchema_(getCrewSheet_(getCrewSpreadsheet_()));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  lock.tryLock(30000);
+  if (!lock.tryLock(30000)) {
+    return jsonResponse_({ success: false, message: "Server sedang sibuk. Silakan coba lagi." });
+  }
   
   try {
     var rawData = e.postData.contents;
@@ -20,7 +43,7 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({status:'success',message:'Endpoint alive'})).setMimeType(ContentService.MimeType.JSON);
   }
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getCrewSpreadsheet_();
 
     // 1. ACTION: BOOKING REQUEST FROM SHIP OWNER
     if (action === "booking_request") {
@@ -74,60 +97,31 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (action === "delete_crew") {
+      return deleteCrew_(ss, data);
+    }
+
+    if (action === "update_crew_status") {
+      return updateCrewStatus_(ss, data);
+    }
+
+    if (action === "migrate_crew_schema") {
+      return jsonResponse_({ success: true, migration: migrateCrewSchema_(getCrewSheet_(ss)) });
+    }
+
+    if (action !== "submit_crew" && action !== "update_crew") {
+      return jsonResponse_({ success: false, message: "Unknown action ignored: " + action });
+    }
+
 
     // 2. ACTION: CREW REGISTRATION SUBMISSION (Form Wizard)
-    var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
+    var sheet = getCrewSheet_(ss);
+    migrateCrewSchema_(sheet);
     
     // Ensure Header Row Exists (AppSheet Compatible)
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "Timestamp",
-        "ID Submisi",
-        "Nama Lengkap",
-        "Nama Mandarin (中文名)",
-        "Jabatan / Posisi",
-        "No. HP / WA",
-        "Alamat Lengkap (Combined)",
-        "Kontak Keluarga 1",
-        "Telp Keluarga 1",
-        "Kontak Keluarga 2",
-        "Telp Keluarga 2",
-        "Pengalaman Longline",
-        "Nama Kapal",
-        "Jenis Kapal",
-        "Asal Kapal",
-        "Negara Penempatan",
-        "Skill Umum",
-        "No. Paspor",
-        "Expired Paspor",
-        "No. Seaman Book",
-        "Expired Seaman Book",
-        "Expired BST",
-        "Status KK",
-        "Status Akte",
-        "Status Ijazah",
-        "Status MCU",
-        "Status Surat Wali",
-        "Status SKCK",
-        "Ukuran Baju",
-        "Ukuran Sepatu",
-        "Tgl Lahir / Gender / Agama",
-        "Folder Google Drive",
-        "URL Paspor (Drive)",
-        "URL KTP (Drive)",
-        "URL Seaman Book (Drive)",
-        "URL MCU (Drive)",
-        "URL Certificate (Drive)",
-        "URL Foto Crew (Drive)",
-        "Status Operasional",
-        "Kandidat Kapal",
-        "Nama Kapal Penempatan",
-        "Tgl Terbang",
-        "Tgl Finish",
-        "Riwayat Status",
-        "Catatan Admin"
-      ]);
-      sheet.getRange(1, 1, 1, 45).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
+      sheet.appendRow(getCrewHeaders_());
+      sheet.getRange(1, 1, 1, 47).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
     }
     
     // Format Combined Address
@@ -153,40 +147,27 @@ function doPost(e) {
           break;
         }
       }
-    }
-
-    // Get or Create Google Drive Folder for Uploads
-    var folderName = "Crew_Longline_Uploads_PT_ALINDA";
-    var folders = DriveApp.getFoldersByName(folderName);
-    var targetFolder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
-    
-    // Sub-folder per Crew
-    var safeName = (data.fullName || "Crew").replace(/[^a-zA-Z0-9]/g, "_");
-    var crewFolderName = safeName + "_" + (data.submissionId || Date.now());
-    var crewFolder;
-    
-    var crewFolders = targetFolder.getFoldersByName(crewFolderName);
-    if (crewFolders.hasNext()) {
-      crewFolder = crewFolders.next();
-    } else {
-      crewFolder = targetFolder.createFolder(crewFolderName);
-      try {
-        crewFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch(shareErr) {
-        Logger.log("Sharing restriction notice: " + shareErr.toString());
+      if (updateRowIndex === -1) {
+        return jsonResponse_({ success: false, message: "Crew yang akan diupdate tidak ditemukan." });
       }
     }
-    
+
     // Save Uploaded Files to Drive
     var docUrls = { passport: [], ktp: [], cdc: [], medical: [], cert: [], photo: [] };
-    
+    var crewFolderId = "";
+    var crewFolderUrl = existingFolderUrl || "";
+
     if (data.documents) {
       for (var docType in data.documents) {
         var files = data.documents[docType];
         if (Array.isArray(files)) {
           files.forEach(function(fileObj, index) {
-            if (fileObj && fileObj.base64 && fileObj.base64.length > 100) {
-              var fileUrl = saveBase64FileToDrive(crewFolder, fileObj, docType + "_" + (index + 1) + "_" + Date.now());
+            if (isNewBase64Upload_(fileObj)) {
+              if (!crewFolderId) {
+                crewFolderId = getOrCreateCrewUploadFolder_(data.submissionId, data.fullName);
+                crewFolderUrl = "https://drive.google.com/drive/folders/" + crewFolderId;
+              }
+              var fileUrl = saveBase64FileToDrive(crewFolderId, fileObj, docType + "_" + (index + 1) + "_" + Date.now());
               if (fileUrl && docUrls[docType]) {
                 docUrls[docType].push(fileUrl);
               }
@@ -228,13 +209,15 @@ function doPost(e) {
       data.shirtSize || "",
       data.shoeSize || "",
       (data.dob || "") + " / " + (data.gender || "") + " / " + (data.religion || ""),
-      crewFolder.getUrl(),
+      crewFolderUrl,
       docUrls.passport.join(" \n"),
       docUrls.ktp.join(" \n"),
       docUrls.cdc.join(" \n"),
       docUrls.medical.join(" \n"),
       docUrls.cert.join(" \n"),
       docUrls.photo.join(" \n"),
+      data.heightCm || "",
+      data.weightKg || "",
       data.operationalStatus || data.status || "STAND_BY",
       data.vesselCandidate || "",
       data.vesselAssigned || "",
@@ -246,11 +229,11 @@ function doPost(e) {
 
     if (isUpdate && updateRowIndex !== -1) {
       var maxCol = sheet.getMaxColumns();
-      if (maxCol < 45) {
-        sheet.insertColumnsAfter(maxCol, 45 - maxCol);
+      if (maxCol < 47) {
+        sheet.insertColumnsAfter(maxCol, 47 - maxCol);
       }
       
-      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 45).getValues()[0];
+      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 47).getValues()[0];
       for (var c = 32; c <= 37; c++) {
         if (rowValues[c] === "" && oldValues[c] !== "") {
           rowValues[c] = oldValues[c];
@@ -258,8 +241,24 @@ function doPost(e) {
           rowValues[c] = oldValues[c] + " \n" + rowValues[c];
         }
       }
+      var preservedFields = [
+        [38, "heightCm"],
+        [39, "weightKg"],
+        [40, "operationalStatus"],
+        [41, "vesselCandidate"],
+        [42, "vesselAssigned"],
+        [43, "flightDate"],
+        [44, "finishDate"],
+        [45, "historyStatus"],
+        [46, "adminNotes"]
+      ];
+      preservedFields.forEach(function(field) {
+        if (!Object.prototype.hasOwnProperty.call(data, field[1])) {
+          rowValues[field[0]] = oldValues[field[0]];
+        }
+      });
       rowValues[0] = oldValues[0];
-      sheet.getRange(updateRowIndex, 1, 1, 45).setValues([rowValues]);
+      sheet.getRange(updateRowIndex, 1, 1, 47).setValues([rowValues]);
     } else {
       sheet.appendRow(rowValues);
     }
@@ -268,7 +267,7 @@ function doPost(e) {
       .createTextOutput(JSON.stringify({
         success: true,
         message: "Data crew Longline Wantaifeng / PT ALINDA berhasil " + (isUpdate ? "diupdate!" : "disimpan!"),
-        folderUrl: crewFolder.getUrl(),
+        folderUrl: crewFolderUrl,
         submissionId: data.submissionId,
         total: sheet.getLastRow() - 1,
         lastSync: new Date().toISOString()
@@ -284,7 +283,228 @@ function doPost(e) {
   }
 }
 
-function saveBase64FileToDrive(folder, fileObj, fileTag) {
+function jsonResponse_(payload) {
+  return ContentService.createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getCrewHeaders_() {
+  return [
+    "Timestamp", "ID Submisi", "Nama Lengkap", "Nama Mandarin (中文名)",
+    "Jabatan / Posisi", "No. HP / WA", "Alamat Lengkap (Combined)",
+    "Kontak Keluarga 1", "Telp Keluarga 1", "Kontak Keluarga 2", "Telp Keluarga 2",
+    "Pengalaman Longline", "Nama Kapal", "Jenis Kapal", "Asal Kapal", "Negara Penempatan",
+    "Skill Umum", "No. Paspor", "Expired Paspor", "No. Seaman Book", "Expired Seaman Book",
+    "Expired BST", "Status KK", "Status Akte", "Status Ijazah", "Status MCU",
+    "Status Surat Wali", "Status SKCK", "Ukuran Baju", "Ukuran Sepatu",
+    "Tgl Lahir / Gender / Agama", "Folder Google Drive", "URL Paspor (Drive)",
+    "URL KTP (Drive)", "URL Seaman Book (Drive)", "URL MCU (Drive)",
+    "URL Certificate (Drive)", "URL Foto Crew (Drive)", "Tinggi Badan (cm)",
+    "Berat Badan (kg)", "Status Operasional", "Kandidat Kapal",
+    "Nama Kapal Penempatan", "Tgl Terbang", "Tgl Finish", "Riwayat Status", "Catatan Admin"
+  ];
+}
+
+function getCrewSheet_(spreadsheet) {
+  var namedSheet = spreadsheet.getSheetByName("Data Crew Longline");
+  if (namedSheet) return namedSheet;
+
+  var sheets = spreadsheet.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].getLastRow() < 1 || sheets[i].getMaxColumns() < 3) continue;
+    var headers = sheets[i].getRange(1, 1, 1, 3).getDisplayValues()[0];
+    if (String(headers[1] || "").trim() === "ID Submisi" &&
+        String(headers[2] || "").trim() === "Nama Lengkap") {
+      return sheets[i];
+    }
+  }
+
+  throw new Error("Sheet data crew tidak ditemukan atau header tidak valid.");
+}
+
+function normalizeOperationalStatus_(value) {
+  var status = String(value || "").trim().toUpperCase();
+  return status === "WAITING" ? "STAND_BY" : status;
+}
+
+function isOperationalStatus_(value) {
+  return ["WAITING", "STAND_BY", "ON_BOAT", "SELECTED", "BLACKLIST"]
+    .indexOf(String(value || "").trim().toUpperCase()) !== -1;
+}
+
+function migrateCrewSchema_(sheet) {
+  var requiredColumns = 47;
+  if (sheet.getMaxColumns() < requiredColumns) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredColumns - sheet.getMaxColumns());
+  }
+
+  var headers = getCrewHeaders_();
+  var currentHeaders = sheet.getRange(1, 39, 1, 9).getDisplayValues()[0];
+  var alreadyCanonical = String(currentHeaders[0] || "").trim() === headers[38] &&
+    String(currentHeaders[1] || "").trim() === headers[39] &&
+    String(currentHeaders[2] || "").trim() === headers[40];
+
+  if (alreadyCanonical) {
+    return { migrated: false, shiftedStatusRows: 0, retainedMeasurementRows: 0 };
+  }
+
+  var lastRow = sheet.getLastRow();
+  var shiftedStatusRows = 0;
+  var retainedMeasurementRows = 0;
+  if (lastRow > 1) {
+    var identities = sheet.getRange(2, 2, lastRow - 1, 2).getDisplayValues();
+    var legacyValues = sheet.getRange(2, 39, lastRow - 1, 9).getValues();
+
+    for (var i = 0; i < legacyValues.length; i++) {
+      if (!String(identities[i][0] || "").trim() && !String(identities[i][1] || "").trim()) continue;
+
+      var row = legacyValues[i];
+      if (isOperationalStatus_(row[2])) {
+        row[2] = normalizeOperationalStatus_(row[2]);
+        continue;
+      }
+
+      if (isOperationalStatus_(row[0])) {
+        legacyValues[i] = [
+          "", "", normalizeOperationalStatus_(row[0]), row[1], row[2], row[3], row[4], row[5], row[6]
+        ];
+        shiftedStatusRows++;
+      } else {
+        row[2] = "STAND_BY";
+        retainedMeasurementRows++;
+      }
+    }
+
+    sheet.getRange(2, 39, lastRow - 1, 9).setValues(legacyValues);
+  }
+
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.getRange(1, 1, 1, headers.length)
+    .setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
+
+  return {
+    migrated: true,
+    shiftedStatusRows: shiftedStatusRows,
+    retainedMeasurementRows: retainedMeasurementRows
+  };
+}
+
+function findCrewRowById_(sheet, submissionId) {
+  var searchId = String(submissionId || "").trim();
+  if (!searchId || sheet.getLastRow() < 2) return -1;
+
+  var ids = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getDisplayValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0] || "").trim() === searchId) return i + 2;
+  }
+  return -1;
+}
+
+function deleteCrew_(spreadsheet, data) {
+  var sheet = getCrewSheet_(spreadsheet);
+  var searchId = String(data.submissionId || "").trim();
+  if (!searchId || sheet.getLastRow() < 2) {
+    return jsonResponse_({ success: false, message: "Crew tidak ditemukan." });
+  }
+
+  var ids = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getDisplayValues();
+  var deletedCount = 0;
+  for (var i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i][0] || "").trim() === searchId) {
+      sheet.deleteRow(i + 2);
+      deletedCount++;
+    }
+  }
+
+  if (deletedCount === 0) {
+    return jsonResponse_({ success: false, message: "Crew tidak ditemukan." });
+  }
+  return jsonResponse_({ success: true, deletedId: searchId, deletedCount: deletedCount });
+}
+
+function updateCrewStatus_(spreadsheet, data) {
+  var sheet = getCrewSheet_(spreadsheet);
+  migrateCrewSchema_(sheet);
+  var rowIndex = findCrewRowById_(sheet, data.submissionId);
+  if (rowIndex === -1) {
+    return jsonResponse_({ success: false, message: "Crew tidak ditemukan." });
+  }
+
+  var allowedStatuses = ["STAND_BY", "ON_BOAT", "SELECTED", "BLACKLIST"];
+  var operationalStatus = String(data.operationalStatus || "STAND_BY").trim();
+  if (allowedStatuses.indexOf(operationalStatus) === -1) {
+    return jsonResponse_({ success: false, message: "Status operasional tidak valid." });
+  }
+
+  sheet.getRange(rowIndex, 41, 1, 7).setValues([[
+    operationalStatus,
+    String(data.vesselCandidate || "").trim(),
+    String(data.vesselAssigned || "").trim(),
+    data.flightDate || "",
+    data.finishDate || "",
+    String(data.historyStatus || "").trim(),
+    String(data.adminNotes || "").trim()
+  ]]);
+
+  return jsonResponse_({ success: true, submissionId: String(data.submissionId) });
+}
+
+function isNewBase64Upload_(fileObj) {
+  if (!fileObj || !fileObj.base64) return false;
+  var value = String(fileObj.base64).trim();
+  return value.length > 100 && !/^https?:\/\//i.test(value);
+}
+
+function setDriveAnyoneView_(fileId) {
+  try {
+    Drive.Permissions.create({ type: "anyone", role: "reader" }, fileId);
+  } catch (shareError) {
+    Logger.log("Sharing restriction notice: " + shareError.toString());
+  }
+}
+
+function createDriveFolder_(name, parentId) {
+  var metadata = { name: name, mimeType: "application/vnd.google-apps.folder" };
+  if (parentId) metadata.parents = [parentId];
+  var folder = Drive.Files.create(metadata, null, { fields: "id" });
+  setDriveAnyoneView_(folder.id);
+  return folder.id;
+}
+
+function getOrCreateCrewUploadFolder_(submissionId, fullName) {
+  var properties = PropertiesService.getScriptProperties();
+  var rootKey = "CREW_UPLOAD_ROOT_FOLDER_ID";
+  var rootFolderId = properties.getProperty(rootKey);
+
+  if (rootFolderId) {
+    try {
+      var rootFolder = Drive.Files.get(rootFolderId, { fields: "id,trashed" });
+      if (rootFolder.trashed) rootFolderId = "";
+    } catch (rootError) {
+      rootFolderId = "";
+    }
+  }
+  if (!rootFolderId) {
+    rootFolderId = createDriveFolder_("Crew_Longline_Uploads_PT_ALINDA", "");
+    properties.setProperty(rootKey, rootFolderId);
+  }
+
+  var crewKey = "CREW_FOLDER_" + String(submissionId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+  var crewFolderId = properties.getProperty(crewKey);
+  if (crewFolderId) {
+    try {
+      var crewFolder = Drive.Files.get(crewFolderId, { fields: "id,trashed" });
+      if (!crewFolder.trashed) return crewFolderId;
+    } catch (crewError) {}
+  }
+
+  var safeName = String(fullName || "Crew").replace(/[^a-zA-Z0-9]/g, "_");
+  crewFolderId = createDriveFolder_(safeName + "_" + (submissionId || Date.now()), rootFolderId);
+  properties.setProperty(crewKey, crewFolderId);
+  return crewFolderId;
+}
+
+function saveBase64FileToDrive(folderId, fileObj, fileTag) {
   try {
     var rawBase64 = fileObj.base64 || "";
     if (rawBase64.indexOf(",") !== -1) {
@@ -298,11 +518,13 @@ function saveBase64FileToDrive(folder, fileObj, fileTag) {
     var decodedBytes = Utilities.base64Decode(rawBase64);
     var blob = Utilities.newBlob(decodedBytes, mimeType, fileName);
 
-    var driveFile = folder.createFile(blob);
-    try {
-      driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch(shareErr) {}
-    return driveFile.getUrl();
+    var driveFile = Drive.Files.create(
+      { name: fileName, parents: [folderId] },
+      blob,
+      { fields: "id,webViewLink" }
+    );
+    setDriveAnyoneView_(driveFile.id);
+    return driveFile.webViewLink || ("https://drive.google.com/file/d/" + driveFile.id + "/view");
   } catch (e) {
     return null;
   }
@@ -313,8 +535,8 @@ function doGet(e) {
   
   if (action === "getAllCrew") {
     try {
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
+      var ss = getCrewSpreadsheet_();
+      var sheet = getCrewSheet_(ss);
       var dataRange = sheet.getDataRange();
       var values = dataRange.getValues();
       var crewList = [];
@@ -379,14 +601,16 @@ function doGet(e) {
             cert: parseUrls(row[36]),
             photo: parseUrls(row[37])
           },
-          operationalStatus: row[38] ? String(row[38]) : "STAND_BY",
-          vesselCandidate: row[39] ? String(row[39]) : "",
-          vesselAssigned: row[40] ? String(row[40]) : "",
-          flightDate: row[41] ? String(row[41]) : "",
-          finishDate: row[42] ? String(row[42]) : "",
-          historyStatus: row[43] ? String(row[43]) : "",
-          adminNotes: row[44] ? String(row[44]) : "",
-          status: row[38] ? String(row[38]) : "STAND_BY"
+          heightCm: row[38] ? String(row[38]) : "",
+          weightKg: row[39] ? String(row[39]) : "",
+          operationalStatus: row[40] ? String(row[40]) : "STAND_BY",
+          vesselCandidate: row[41] ? String(row[41]) : "",
+          vesselAssigned: row[42] ? String(row[42]) : "",
+          flightDate: row[43] ? String(row[43]) : "",
+          finishDate: row[44] ? String(row[44]) : "",
+          historyStatus: row[45] ? String(row[45]) : "",
+          adminNotes: row[46] ? String(row[46]) : "",
+          status: row[40] ? String(row[40]) : "STAND_BY"
         });
       }
       

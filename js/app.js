@@ -64,14 +64,16 @@ async function bootstrap() {
     await sleep(200);
     checkCriticalSystems();
     
-    // 3. Initialize Services
-    updateLoadingText("Loading Services...");
+    // 3. Initialize Services. Local storage is an offline cache; cloud is authoritative.
+    updateLoadingText("Loading Local Cache...");
     await sleep(200);
-    if (typeof loadLocalDatabase === 'function') {
-      loadLocalDatabase();
-    } else {
-      throw new Error("api.js failed to load: loadLocalDatabase is undefined");
+    if (!window.api || typeof window.api.loadLocalDatabase !== 'function') {
+      throw new Error("api.js failed to load: window.api is undefined");
     }
+    window.api.loadLocalDatabase();
+
+    updateLoadingText("Synchronizing Crew Database...");
+    await window.api.loadCloudDatabase();
     
     if (typeof parseUrlParams === 'function') parseUrlParams();
     
@@ -79,10 +81,6 @@ async function bootstrap() {
     updateLoadingText("Loading User Interface...");
     await sleep(200);
     initializeUI();
-    
-    // 5. Initialize Google Services (Health Ping)
-    updateLoadingText("Verifying Google Apps Script...");
-    await pingGoogleAppsScript();
     
     // Finish Loading
     updateLoadingText("Loading Completed");

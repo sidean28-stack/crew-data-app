@@ -165,8 +165,42 @@ function createDummySvgDataUrl(title) {
   return "data:image/svg+xml;base64," + btoa(svg);
 }
 
-function openImagePreview(src) {
-  document.getElementById('enlargedImage').src = src;
+function getGoogleDriveFileId(url) {
+  if (!url) return '';
+  const value = String(url).trim();
+  const pathMatch = value.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (pathMatch) return pathMatch[1];
+
+  try {
+    const parsedUrl = new URL(value, window.location.href);
+    return parsedUrl.searchParams.get('id') || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function resolveImgSrc(source) {
+  if (!source) return '';
+  const rawUrl = typeof source === 'string'
+    ? source
+    : (source.base64 || source.url || source.link || '');
+  const url = String(rawUrl).trim();
+  if (!url) return '';
+
+  if (url.includes('drive.google.com') || url.includes('googleusercontent.com')) {
+    const fileId = getGoogleDriveFileId(url);
+    if (fileId) return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}`;
+  }
+  return url;
+}
+
+function openImagePreview(source) {
+  const src = resolveImgSrc(source);
+  if (!src) return;
+
+  const image = document.getElementById('enlargedImage');
+  image.src = src;
+  image.alt = typeof source === 'object' && source.name ? source.name : 'Preview dokumen kru';
   const watermark = document.getElementById('watermarkOverlay');
   if (window.activeToken || window.currentRole === 'owner') {
     watermark.textContent = `CONFIDENTIAL FOR ${window.tokenOwnerName || 'SHIP OWNER'} - ${new Date().toLocaleDateString()}`;
@@ -178,8 +212,21 @@ function openImagePreview(src) {
 }
 
 function closeImagePreview() {
-  document.getElementById('imagePreviewModal').classList.remove('active');
+  const modal = document.getElementById('imagePreviewModal');
+  const image = document.getElementById('enlargedImage');
+  modal.classList.remove('active');
+  image.removeAttribute('src');
 }
+
+document.addEventListener('click', function (event) {
+  if (event.target && event.target.id === 'imagePreviewModal') closeImagePreview();
+});
+
+document.addEventListener('keydown', function (event) {
+  if (event.key === 'Escape' && document.getElementById('imagePreviewModal')?.classList.contains('active')) {
+    closeImagePreview();
+  }
+});
 
 /**
  * Escapes HTML characters to prevent Cross-Site Scripting (XSS).

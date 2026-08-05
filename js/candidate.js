@@ -157,46 +157,97 @@ function getFormData() {
     waliStatus: document.getElementById('waliStatus').value,
     skckStatus: document.getElementById('skckStatus').value,
     documents: window.uploadedDocuments,
-    status: 'WAITING',
+    operationalStatus: 'STAND_BY',
+    status: 'STAND_BY',
     submittedAt: new Date().toISOString()
   };
 }
 
-function submitCrewForm() {
+async function submitCrewForm() {
   if (!document.getElementById('agreeTermsCheck').checked) {
     alert("Harap centang persetujuan keabsahan data.");
     return;
   }
   const formData = getFormData();
+  const isEditing = Boolean(window.editingSubmissionId);
+  let cloudPayload = formData;
   
-  if (window.editingSubmissionId) {
+  if (isEditing) {
     formData.submissionId = window.editingSubmissionId;
-    formData.action = 'update_crew';
     const idx = window.crewDatabase.findIndex(c => c.submissionId === window.editingSubmissionId);
-    if (idx !== -1) window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...formData };
+    if (idx === -1) {
+      alert('Data kru yang akan diedit tidak ditemukan. Muat ulang data lalu coba lagi.');
+      return;
+    }
+
+    const existingCrew = window.crewDatabase[idx];
+    delete formData.operationalStatus;
+    delete formData.status;
+    delete formData.submittedAt;
+    cloudPayload = { ...existingCrew, ...formData };
   } else {
     formData.submissionId = "CRW-" + Date.now();
-    formData.action = 'submit_crew';
-    window.crewDatabase.unshift(formData);
   }
-  
-  if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
-  
+
+  const submitButton = document.querySelector('.btn-submit');
+  const originalButtonHtml = submitButton ? submitButton.innerHTML : '';
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> MENYIMPAN...';
+  }
+
+  try {
+    if (!window.api) throw new Error('API cloud tidak tersedia.');
+    if (isEditing) await window.api.updateCrew(cloudPayload);
+    else await window.api.submitCrew(cloudPayload);
+
+    const cloudSynced = await window.api.syncNow();
+    const cloudCrew = window.crewDatabase.find(crew => crew.submissionId === cloudPayload.submissionId);
+    if (!cloudSynced || !cloudCrew) {
+      throw new Error('Perubahan belum terkonfirmasi pada snapshot cloud.');
+    }
+
+    if (isEditing) {
+      const verificationFields = [
+        'fullName', 'chineseName', 'rankPosition', 'phoneNo',
+        'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone',
+        'expLongline', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry',
+        'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus',
+        'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus',
+        'shirtSize', 'shoeSize', 'dob', 'gender', 'religion'
+      ];
+      const hasMismatch = verificationFields.some(field =>
+        String(cloudCrew[field] || '').trim() !== String(cloudPayload[field] || '').trim()
+      );
+      const expectedAddress = (cloudPayload.streetAddress || '') +
+        (cloudPayload.rtRw ? ' RT/RW: ' + cloudPayload.rtRw : '') +
+        (cloudPayload.village ? ' Kel/Desa: ' + cloudPayload.village : '') +
+        (cloudPayload.district ? ' Kec: ' + cloudPayload.district : '') +
+        (cloudPayload.city ? ' Kab/Kota: ' + cloudPayload.city : '') +
+        (cloudPayload.province ? ' Prov: ' + cloudPayload.province : '');
+      const addressMismatch = String(cloudCrew.combinedAddress || '').trim() !== expectedAddress.trim();
+      if (hasMismatch || addressMismatch) {
+        throw new Error('Nilai perubahan belum sama dengan snapshot cloud.');
+      }
+    }
+  } catch (error) {
+    console.error('Crew cloud sync failed:', error);
+    alert('Perubahan belum terkonfirmasi di cloud. Silakan periksa koneksi lalu simpan kembali.');
+    return;
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalButtonHtml;
+    }
+  }
+
   if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
   if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
 
-  fetch(getGasUrl(), {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formData)
-  }).catch(err => console.error("GAS post sync:", err));
-
-  alert(window.editingSubmissionId ? "Data kru berhasil diupdate!" : i18n[window.currentLang].alertSubmitSuccess);
+  alert(isEditing ? "Data kru berhasil diupdate!" : i18n[window.currentLang].alertSubmitSuccess);
   
   window.editingSubmissionId = null;
-  const btn = document.querySelector('.btn-submit');
-  if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
+  if (submitButton) submitButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> SUBMIT DATA CREW';
   
   clearDraft();
   switchTab('directory');
@@ -275,7 +326,7 @@ function renderGallery(docType) {
 
     return `
       <div class="thumb-item">
-        <img src="${imgSrc}" onclick="openImagePreview('${imgSrc}')" alt="${escapeHTML(name)}">
+        <img src="${escapeHTML(imgSrc)}" onclick="openImagePreview(this.currentSrc || this.src)" alt="${escapeHTML(name)}">
         <button class="thumb-remove-btn" onclick="removeDoc('${docType}', ${idx})">&times;</button>
         <div class="thumb-label">${escapeHTML(name)}</div>
       </div>

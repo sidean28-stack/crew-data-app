@@ -137,17 +137,34 @@ function openDeleteModal(submissionId) {
 }
 function closeDeleteModal() { document.getElementById('deleteConfirmModal').classList.remove('active'); }
 
-function executeDeleteCrew() {
+async function executeDeleteCrew() {
   const submissionId = document.getElementById('deleteTargetId').value;
-  const index = window.crewDatabase.findIndex(c => c.submissionId === submissionId);
-  if (index >= 0) {
-    window.crewDatabase.splice(index, 1);
-    if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+  const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
+  if (!crew || !window.api || typeof window.api.deleteCrew !== 'function') {
+    alert('Data kru atau koneksi backend tidak tersedia.');
+    return;
+  }
+
+  const deleteButton = document.getElementById('confirmDeleteCrewButton');
+  if (deleteButton) deleteButton.disabled = true;
+
+  try {
+    await window.api.deleteCrew({ submissionId: submissionId });
+    const cloudSynced = await window.api.syncNow();
+    if (!cloudSynced || window.crewDatabase.some(item => item.submissionId === submissionId)) {
+      throw new Error('Penghapusan belum terkonfirmasi pada snapshot cloud.');
+    }
+
     loadDirectoryTable();
     if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
     alert("Data kru berhasil dihapus!");
+    closeDeleteModal();
+  } catch (error) {
+    console.error('Delete crew failed:', error);
+    alert('Gagal menghapus data kru dari backend. Data lokal tidak diubah.');
+  } finally {
+    if (deleteButton) deleteButton.disabled = false;
   }
-  closeDeleteModal();
 }
 
 function populateAddressFieldsForEdit(crew) {
@@ -207,6 +224,19 @@ function populateAddressFieldsForEdit(crew) {
   if (provinceInput) provinceInput.value = province;
 }
 
+function formatDateForInput(dateValue) {
+  if (!dateValue) return '';
+  const directMatch = String(dateValue).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) return directMatch[1];
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function editCrew(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
@@ -255,12 +285,17 @@ function editCrew(submissionId) {
       if (Array.isArray(list)) {
         window.uploadedDocuments[dk] = list.map(item => {
           if (typeof item === 'string') {
-            return { name: dk.toUpperCase() + ' File', url: item, base64: item };
+            return { name: dk.toUpperCase() + ' File', url: item, base64: '' };
           } else if (item && typeof item === 'object') {
+            const sourceUrl = item.url || item.link ||
+              (typeof item.base64 === 'string' && !item.base64.startsWith('data:') ? item.base64 : '');
+            const base64 = typeof item.base64 === 'string' && item.base64.startsWith('data:')
+              ? item.base64
+              : '';
             return {
               name: item.name || (dk.toUpperCase() + ' File'),
-              url: item.url || item.base64 || '',
-              base64: item.base64 || item.url || ''
+              url: sourceUrl,
+              base64: base64
             };
           }
           return null;
@@ -562,7 +597,8 @@ function printCrewCV(submissionId) {
   // Ambil foto profil (index 0) jika ada, format 4x6
   let photoHtml = '<div style="margin-top: 80px; font-size: 10pt;">4 x 6 cm</div>';
   if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
-    photoHtml = `<img src="${crew.documents.photo[0].base64}">`;
+    const photoSrc = resolveImgSrc(crew.documents.photo[0]);
+    if (photoSrc) photoHtml = `<img src="${escapeHTML(photoSrc)}">`;
   }
 
   // Hitung Umur
@@ -610,10 +646,12 @@ function printCrewCV(submissionId) {
     for (const [key, label] of Object.entries(docNames)) {
       if (crew.documents[key] && crew.documents[key].length > 0) {
         crew.documents[key].forEach((doc) => {
+          const attachmentSrc = resolveImgSrc(doc);
+          if (!attachmentSrc) return;
           attachmentsHtml += `
             <div style="margin-bottom: 40px; text-align: center; page-break-inside: avoid;">
               <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${label}</h4>
-              <img src="${doc.base64}" style="max-width: 100%; max-height: 800px; border: 1px solid #999; padding: 5px;">
+              <img src="${escapeHTML(attachmentSrc)}" style="max-width: 100%; max-height: 800px; border: 1px solid #999; padding: 5px;">
             </div>
           `;
         });
@@ -962,7 +1000,7 @@ function openCrewDetailModal(submissionId) {
         const imgSrc = typeof resolveImgSrc === 'function' ? resolveImgSrc(firstDoc) : (firstDoc.base64 || firstDoc.url);
         if (imgSrc) {
           docButtonsHtml += `
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openImagePreview('${imgSrc}')">
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" data-preview-src="${escapeHTML(imgSrc)}" onclick="openImagePreview(this.dataset.previewSrc)">
               <i class="fa-solid fa-file-image"></i> ${label}
             </button>
           `;
@@ -1020,25 +1058,44 @@ async function saveCrewOperationalStatus() {
     }
   }
 
-  crew.operationalStatus = selectedOpStatus;
-  crew.status = selectedOpStatus;
-  crew.vesselCandidate = document.getElementById('detailVesselCandidate')?.value.trim() || '';
-  crew.vesselAssigned = document.getElementById('detailVesselAssigned')?.value.trim() || '';
-  crew.flightDate = document.getElementById('detailFlightDate')?.value || '';
-  crew.finishDate = document.getElementById('detailFinishDate')?.value || '';
-  crew.historyStatus = document.getElementById('detailHistoryStatus')?.value || '';
-  crew.adminNotes = document.getElementById('detailAdminNotes')?.value.trim() || '';
+  const statusUpdate = {
+    submissionId: crew.submissionId,
+    operationalStatus: selectedOpStatus,
+    vesselCandidate: document.getElementById('detailVesselCandidate')?.value.trim() || '',
+    vesselAssigned: document.getElementById('detailVesselAssigned')?.value.trim() || '',
+    flightDate: document.getElementById('detailFlightDate')?.value || '',
+    finishDate: document.getElementById('detailFinishDate')?.value || '',
+    historyStatus: document.getElementById('detailHistoryStatus')?.value || '',
+    adminNotes: document.getElementById('detailAdminNotes')?.value.trim() || ''
+  };
 
-  // Save to local storage cache
-  if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+  const saveButton = document.getElementById('saveCrewStatusButton');
+  if (saveButton) saveButton.disabled = true;
 
   // Sync to Cloud / Google Apps Script
-  if (window.api && typeof window.api.updateCrew === 'function') {
+  if (window.api && typeof window.api.updateCrewStatus === 'function') {
     try {
-      await window.api.updateCrew(crew);
+      await window.api.updateCrewStatus(statusUpdate);
+      const cloudSynced = await window.api.syncNow();
+      const syncedCrew = window.crewDatabase.find(item => item.submissionId === crew.submissionId);
+      const statusMatches = syncedCrew &&
+        syncedCrew.operationalStatus === statusUpdate.operationalStatus &&
+        syncedCrew.vesselCandidate === statusUpdate.vesselCandidate &&
+        syncedCrew.vesselAssigned === statusUpdate.vesselAssigned;
+      if (!cloudSynced || !statusMatches) {
+        throw new Error('Status belum terkonfirmasi pada snapshot cloud.');
+      }
     } catch (err) {
-      console.warn("Cloud update notice:", err);
+      console.error("Cloud status update failed:", err);
+      alert('Status belum tersimpan di cloud. Data tampilan dikembalikan ke snapshot cloud terakhir.');
+      return;
+    } finally {
+      if (saveButton) saveButton.disabled = false;
     }
+  } else {
+    if (saveButton) saveButton.disabled = false;
+    alert('Koneksi backend tidak tersedia. Status tidak disimpan.');
+    return;
   }
 
   if (typeof loadDirectoryTable === 'function') loadDirectoryTable();

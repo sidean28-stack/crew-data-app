@@ -32,7 +32,7 @@ function renderCatalogGrid() {
     const displayName = isUnmasked ? crew.fullName : maskName(crew.fullName);
     let photoUrl = createDummySvgDataUrl("CREW PHOTO");
     if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
-      photoUrl = crew.documents.photo[0].base64 || photoUrl;
+      photoUrl = resolveImgSrc(crew.documents.photo[0]) || photoUrl;
     }
     
     let currentStatus = crew.status || 'WAITING';
@@ -160,8 +160,10 @@ function generateScoreInput(label, id, value) {
 
 function generateDocButton(crew, type, label) {
   if (crew.documents && crew.documents[type] && crew.documents[type].length > 0) {
-    const b64 = crew.documents[type][0].base64;
-    return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px;" onclick="openImagePreview('${b64}')"><i class="fa-solid fa-image"></i> ${label}</button>`;
+    const imageUrl = resolveImgSrc(crew.documents[type][0]);
+    if (imageUrl) {
+      return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px;" data-preview-src="${escapeHTML(imageUrl)}" onclick="openImagePreview(this.dataset.previewSrc)"><i class="fa-solid fa-image"></i> ${label}</button>`;
+    }
   }
   return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px; opacity: 0.5;" disabled><i class="fa-solid fa-image"></i> ${label}</button>`;
 }
