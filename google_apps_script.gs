@@ -42,7 +42,7 @@ function doPost(e) {
         selectedList
       ]);
 
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Booking order registered successfully!" }))
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Booking order registered successfully!" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (action === "edit_crew") {
@@ -70,7 +70,7 @@ function doPost(e) {
         review.notes || ""
       ]);
 
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Review saved" }))
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Review saved" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -118,9 +118,16 @@ function doPost(e) {
         "URL Seaman Book (Drive)",
         "URL MCU (Drive)",
         "URL Certificate (Drive)",
-        "URL Foto Crew (Drive)"
+        "URL Foto Crew (Drive)",
+        "Status Operasional",
+        "Kandidat Kapal",
+        "Nama Kapal Penempatan",
+        "Tgl Terbang",
+        "Tgl Finish",
+        "Riwayat Status",
+        "Catatan Admin"
       ]);
-      sheet.getRange(1, 1, 1, 38).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
+      sheet.getRange(1, 1, 1, 45).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
     }
     
     // Format Combined Address
@@ -171,7 +178,6 @@ function doPost(e) {
     }
     
     // Save Uploaded Files to Drive
-    // If update, we might re-upload files. It's safer to re-upload if base64 is present.
     var docUrls = { passport: [], ktp: [], cdc: [], medical: [], cert: [], photo: [] };
     
     if (data.documents) {
@@ -228,37 +234,50 @@ function doPost(e) {
       docUrls.cdc.join(" \n"),
       docUrls.medical.join(" \n"),
       docUrls.cert.join(" \n"),
-      docUrls.photo.join(" \n")
+      docUrls.photo.join(" \n"),
+      data.operationalStatus || data.status || "STAND_BY",
+      data.vesselCandidate || "",
+      data.vesselAssigned || "",
+      data.flightDate || "",
+      data.finishDate || "",
+      data.historyStatus || "",
+      data.adminNotes || ""
     ];
 
     if (isUpdate && updateRowIndex !== -1) {
-      // For updates, we keep the original URLs if the new one is empty (meaning no new file was uploaded)
-      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 38).getValues()[0];
+      var maxCol = sheet.getMaxColumns();
+      if (maxCol < 45) {
+        sheet.insertColumnsAfter(maxCol, 45 - maxCol);
+      }
+      
+      var oldValues = sheet.getRange(updateRowIndex, 1, 1, 45).getValues()[0];
       for (var c = 32; c <= 37; c++) {
         if (rowValues[c] === "" && oldValues[c] !== "") {
-          rowValues[c] = oldValues[c]; // retain old links
+          rowValues[c] = oldValues[c];
         } else if (rowValues[c] !== "" && oldValues[c] !== "") {
-          rowValues[c] = oldValues[c] + " \n" + rowValues[c]; // append new links
+          rowValues[c] = oldValues[c] + " \n" + rowValues[c];
         }
       }
-      rowValues[0] = oldValues[0]; // Retain original timestamp
-      sheet.getRange(updateRowIndex, 1, 1, 38).setValues([rowValues]);
+      rowValues[0] = oldValues[0];
+      sheet.getRange(updateRowIndex, 1, 1, 45).setValues([rowValues]);
     } else {
       sheet.appendRow(rowValues);
     }
     
     return ContentService
       .createTextOutput(JSON.stringify({
-        status: "success",
+        success: true,
         message: "Data crew Longline Wantaifeng / PT ALINDA berhasil " + (isUpdate ? "diupdate!" : "disimpan!"),
         folderUrl: crewFolder.getUrl(),
-        submissionId: data.submissionId
+        submissionId: data.submissionId,
+        total: sheet.getLastRow() - 1,
+        lastSync: new Date().toISOString()
       }))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
     return ContentService
-      .createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
+      .createTextOutput(JSON.stringify({ success: false, message: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
@@ -290,26 +309,105 @@ function saveBase64FileToDrive(folder, fileObj, fileTag) {
 }
 
 function doGet(e) {
+  var action = e.parameter.action;
+  
+  if (action === "getAllCrew") {
+    try {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName("Data Crew Longline") || ss.getActiveSheet();
+      var dataRange = sheet.getDataRange();
+      var values = dataRange.getValues();
+      var crewList = [];
+      
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        var subId = String(row[1] || "").trim();
+        var fullName = String(row[2] || "").trim();
+        if (!subId && !fullName) continue;
+        if (!subId) subId = "CREW-LONG-" + (100 + i);
+        
+        var parseUrls = function(str) {
+          if (!str) return [];
+          return String(str).split("\n").map(function(u){ return u.trim(); }).filter(function(u){ return u.length > 0; });
+        };
+        
+        var fam1 = String(row[7] || "").split("(");
+        var fam2 = String(row[9] || "").split("(");
+        var combinedDob = String(row[30] || "").split("/");
+        
+        crewList.push({
+          submissionId: subId,
+          fullName: fullName,
+          chineseName: String(row[3] || ""),
+          rankPosition: String(row[4] || ""),
+          phoneNo: String(row[5] || ""),
+          combinedAddress: String(row[6] || ""),
+          fam1Name: fam1[0] ? fam1[0].trim() : "",
+          fam1Relation: fam1[1] ? fam1[1].replace(")","").trim() : "",
+          fam1Phone: String(row[8] || ""),
+          fam2Name: fam2[0] ? fam2[0].trim() : "",
+          fam2Relation: fam2[1] ? fam2[1].replace(")","").trim() : "",
+          fam2Phone: String(row[10] || ""),
+          expLongline: String(row[11] || ""),
+          vesselName: String(row[12] || ""),
+          vesselTypeLongline: String(row[13] || ""),
+          vesselOrigin: String(row[14] || ""),
+          placementCountry: String(row[15] || ""),
+          skillGeneral: String(row[16] || ""),
+          passportNo: String(row[17] || ""),
+          passportExpiry: String(row[18] || ""),
+          cdcNo: String(row[19] || ""),
+          cdcExpiry: String(row[20] || ""),
+          bstExpiry: String(row[21] || ""),
+          kkStatus: String(row[22] || ""),
+          akteStatus: String(row[23] || ""),
+          ijazahLevel: String(row[24] || ""),
+          medicalStatus: String(row[25] || ""),
+          waliStatus: String(row[26] || ""),
+          skckStatus: String(row[27] || ""),
+          shirtSize: String(row[28] || ""),
+          shoeSize: String(row[29] || ""),
+          dob: combinedDob[0] ? combinedDob[0].trim() : "",
+          gender: combinedDob[1] ? combinedDob[1].trim() : "",
+          religion: combinedDob[2] ? combinedDob[2].trim() : "",
+          folderUrl: String(row[31] || ""),
+          documents: {
+            passport: parseUrls(row[32]),
+            ktp: parseUrls(row[33]),
+            cdc: parseUrls(row[34]),
+            medical: parseUrls(row[35]),
+            cert: parseUrls(row[36]),
+            photo: parseUrls(row[37])
+          },
+          operationalStatus: row[38] ? String(row[38]) : "STAND_BY",
+          vesselCandidate: row[39] ? String(row[39]) : "",
+          vesselAssigned: row[40] ? String(row[40]) : "",
+          flightDate: row[41] ? String(row[41]) : "",
+          finishDate: row[42] ? String(row[42]) : "",
+          historyStatus: row[43] ? String(row[43]) : "",
+          adminNotes: row[44] ? String(row[44]) : "",
+          status: row[38] ? String(row[38]) : "STAND_BY"
+        });
+      }
+      
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          total: crewList.length,
+          lastSync: new Date().toISOString(),
+          crew: crewList
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+        
+    } catch (e) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: false,
+          error: e.toString()
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   return ContentService.createTextOutput("Crew Data System Endpoint (PT ALINDA PRIMA SENTOSA) is Active.");
-}
-
-function initializeSampleData() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Data Crew Longline') || ss.getActiveSheet();
-  // Check if data already exists (beyond header)
-  if (sheet.getLastRow() > 1) return;
-  var sampleRows = [
-    [new Date(), 37, 'MUHAMMAD SAIBUL AMIN', 'MUHAMMAD SAIBUL AMIN', 'CT4 MANUAL 小筒下口', '+628138782718', 'TEGAL', 'Tegal (Tegal)', '+628138782718', '', 'MANUAL 小筒下口 TAIWAN 小筒下口', 'SHIN JIAN LIH', 'CT4 MANUAL 小筒下口', 'Taiwan 台湾', 'Taiwan  台湾', '2024-10-06 00:00:00', '2026-01-26 00:00:00', 'UMMU HABIBAH', '+6281393778634', 'Istri 妻子'],
-    [new Date(), 38, 'RIO ADITIAS NUR CAHYA', 'RIO ADITIAS NUR CAHYA', 'CT5 SNAP ATAS 车筒下口', '+6289531882811', 'TEGAL', 'Tegal (TEGAL)', '+6289531882811', '+886967295041', 'MANUAL DAN SNAP ATAS 小筒下口 , 车筒下口', 'SHENG HI SAI', 'CT5 SNAP ATAS 车筒下口', 'Taiwan 台湾', 'Taiwan  台湾', '2014-02-17 00:00:00', '2017-07-05 00:00:00', 'JAYANTI', '+6289531882811', 'Ibu 母亲']
-    // Additional rows can be added here following the same structure
-  ];
-  sheet.getRange(sheet.getLastRow() + 1, 1, sampleRows.length, sampleRows[0].length).setValues(sampleRows);
-}
-
-// Run initialization once
-function onInstall(e) {
-  initializeSampleData();
-}
-function onOpen(e) {
-  initializeSampleData();
 }
