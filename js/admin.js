@@ -258,6 +258,22 @@ function editCrew(submissionId) {
     }
   });
 
+  const vesselEntries = String(crew.vesselName || '').split('|').map(value => value.trim()).filter(Boolean);
+  const placementEntries = String(crew.placementCountry || '').split('|').map(value => value.trim()).filter(Boolean);
+  vesselEntries.slice(0, 3).forEach((value, index) => {
+    const number = index + 1;
+    const withoutNumber = value.replace(/^\d+\.\s*/, '');
+    const periodMatch = withoutNumber.match(/\(([^()]*)\)\s*$/);
+    const vesselInput = document.getElementById(`vesselName${number}`);
+    const periodInput = document.getElementById(`signOnOff${number}`);
+    if (vesselInput) vesselInput.value = withoutNumber.replace(/\s*\([^()]*\)\s*$/, '').trim();
+    if (periodInput && periodMatch) periodInput.value = periodMatch[1].trim();
+  });
+  placementEntries.slice(0, 3).forEach((value, index) => {
+    const placementInput = document.getElementById(`placementCountry${index + 1}`);
+    if (placementInput) placementInput.value = value.replace(/^\d+\.\s*/, '').trim().replace(/^-$|^–$/, '');
+  });
+
   // Presisi Alamat (BUG 2 Fix)
   populateAddressFieldsForEdit(crew);
 

@@ -79,10 +79,13 @@ function populateDropdowns() {
     vesselOriginSelect.innerHTML += `<option value="${o.nameId}">${o.nameId}</option>`;
   });
 
-  const placementSelect = document.getElementById('placementCountry');
-  placementSelect.innerHTML = `<option value="">-- Pilih Negara Penempatan --</option>`;
-  placementCountryOptions.forEach(p => {
-    placementSelect.innerHTML += `<option value="${p.nameId}">${p.nameId}</option>`;
+  document.querySelectorAll('.sailing-placement').forEach(placementSelect => {
+    const selectedValue = placementSelect.value;
+    placementSelect.innerHTML = `<option value="">-- Pilih Negara Penempatan --</option>`;
+    placementCountryOptions.forEach(p => {
+      placementSelect.innerHTML += `<option value="${p.nameId}">${p.nameId}</option>`;
+    });
+    placementSelect.value = selectedValue;
   });
 }
 

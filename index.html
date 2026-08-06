@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260806.5">
+  <link rel="stylesheet" href="styles.css?v=20260806.6">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Excel Parser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -363,9 +363,25 @@
               <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 10px;" data-i18n="sailingHistoryTitle">PENGALAMAN BERLAYAR 航海经验</h3>
             </div>
 
-            <div class="form-group col-6">
-              <label data-i18n="vesselName">12. Nama Kapal 舰船名称 :</label>
-              <input type="text" id="vesselName" class="form-control" placeholder="E.g. FU YUAN YU 888 / TAI WAN 12">
+            <div class="col-12 sailing-history-grid">
+              <fieldset class="sailing-history-entry">
+                <legend>1. Pengalaman Berlayar / 航海经验</legend>
+                <div class="form-group"><label>Nama Kapal / 船名</label><input type="text" id="vesselName1" class="form-control" placeholder="Contoh: Fu Yuan Yu 888"></div>
+                <div class="form-group"><label>Sign On / Off</label><input type="text" id="signOnOff1" class="form-control" placeholder="Contoh: 2022 - 2024"></div>
+                <div class="form-group"><label>Negara Penempatan / 工作地点</label><select id="placementCountry1" class="form-control sailing-placement"></select></div>
+              </fieldset>
+              <fieldset class="sailing-history-entry">
+                <legend>2. Pengalaman Berlayar / 航海经验</legend>
+                <div class="form-group"><label>Nama Kapal / 船名</label><input type="text" id="vesselName2" class="form-control" placeholder="Nama kapal kedua"></div>
+                <div class="form-group"><label>Sign On / Off</label><input type="text" id="signOnOff2" class="form-control" placeholder="Contoh: 2020 - 2022"></div>
+                <div class="form-group"><label>Negara Penempatan / 工作地点</label><select id="placementCountry2" class="form-control sailing-placement"></select></div>
+              </fieldset>
+              <fieldset class="sailing-history-entry">
+                <legend>3. Pengalaman Berlayar / 航海经验</legend>
+                <div class="form-group"><label>Nama Kapal / 船名</label><input type="text" id="vesselName3" class="form-control" placeholder="Nama kapal ketiga"></div>
+                <div class="form-group"><label>Sign On / Off</label><input type="text" id="signOnOff3" class="form-control" placeholder="Contoh: 2018 - 2020"></div>
+                <div class="form-group"><label>Negara Penempatan / 工作地点</label><select id="placementCountry3" class="form-control sailing-placement"></select></div>
+              </fieldset>
             </div>
 
             <div class="form-group col-6">
@@ -378,13 +394,6 @@
             <div class="form-group col-6">
               <label data-i18n="vesselOrigin">14. Asal Kapal 船只的来源:</label>
               <select id="vesselOrigin" class="form-control">
-                <!-- Populated dynamically -->
-              </select>
-            </div>
-
-            <div class="form-group col-6">
-              <label data-i18n="placementCountry">15. Negara Penempatan 工作地点:</label>
-              <select id="placementCountry" class="form-control">
                 <!-- Populated dynamically -->
               </select>
             </div>
@@ -1003,12 +1012,12 @@
   <script src="js/config.js"></script>
   <div id="appNotificationRegion" class="app-notification-region" aria-live="polite" aria-atomic="false"></div>
 
-  <script src="js/api.js?v=20260806.14"></script>
-  <script src="js/ui-components.js?v=20260806.14"></script>
+  <script src="js/api.js?v=20260806.15"></script>
+  <script src="js/ui-components.js?v=20260806.15"></script>
   <script src="js/auth.js?v=20260806.4"></script>
-  <script src="js/candidate.js?v=20260806.15"></script>
+  <script src="js/candidate.js?v=20260806.16"></script>
   <script src="js/owner.js?v=20260806.14"></script>
-  <script src="js/admin.js?v=20260806.16"></script>
+  <script src="js/admin.js?v=20260806.17"></script>
   <script src="js/app.js?v=20260806.8"></script>
 </body>
 </html>

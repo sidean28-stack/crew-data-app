@@ -119,6 +119,16 @@ function getFormData() {
   const city = properValue('city');
   const province = properValue('province');
   const rtRw = document.getElementById('rtRw').value.trim();
+  const sailingHistory = [1, 2, 3].map(number => ({
+    vessel: properValue(`vesselName${number}`),
+    period: document.getElementById(`signOnOff${number}`).value.trim(),
+    placement: properValue(`placementCountry${number}`)
+  })).filter(entry => entry.vessel || entry.period || entry.placement);
+  const vesselHistoryText = sailingHistory.map((entry, index) =>
+    `${index + 1}. ${entry.vessel || '-'}${entry.period ? ` (${entry.period})` : ''}`
+  ).join(' | ');
+  const signOnOffText = sailingHistory.map((entry, index) => `${index + 1}. ${entry.period || '-'}`).join(' | ');
+  const placementHistoryText = sailingHistory.map((entry, index) => `${index + 1}. ${entry.placement || '-'}`).join(' | ');
 
   return {
     submissionId: "CREW-LONG-" + Date.now().toString().slice(-6),
@@ -150,10 +160,11 @@ function getFormData() {
     fam2Relation: properValue('fam2Relation'),
     fam2Phone: document.getElementById('fam2Phone').value.trim(),
     expLongline: expRadio ? properCaseText(expRadio.value) : "",
-    vesselName: properValue('vesselName'),
+    vesselName: vesselHistoryText,
+    signOnOff: signOnOffText,
     vesselTypeLongline: properValue('vesselTypeLongline'),
     vesselOrigin: properValue('vesselOrigin'),
-    placementCountry: properValue('placementCountry'),
+    placementCountry: placementHistoryText,
     skillGeneral: skillsChecked.map(properCaseText),
     passportNo: document.getElementById('passportNo').value.trim(),
     passportExpiry: document.getElementById('passportExpiry').value,

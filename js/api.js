@@ -165,6 +165,13 @@ window.api = {
             if (normalized[field]) normalized[field] = properCaseText(normalized[field]);
           });
         }
+        if (!normalized.signOnOff && normalized.vesselName) {
+          const periods = String(normalized.vesselName).split('|').map((entry, index) => {
+            const match = entry.match(/\(([^()]*)\)\s*$/);
+            return match ? `${index + 1}. ${match[1].trim()}` : '';
+          }).filter(Boolean);
+          normalized.signOnOff = periods.join(' | ');
+        }
         return normalized;
       });
       this.saveLocalDatabase();
