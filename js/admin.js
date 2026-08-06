@@ -1101,13 +1101,24 @@ async function saveCrewOperationalStatus() {
   if (window.api && typeof window.api.updateCrewStatus === 'function') {
     try {
       await window.api.updateCrewStatus(statusUpdate);
-      const cloudSynced = await window.api.syncNow();
-      const syncedCrew = window.crewDatabase.find(item => item.submissionId === crew.submissionId);
-      const statusMatches = syncedCrew &&
-        syncedCrew.operationalStatus === statusUpdate.operationalStatus &&
-        syncedCrew.vesselCandidate === statusUpdate.vesselCandidate &&
-        syncedCrew.vesselAssigned === statusUpdate.vesselAssigned;
-      if (!cloudSynced || !statusMatches) {
+
+      // Apps Script POST uses no-cors and Sheets may need a few seconds before
+      // the updated row is visible to the next GET. Poll the authoritative
+      // snapshot instead of treating the first stale read as a failed save.
+      let statusMatches = false;
+      const verificationDelays = [1200, 1800, 2600, 3600, 5000];
+      for (const delay of verificationDelays) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        const cloudSynced = await window.api.syncNow();
+        const syncedCrew = window.crewDatabase.find(item => item.submissionId === crew.submissionId);
+        statusMatches = Boolean(cloudSynced && syncedCrew &&
+          String(syncedCrew.operationalStatus || '') === statusUpdate.operationalStatus &&
+          String(syncedCrew.vesselCandidate || '') === statusUpdate.vesselCandidate &&
+          String(syncedCrew.vesselAssigned || '') === statusUpdate.vesselAssigned);
+        if (statusMatches) break;
+      }
+
+      if (!statusMatches) {
         throw new Error('Status belum terkonfirmasi pada snapshot cloud.');
       }
     } catch (err) {
