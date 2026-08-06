@@ -81,7 +81,7 @@ function renderCatalogGrid() {
         </div>
         <div class="crew-card-footer" style="display: flex; justify-content: space-between; gap: 8px;">
           <div style="padding: 6px 12px; border: 1px solid; border-radius: 4px; font-size: 0.8rem; font-weight: bold; ${escapeHTML(statusStyle)}">${escapeHTML(statusText)}</div>
-          <button class="btn-primary" style="flex: 1;" onclick="openCrewDetailModal('${escapeHTML(crew.submissionId)}')">
+          <button class="btn-primary" style="flex: 1;" onclick="openOwnerCrewDetailModal('${escapeHTML(crew.submissionId)}')">
             <i class="fa-solid fa-file-invoice"></i> ${text.view}
           </button>
         </div>
@@ -90,7 +90,7 @@ function renderCatalogGrid() {
   }).join('');
 }
 
-function openCrewDetailModal(submissionId) {
+function openOwnerCrewDetailModal(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
 
@@ -135,7 +135,7 @@ function openCrewDetailModal(submissionId) {
     <div class="modal-card" style="max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
         <h2 style="color: var(--primary);"><i class="fa-solid fa-user-tie"></i> ${t.profile}：${escapeHTML(displayName)}</h2>
-        <button class="modal-close-btn" onclick="closeCrewDetailModal()" style="position: static;">&times;</button>
+        <button class="modal-close-btn" onclick="closeOwnerCrewDetailModal()" style="position: static;">&times;</button>
       </div>
 
       <div style="display: flex; flex-wrap: wrap; gap: 24px;">
@@ -220,8 +220,8 @@ function generateDocButton(crew, type, label) {
   return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px; opacity: 0.5;" disabled><i class="fa-solid fa-image"></i> ${label}</button>`;
 }
 
-function closeCrewDetailModal() {
-  const modal = document.getElementById('ownerCrewDetailModal') || document.getElementById('crewDetailModal');
+function closeOwnerCrewDetailModal() {
+  const modal = document.getElementById('ownerCrewDetailModal');
   if (modal) modal.remove();
 }
 
@@ -244,8 +244,8 @@ function setReviewStatus(submissionId, status) {
   window.ownerSelections[submissionId].attitudeScore = att;
   window.ownerSelections[submissionId].leadershipScore = lead;
 
-  closeCrewDetailModal();
-  openCrewDetailModal(submissionId);
+  closeOwnerCrewDetailModal();
+  openOwnerCrewDetailModal(submissionId);
 }
 
 async function saveReviewSelection(submissionId) {
@@ -295,7 +295,7 @@ async function saveReviewSelection(submissionId) {
     }
   }
 
-  closeCrewDetailModal();
+  closeOwnerCrewDetailModal();
   renderCatalogGrid();
   if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
   alert(window.currentLang === 'zh' ? "审核与决定已成功保存。" : "Review & keputusan berhasil disimpan.");
