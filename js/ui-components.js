@@ -333,6 +333,13 @@ function downloadCurrentPreview() {
   link.remove();
 }
 
+// Dynamic detail buttons use inline handlers, so viewer actions must be explicit globals.
+window.setDocumentPreviewGallery = setDocumentPreviewGallery;
+window.openDocumentPreview = openDocumentPreview;
+window.openImagePreview = openImagePreview;
+window.navigateImagePreview = navigateImagePreview;
+window.downloadCurrentPreview = downloadCurrentPreview;
+
 function closeImagePreview() {
   const modal = document.getElementById('imagePreviewModal');
   const image = document.getElementById('enlargedImage');
@@ -341,6 +348,8 @@ function closeImagePreview() {
   image.removeAttribute('src');
   window.currentDocumentPreviewIndex = 0;
 }
+
+window.closeImagePreview = closeImagePreview;
 
 document.addEventListener('click', function (event) {
   if (event.target && event.target.id === 'imagePreviewModal') closeImagePreview();
