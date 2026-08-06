@@ -1231,11 +1231,13 @@ button.is-processing:not(:disabled) {
 }
 
 button.is-processing {
-  background-color: #0f766e !important;
-  border-color: #115e59 !important;
+  background-color: #b45309 !important;
+  border-color: #92400e !important;
   color: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.28) !important;
   cursor: progress !important;
+  opacity: 1 !important;
+  animation: buttonWorkingPulse 1.1s ease-in-out infinite;
 }
 
 button.is-processing::after {
@@ -1249,6 +1251,11 @@ button.is-processing::after {
   display: inline-block;
   vertical-align: -2px;
   animation: spin 0.7s linear infinite;
+}
+
+@keyframes buttonWorkingPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0.08); }
 }
 
 .app-notification-region {

@@ -1114,7 +1114,13 @@ async function saveCrewOperationalStatus() {
   };
 
   const saveButton = document.getElementById('saveCrewStatusButton');
-  if (saveButton) saveButton.disabled = true;
+  const originalSaveButtonHtml = saveButton ? saveButton.innerHTML : '';
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.classList.add('is-processing');
+    saveButton.setAttribute('aria-busy', 'true');
+    saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Menyimpan Status...</span>';
+  }
 
   // Sync to Cloud / Google Apps Script
   if (window.api && typeof window.api.updateCrewStatus === 'function') {
@@ -1145,10 +1151,20 @@ async function saveCrewOperationalStatus() {
       alert('Status belum tersimpan di cloud. Data tampilan dikembalikan ke snapshot cloud terakhir.');
       return;
     } finally {
-      if (saveButton) saveButton.disabled = false;
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.classList.remove('is-processing');
+        saveButton.removeAttribute('aria-busy');
+        saveButton.innerHTML = originalSaveButtonHtml;
+      }
     }
   } else {
-    if (saveButton) saveButton.disabled = false;
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.classList.remove('is-processing');
+      saveButton.removeAttribute('aria-busy');
+      saveButton.innerHTML = originalSaveButtonHtml;
+    }
     alert('Koneksi backend tidak tersedia. Status tidak disimpan.');
     return;
   }

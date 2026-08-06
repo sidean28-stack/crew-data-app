@@ -214,6 +214,8 @@ async function submitCrewForm() {
   const originalButtonHtml = submitButton ? submitButton.innerHTML : '';
   if (submitButton) {
     submitButton.disabled = true;
+    submitButton.classList.add('is-processing');
+    submitButton.setAttribute('aria-busy', 'true');
     submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> MENYIMPAN...';
   }
 
@@ -258,6 +260,8 @@ async function submitCrewForm() {
   } finally {
     if (submitButton) {
       submitButton.disabled = false;
+      submitButton.classList.remove('is-processing');
+      submitButton.removeAttribute('aria-busy');
       submitButton.innerHTML = originalButtonHtml;
     }
   }
