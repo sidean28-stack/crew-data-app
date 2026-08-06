@@ -151,7 +151,22 @@ window.api = {
         });
         mergedCrew.set(key, profile);
       });
-      window.crewDatabase = Array.from(mergedCrew.values());
+      const properCaseFields = [
+        'fullName', 'rankPosition', 'combinedAddress', 'fam1Name', 'fam1Relation',
+        'fam2Name', 'fam2Relation', 'expLongline', 'vesselName', 'vesselTypeLongline',
+        'vesselOrigin', 'placementCountry', 'skillGeneral', 'pob', 'religion',
+        'maritalStatus', 'streetAddress', 'village', 'district', 'city', 'province',
+        'vesselCandidate', 'vesselAssigned', 'historyStatus'
+      ];
+      window.crewDatabase = Array.from(mergedCrew.values()).map(crew => {
+        const normalized = { ...crew };
+        if (typeof properCaseText === 'function') {
+          properCaseFields.forEach(field => {
+            if (normalized[field]) normalized[field] = properCaseText(normalized[field]);
+          });
+        }
+        return normalized;
+      });
       this.saveLocalDatabase();
 
       if (typeof updateCloudBanner === 'function') {

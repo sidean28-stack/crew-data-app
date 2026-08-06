@@ -103,8 +103,8 @@ function renderReviewSummary() {
       <p><strong>Kontak:</strong> ${escapeHTML(data.phoneNo)}</p>
       <p><strong>Alamat:</strong> ${escapeHTML(data.streetAddress)}, ${escapeHTML(data.city)}</p>
       <p><strong>Kualifikasi Longline:</strong> ${escapeHTML(data.expLongline)}</p>
-      <p><strong>Paspor:</strong> ${escapeHTML(data.passportNo)} (Exp: ${escapeHTML(data.passportExpiry)})</p>
-      <p><strong>Buku Pelaut:</strong> ${escapeHTML(data.cdcNo)} (Exp: ${escapeHTML(data.cdcExpiry)})</p>
+      <p><strong>Paspor:</strong> ${escapeHTML(data.passportNo)} (Exp: ${escapeHTML(formatDisplayDate(data.passportExpiry))})</p>
+      <p><strong>Buku Pelaut:</strong> ${escapeHTML(data.cdcNo)} (Exp: ${escapeHTML(formatDisplayDate(data.cdcExpiry))})</p>
     </div>
   `;
 }

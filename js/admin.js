@@ -104,12 +104,13 @@ function filterDirectory() {
 }
 
 function getDocExpiryStatus(crew) {
-  if (!crew.passportExpiry) return { text: "No Date", badgeClass: "badge-expiry-yellow" };
+  if (!crew.passportExpiry) return { text: "-", badgeClass: "badge-expiry-yellow" };
   const expDate = new Date(crew.passportExpiry);
   const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 90) return { text: `🔴 Expired / < 90 Hari (${diffDays} hr)`, badgeClass: "badge-expiry-red" };
-  if (diffDays < 180) return { text: `🟡 Warning (< 180 Hari)`, badgeClass: "badge-expiry-yellow" };
-  return { text: `🟢 Valid (${diffDays} hr)`, badgeClass: "badge-expiry-green" };
+  const displayDate = typeof formatDisplayDate === 'function' ? formatDisplayDate(crew.passportExpiry) : crew.passportExpiry;
+  if (diffDays < 90) return { text: displayDate, badgeClass: "badge-expiry-red" };
+  if (diffDays < 180) return { text: displayDate, badgeClass: "badge-expiry-yellow" };
+  return { text: displayDate, badgeClass: "badge-expiry-green" };
 }
 
 function openOneTimeLinkModal() { document.getElementById('otlModal').classList.add('active'); }
@@ -617,7 +618,9 @@ function printCrewCV(submissionId) {
   const cvLabel = (id, en, zh) => isZh
     ? `<span class="lbl-id">${zh}</span><span class="lbl-en">${en}</span><span class="lbl-tw">${id}</span>`
     : `<span class="lbl-id">${id}</span><span class="lbl-en">${en}</span><span class="lbl-tw">${zh}</span>`;
-  const validUntilText = date => isZh ? `有效至 ${formatDateForInput(date) || date}` : `Valid until ${formatDateForInput(date) || date}`;
+  const validUntilText = date => isZh
+    ? `有效至 ${formatDisplayDate(date)}`
+    : `Berlaku hingga ${formatDisplayDate(date)}`;
   const unavailableText = isZh ? '無效或未提供' : 'Expired / None';
   const availableText = isZh ? '已提供' : 'Available';
   const noneText = isZh ? '無' : 'None';
@@ -859,12 +862,12 @@ function printCrewCV(submissionId) {
         <tr>
           <td><strong>${isZh ? '護照' : 'Passport'}</strong><br><span style="font-size: 8pt; color: #555;">${escapeHTML(crew.passportNo || '-')}</span></td>
           <td>${isPassportValid ? validUntilText(crew.passportExpiry) : unavailableText}</td>
-          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + (formatDateForInput(crew.passportExpiry) || escapeHTML(crew.passportExpiry)) : '無效'}</td>
+          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + formatDisplayDate(crew.passportExpiry) : '無效'}</td>
         </tr>
         <tr>
           <td><strong>${isZh ? '船員手冊' : 'Seaman Book'}</strong><br><span style="font-size: 8pt; color: #555;">${escapeHTML(crew.cdcNo || '-')}</span></td>
           <td>${isCdcValid ? validUntilText(crew.cdcExpiry) : unavailableText}</td>
-          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + (formatDateForInput(crew.cdcExpiry) || escapeHTML(crew.cdcExpiry)) : '無效'}</td>
+          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + formatDisplayDate(crew.cdcExpiry) : '無效'}</td>
         </tr>
         <tr>
           <td><strong>${isZh ? '體檢證明' : 'MCU'}</strong></td>
@@ -874,7 +877,7 @@ function printCrewCV(submissionId) {
         <tr>
           <td><strong>BST</strong></td>
           <td>${isBstValid ? validUntilText(crew.bstExpiry) : unavailableText}</td>
-          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + (formatDateForInput(crew.bstExpiry) || escapeHTML(crew.bstExpiry)) : '無'}</td>
+          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + formatDisplayDate(crew.bstExpiry) : '無'}</td>
         </tr>
         <tr>
           <td><strong>SKCK / ID Card</strong></td>

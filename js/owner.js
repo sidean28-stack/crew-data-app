@@ -117,7 +117,7 @@ function openOwnerCrewDetailModal(submissionId) {
       <div style="font-size: .88rem; line-height: 1.65;">
         <div><strong>${zh ? '当前状态：' : 'Status saat ini:'}</strong> ${escapeHTML(crew.operationalStatus || crew.ownerReview?.status || '-')}</div>
         <div><strong>${zh ? '船舶：' : 'Kapal:'}</strong> ${escapeHTML(crew.vesselAssigned || crew.vesselCandidate || '-')}</div>
-        <div><strong>${zh ? '上船 / 下船：' : 'Sign on / off:'}</strong> ${escapeHTML(crew.flightDate || '-')} / ${escapeHTML(crew.finishDate || '-')}</div>
+        <div><strong>${zh ? '上船 / 下船：' : 'Sign on / off:'}</strong> ${escapeHTML(formatDisplayDate(crew.flightDate))} / ${escapeHTML(formatDisplayDate(crew.finishDate))}</div>
         <div><strong>${zh ? '历史：' : 'Riwayat:'}</strong> ${escapeHTML(crew.historyStatus || '-')}</div>
       </div>
     </div>` : '';

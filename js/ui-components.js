@@ -404,6 +404,45 @@ function escapeHTML(value) {
   });
 }
 
+function properCaseText(value) {
+  return String(value || '').toLocaleLowerCase('id-ID').replace(/(^|[\s/|,(\-])([a-zà-öø-ÿ])/g, (match, separator, letter) => {
+    return separator + letter.toLocaleUpperCase('id-ID');
+  });
+}
+
+function formatDisplayDate(value) {
+  if (!value) return '-';
+  const text = String(value).trim();
+  let year;
+  let month;
+  let day;
+
+  let match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (match) {
+    year = Number(match[1]);
+    month = Number(match[2]);
+    day = Number(match[3]);
+  } else {
+    match = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (match) {
+      day = Number(match[1]);
+      month = Number(match[2]);
+      year = Number(match[3]);
+    } else {
+      const parsed = new Date(text);
+      if (Number.isNaN(parsed.getTime())) return text;
+      year = parsed.getFullYear();
+      month = parsed.getMonth() + 1;
+      day = parsed.getDate();
+    }
+  }
+
+  return `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
+}
+
+window.properCaseText = properCaseText;
+window.formatDisplayDate = formatDisplayDate;
+
 function inferNotificationType(message) {
   const text = String(message || '').toLowerCase();
   if (/gagal|error|tidak tersedia|belum tersimpan|tidak ditemukan|failed|失败|错误/.test(text)) return 'error';
