@@ -1,4 +1,4 @@
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbz5n3DVX3ZvCH0vKZsUXX1XUgkJiYTQXit6Jp3d0gbyFRAWRsTirK8LNtZgUPr91uGh/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyrrukuwvqMkCgF7T9QRwRmzsdHbSeOXUf4g8XF4QqHZdwZqTATT7ce3kWbbk97dgzF/exec";
 const LEGACY_GAS_DEPLOYMENT_IDS = [
   'AKfycbwgSE70ic5Fuwe6j_e2gaK1Z5227MVmHJIqORI7BEhWTQm5nY8udw689d9uYWKwiVlG',
   'AKfycbwf8iObaafOe69BE0h4rD59ujKMLV8Yr4HH9osx-L7SnMhKNEWvApJd50Asc9DdXDfu'
@@ -27,10 +27,19 @@ window.api = {
     }
   },
 
-  getAllCrew: function () {
+  getAllCrew: async function () {
     const separator = getGasUrl().includes('?') ? '&' : '?';
-    const url = `${getGasUrl()}${separator}action=getAllCrew&_t=${Date.now()}`;
-    return this.fetchWithTimeout(url, { method: 'GET', cache: 'no-store' }, 20000);
+    let lastError;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const url = `${getGasUrl()}${separator}action=getAllCrew&_t=${Date.now()}&attempt=${attempt}`;
+        return await this.fetchWithTimeout(url, { method: 'GET', cache: 'no-store' }, 20000);
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 900));
+      }
+    }
+    throw lastError;
   },
 
   postData: async function (payload, timeoutMs) {
