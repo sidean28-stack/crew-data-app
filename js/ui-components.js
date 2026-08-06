@@ -266,11 +266,26 @@ function setDocumentPreviewGallery(crew, labels) {
   });
   window.currentDocumentPreviewItems = items;
   window.currentDocumentPreviewIndex = 0;
+  const previewModal = document.getElementById('imagePreviewModal');
+  if (previewModal) previewModal.dataset.gallery = JSON.stringify(items);
   return items;
 }
 
+function getDocumentPreviewItems() {
+  if (Array.isArray(window.currentDocumentPreviewItems) && window.currentDocumentPreviewItems.length) {
+    return window.currentDocumentPreviewItems;
+  }
+  try {
+    const storedItems = JSON.parse(document.getElementById('imagePreviewModal')?.dataset.gallery || '[]');
+    if (Array.isArray(storedItems)) window.currentDocumentPreviewItems = storedItems;
+  } catch (error) {
+    window.currentDocumentPreviewItems = [];
+  }
+  return window.currentDocumentPreviewItems;
+}
+
 function openDocumentPreview(index) {
-  const items = window.currentDocumentPreviewItems || [];
+  const items = getDocumentPreviewItems();
   if (!items.length) return;
   window.currentDocumentPreviewIndex = Math.max(0, Math.min(Number(index) || 0, items.length - 1));
   openImagePreview(items[window.currentDocumentPreviewIndex]);
@@ -297,7 +312,7 @@ function openImagePreview(source) {
 }
 
 function updateImagePreviewControls() {
-  const items = window.currentDocumentPreviewItems || [];
+  const items = getDocumentPreviewItems();
   const index = window.currentDocumentPreviewIndex || 0;
   const current = items[index];
   const hasMultiple = items.length > 1;
@@ -308,7 +323,7 @@ function updateImagePreviewControls() {
 }
 
 function navigateImagePreview(direction) {
-  const items = window.currentDocumentPreviewItems || [];
+  const items = getDocumentPreviewItems();
   if (items.length < 2) return;
   window.currentDocumentPreviewIndex = (window.currentDocumentPreviewIndex + direction + items.length) % items.length;
   const current = items[window.currentDocumentPreviewIndex];
@@ -319,7 +334,7 @@ function navigateImagePreview(direction) {
 }
 
 function downloadCurrentPreview() {
-  const current = (window.currentDocumentPreviewItems || [])[window.currentDocumentPreviewIndex];
+  const current = getDocumentPreviewItems()[window.currentDocumentPreviewIndex];
   const image = document.getElementById('enlargedImage');
   const src = current?.src || image.src;
   if (!src) return;
