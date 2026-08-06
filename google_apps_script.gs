@@ -76,9 +76,10 @@ function doPost(e) {
     if (action === "submit_review") {
       var reviewSheet = ss.getSheetByName("Review Owner") || ss.insertSheet("Review Owner");
       if (reviewSheet.getLastRow() === 0) {
-        reviewSheet.appendRow(["Timestamp", "ID Submisi", "Token OTL", "Status", "Comm", "Skill", "Exp", "Attitude", "Leadership", "Notes"]);
-        reviewSheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#8b5cf6").setFontColor("#ffffff");
+        reviewSheet.appendRow(["Timestamp", "ID Submisi", "Token OTL", "Status", "Comm", "Skill", "Exp", "Attitude", "Leadership", "Notes", "Nama Owner / Perusahaan"]);
+        reviewSheet.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#8b5cf6").setFontColor("#ffffff");
       }
+      if (!reviewSheet.getRange(1, 11).getValue()) reviewSheet.getRange(1, 11).setValue("Nama Owner / Perusahaan");
       var review = data.review || {};
       reviewSheet.appendRow([
         new Date(),
@@ -90,7 +91,8 @@ function doPost(e) {
         review.expScore || "",
         review.attitudeScore || "",
         review.leadershipScore || "",
-        review.notes || ""
+        review.notes || "",
+        data.ownerName || ""
       ]);
 
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Review saved" }))
@@ -579,7 +581,7 @@ function doGet(e) {
       var latestReviews = {};
       var reviewSheet = ss.getSheetByName("Review Owner");
       if (reviewSheet && reviewSheet.getLastRow() > 1) {
-        var reviewValues = reviewSheet.getRange(2, 1, reviewSheet.getLastRow() - 1, 10).getValues();
+        var reviewValues = reviewSheet.getRange(2, 1, reviewSheet.getLastRow() - 1, Math.max(11, reviewSheet.getLastColumn())).getValues();
         reviewValues.forEach(function(reviewRow) {
           var reviewId = String(reviewRow[1] || "").trim();
           if (!reviewId) return;
@@ -591,6 +593,8 @@ function doGet(e) {
             attitudeScore: reviewRow[7] === "" ? 0 : Number(reviewRow[7]),
             leadershipScore: reviewRow[8] === "" ? 0 : Number(reviewRow[8]),
             notes: String(reviewRow[9] || ""),
+            ownerName: String(reviewRow[10] || ""),
+            ownerToken: String(reviewRow[2] || ""),
             updatedAt: reviewRow[0] instanceof Date ? reviewRow[0].toISOString() : String(reviewRow[0] || "")
           };
         });

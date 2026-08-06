@@ -250,6 +250,32 @@ document.getElementById('chineseName')?.addEventListener('input', function () {
   this.dataset.manualName = this.value.trim() && this.value !== this.dataset.autoValue ? 'true' : '';
 });
 
+window.currentDocumentPreviewItems = [];
+window.currentDocumentPreviewIndex = 0;
+
+function setDocumentPreviewGallery(crew, labels) {
+  const items = [];
+  Object.entries(labels || {}).forEach(([type, label]) => {
+    const documents = crew?.documents?.[type];
+    if (!Array.isArray(documents)) return;
+    documents.forEach((documentItem, itemIndex) => {
+      const src = resolveImgSrc(documentItem);
+      if (!src) return;
+      items.push({ src, type, label, name: documentItem?.name || `${label} ${itemIndex + 1}` });
+    });
+  });
+  window.currentDocumentPreviewItems = items;
+  window.currentDocumentPreviewIndex = 0;
+  return items;
+}
+
+function openDocumentPreview(index) {
+  const items = window.currentDocumentPreviewItems || [];
+  if (!items.length) return;
+  window.currentDocumentPreviewIndex = Math.max(0, Math.min(Number(index) || 0, items.length - 1));
+  openImagePreview(items[window.currentDocumentPreviewIndex]);
+}
+
 function openImagePreview(source) {
   const src = resolveImgSrc(source);
   if (!src) return;
@@ -267,6 +293,44 @@ function openImagePreview(source) {
   const previewModal = document.getElementById('imagePreviewModal');
   previewModal.classList.add('active');
   document.body.classList.add('image-preview-open');
+  updateImagePreviewControls();
+}
+
+function updateImagePreviewControls() {
+  const items = window.currentDocumentPreviewItems || [];
+  const index = window.currentDocumentPreviewIndex || 0;
+  const current = items[index];
+  const hasMultiple = items.length > 1;
+  document.getElementById('imagePreviewPrev').hidden = !hasMultiple;
+  document.getElementById('imagePreviewNext').hidden = !hasMultiple;
+  document.getElementById('imagePreviewCounter').textContent = items.length ? `${index + 1} / ${items.length}` : '';
+  document.getElementById('imagePreviewCaption').textContent = current?.name || current?.label || 'Dokumen kru';
+}
+
+function navigateImagePreview(direction) {
+  const items = window.currentDocumentPreviewItems || [];
+  if (items.length < 2) return;
+  window.currentDocumentPreviewIndex = (window.currentDocumentPreviewIndex + direction + items.length) % items.length;
+  const current = items[window.currentDocumentPreviewIndex];
+  const image = document.getElementById('enlargedImage');
+  image.src = current.src;
+  image.alt = current.name || current.label || 'Preview dokumen kru';
+  updateImagePreviewControls();
+}
+
+function downloadCurrentPreview() {
+  const current = (window.currentDocumentPreviewItems || [])[window.currentDocumentPreviewIndex];
+  const image = document.getElementById('enlargedImage');
+  const src = current?.src || image.src;
+  if (!src) return;
+  const link = document.createElement('a');
+  link.href = src;
+  link.download = current?.name || `dokumen-kru-${window.currentDocumentPreviewIndex + 1}`;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function closeImagePreview() {
@@ -275,6 +339,7 @@ function closeImagePreview() {
   modal.classList.remove('active');
   document.body.classList.remove('image-preview-open');
   image.removeAttribute('src');
+  window.currentDocumentPreviewIndex = 0;
 }
 
 document.addEventListener('click', function (event) {
@@ -284,6 +349,10 @@ document.addEventListener('click', function (event) {
 document.addEventListener('keydown', function (event) {
   if (event.key === 'Escape' && document.getElementById('imagePreviewModal')?.classList.contains('active')) {
     closeImagePreview();
+  } else if (event.key === 'ArrowLeft' && document.getElementById('imagePreviewModal')?.classList.contains('active')) {
+    navigateImagePreview(-1);
+  } else if (event.key === 'ArrowRight' && document.getElementById('imagePreviewModal')?.classList.contains('active')) {
+    navigateImagePreview(1);
   }
 });
 

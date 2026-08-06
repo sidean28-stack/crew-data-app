@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260806.4">
+  <link rel="stylesheet" href="styles.css?v=20260806.5">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Excel Parser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -843,11 +843,18 @@
 
   <!-- 5. IMAGE PREVIEW MODAL WITH WATERMARK LAYER -->
   <div class="modal-overlay" id="imagePreviewModal">
-    <div class="modal-card" style="max-width: 680px; text-align: center; background: transparent; border: none; box-shadow: none; position: relative;">
+    <div class="modal-card image-preview-card">
       <button class="modal-close-btn" onclick="closeImagePreview()" style="color:#fff;">&times;</button>
-      <div style="position: relative; display: inline-block;">
-        <img id="enlargedImage" src="" style="max-width: 100%; max-height: 80vh; border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <div class="image-preview-stage">
+        <button id="imagePreviewPrev" class="image-preview-nav image-preview-prev" type="button" onclick="navigateImagePreview(-1)" aria-label="Dokumen sebelumnya" title="Dokumen sebelumnya"><i class="fa-solid fa-chevron-left"></i></button>
+        <img id="enlargedImage" src="" alt="Preview dokumen kru">
         <div class="watermark-overlay-text" id="watermarkOverlay">CONFIDENTIAL FOR MARITIME AUTHORITY</div>
+        <button id="imagePreviewNext" class="image-preview-nav image-preview-next" type="button" onclick="navigateImagePreview(1)" aria-label="Dokumen berikutnya" title="Dokumen berikutnya"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      <div class="image-preview-toolbar">
+        <span id="imagePreviewCaption">Dokumen kru</span>
+        <span id="imagePreviewCounter" aria-live="polite"></span>
+        <button class="image-preview-download" type="button" onclick="downloadCurrentPreview()" title="Unduh dokumen"><i class="fa-solid fa-download"></i><span>Unduh</span></button>
       </div>
     </div>
   </div>
@@ -997,11 +1004,11 @@
   <div id="appNotificationRegion" class="app-notification-region" aria-live="polite" aria-atomic="false"></div>
 
   <script src="js/api.js?v=20260806.8"></script>
-  <script src="js/ui-components.js?v=20260806.7"></script>
+  <script src="js/ui-components.js?v=20260806.8"></script>
   <script src="js/auth.js?v=20260806.4"></script>
   <script src="js/candidate.js?v=20260806.6"></script>
-  <script src="js/owner.js?v=20260806.8"></script>
-  <script src="js/admin.js?v=20260806.9"></script>
+  <script src="js/owner.js?v=20260806.10"></script>
+  <script src="js/admin.js?v=20260806.10"></script>
   <script src="js/app.js?v=20260806.8"></script>
 </body>
 </html>

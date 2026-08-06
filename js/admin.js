@@ -1018,15 +1018,15 @@ function openCrewDetailModal(submissionId) {
     bst: 'BST', kk: 'KK', akte: 'Akte', skck: 'SKCK', cert: 'Sertifikat', photo: 'Foto'
   };
 
+  const previewItems = setDocumentPreviewGallery(crew, docLabels);
   if (crew.documents) {
     for (const [key, label] of Object.entries(docLabels)) {
       if (crew.documents[key] && crew.documents[key].length > 0) {
-        const firstDoc = crew.documents[key][0];
-        const imgSrc = typeof resolveImgSrc === 'function' ? resolveImgSrc(firstDoc) : (firstDoc.base64 || firstDoc.url);
-        if (imgSrc) {
+        const previewIndex = previewItems.findIndex(item => item.type === key);
+        if (previewIndex >= 0) {
           docButtonsHtml += `
-            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" data-preview-src="${escapeHTML(imgSrc)}" onclick="openImagePreview(this.dataset.previewSrc)">
-              <i class="fa-solid fa-file-image"></i> ${label}
+            <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openDocumentPreview(${previewIndex})">
+              <i class="fa-solid fa-file-image"></i> ${label}${crew.documents[key].length > 1 ? ` (${crew.documents[key].length})` : ''}
             </button>
           `;
         }

@@ -8,6 +8,14 @@ function renderCatalogGrid() {
   const filterRank = document.getElementById('catFilterRank')?.value || '';
   const filterQual = document.getElementById('catFilterQual')?.value || '';
   const filterVessel = document.getElementById('catFilterVessel')?.value || '';
+  const normalizeOwnerIdentity = value => String(value || '').trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+  const activeOwnerName = normalizeOwnerIdentity(window.tokenOwnerName);
+  const canCurrentOwnerViewRestrictedCrew = crew => {
+    const review = crew.ownerReview || {};
+    if (window.currentRole === 'admin') return true;
+    if (window.activeToken && review.ownerToken && review.ownerToken === window.activeToken) return true;
+    return Boolean(activeOwnerName && review.ownerName && normalizeOwnerIdentity(review.ownerName) === activeOwnerName);
+  };
 
   const zh = window.currentLang === 'zh';
   const text = zh ? {
@@ -18,6 +26,10 @@ function renderCatalogGrid() {
     view:'Lihat Profil & Nilai', waiting:'Menunggu', selected:'Terpilih', priority:'Prioritas', rejected:'Ditolak'
   };
   const filtered = window.crewDatabase.filter(crew => {
+    const operationalStatus = String(crew.operationalStatus || crew.status || 'STAND_BY').toUpperCase();
+    const selectionStatus = String(crew.ownerReview?.status || '').toUpperCase();
+    const isRestricted = operationalStatus === 'ON_BOAT' || operationalStatus === 'SELECTED' || selectionStatus === 'SELECTED';
+    if (isRestricted && !canCurrentOwnerViewRestrictedCrew(crew)) return false;
     const matchesSearch = !searchQuery || 
       crew.fullName.toLowerCase().includes(searchQuery) ||
       (crew.chineseName && crew.chineseName.toLowerCase().includes(searchQuery)) ||
@@ -99,6 +111,18 @@ function openCrewDetailModal(submissionId) {
     notes:'Catatan Interview:', notesPlaceholder:'Tambahkan catatan interview di sini...', status:'Status Seleksi:', waiting:'Menunggu', selected:'Terpilih', priority:'Prioritas', rejected:'Ditolak', save:'Simpan Review & Keputusan'
   };
   const chineseName = crew.chineseName || transliterateNameToChinese(crew.fullName);
+  const restrictedHistory = (crew.operationalStatus === 'ON_BOAT' || crew.operationalStatus === 'SELECTED' || crew.ownerReview?.status === 'SELECTED') ? `
+    <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+      <h3 style="margin-bottom: 8px; color: var(--primary-container);">${zh ? '选择与航行记录' : 'Pilihan & Riwayat Kru'}</h3>
+      <div style="font-size: .88rem; line-height: 1.65;">
+        <div><strong>${zh ? '当前状态：' : 'Status saat ini:'}</strong> ${escapeHTML(crew.operationalStatus || crew.ownerReview?.status || '-')}</div>
+        <div><strong>${zh ? '船舶：' : 'Kapal:'}</strong> ${escapeHTML(crew.vesselAssigned || crew.vesselCandidate || '-')}</div>
+        <div><strong>${zh ? '上船 / 下船：' : 'Sign on / off:'}</strong> ${escapeHTML(crew.flightDate || '-')} / ${escapeHTML(crew.finishDate || '-')}</div>
+        <div><strong>${zh ? '历史：' : 'Riwayat:'}</strong> ${escapeHTML(crew.historyStatus || '-')}</div>
+      </div>
+    </div>` : '';
+  const ownerDocLabels = { photo: t.photo, passport: t.passport, cdc: t.cdc, medical: t.medical };
+  setDocumentPreviewGallery(crew, ownerDocLabels);
 
   window.ownerSelections = window.ownerSelections || {};
   let selection = window.ownerSelections[submissionId] || crew.ownerReview || {
@@ -136,6 +160,7 @@ function openCrewDetailModal(submissionId) {
             ${generateDocButton(crew, 'cdc', t.cdc)}
             ${generateDocButton(crew, 'medical', t.medical)}
           </div>
+          ${restrictedHistory}
         </div>
 
         <!-- Right Column: Scoring & Selection -->
@@ -186,9 +211,10 @@ function generateScoreInput(label, id, value) {
 
 function generateDocButton(crew, type, label) {
   if (crew.documents && crew.documents[type] && crew.documents[type].length > 0) {
-    const imageUrl = resolveImgSrc(crew.documents[type][0]);
-    if (imageUrl) {
-      return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px;" data-preview-src="${escapeHTML(imageUrl)}" onclick="openImagePreview(this.dataset.previewSrc)"><i class="fa-solid fa-image"></i> ${label}</button>`;
+    const previewIndex = (window.currentDocumentPreviewItems || []).findIndex(item => item.type === type);
+    if (previewIndex >= 0) {
+      const count = crew.documents[type].length;
+      return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px;" onclick="openDocumentPreview(${previewIndex})"><i class="fa-solid fa-image"></i> ${label}${count > 1 ? ` (${count})` : ''}</button>`;
     }
   }
   return `<button class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px; opacity: 0.5;" disabled><i class="fa-solid fa-image"></i> ${label}</button>`;
@@ -250,6 +276,7 @@ async function saveReviewSelection(submissionId) {
       action: 'submit_review',
       submissionId: submissionId,
       token: window.activeToken,
+      ownerName: window.tokenOwnerName || '',
       review: window.ownerSelections[submissionId],
       timestamp: new Date().toISOString()
     };
