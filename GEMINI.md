@@ -109,4 +109,3 @@ Every completion report must state:
 - Any remaining risk, untested scenario, or manual action.
 
 Do not say `fixed`, `synchronized`, `safe`, or `live` without evidence from the production system.
-
