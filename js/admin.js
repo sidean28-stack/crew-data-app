@@ -552,34 +552,34 @@ function exportDirectoryExcel() {
   const exportData = window.crewDatabase.map(c => {
     let skillsText = '-';
     if (Array.isArray(c.skillGeneral) && c.skillGeneral.length > 0) {
-      skillsText = c.skillGeneral.join(', ');
+      skillsText = c.skillGeneral.map(properCaseText).join(', ');
     } else if (c.skillGeneral) {
-      skillsText = c.skillGeneral;
+      skillsText = properCaseText(c.skillGeneral);
     }
 
     return {
       "ID Submisi": c.submissionId || '',
-      "Nama Lengkap": c.fullName || '',
+      "Nama Lengkap": properCaseText(c.fullName),
       "Nama Mandarin (中文名)": c.chineseName || '',
-      "Jabatan / Posisi": c.rankPosition || '',
+      "Jabatan / Posisi": properCaseText(c.rankPosition),
       "No. HP / WA": c.phoneNo || '',
-      "Alamat Lengkap": c.combinedAddress || c.streetAddress || '',
-      "Kontak Darurat 1": (c.fam1Name || '') + (c.fam1Relation ? ' (' + c.fam1Relation + ')' : ''),
+      "Alamat Lengkap": properCaseText(c.combinedAddress || c.streetAddress),
+      "Kontak Darurat 1": properCaseText((c.fam1Name || '') + (c.fam1Relation ? ' (' + c.fam1Relation + ')' : '')),
       "Telp Darurat 1": c.fam1Phone || '',
-      "Kontak Darurat 2": (c.fam2Name || '') + (c.fam2Relation ? ' (' + c.fam2Relation + ')' : ''),
+      "Kontak Darurat 2": properCaseText((c.fam2Name || '') + (c.fam2Relation ? ' (' + c.fam2Relation + ')' : '')),
       "Telp Darurat 2": c.fam2Phone || '',
-      "Pengalaman Longline": c.expLongline || '',
-      "Nama Kapal 1-3": c.vesselName || '',
+      "Pengalaman Longline": properCaseText(c.expLongline),
+      "Nama Kapal 1-3": properCaseText(c.vesselName),
       "Sign On/Off 1-3": c.signOnOff || '',
-      "Jenis Kapal": c.vesselTypeLongline || '',
-      "Asal Kapal": c.vesselOrigin || '',
-      "Negara Penempatan 1-3": c.placementCountry || '',
+      "Jenis Kapal": properCaseText(c.vesselTypeLongline),
+      "Asal Kapal": properCaseText(c.vesselOrigin),
+      "Negara Penempatan 1-3": properCaseText(c.placementCountry),
       "Skill Umum": skillsText,
       "No. Paspor": c.passportNo || '',
-      "Expired Paspor": c.passportExpiry || '',
+      "Expired Paspor": c.passportExpiry ? formatDisplayDate(c.passportExpiry) : '',
       "No. Buku Pelaut": c.cdcNo || '',
-      "Expired Buku Pelaut": c.cdcExpiry || '',
-      "Expired BST": c.bstExpiry || '',
+      "Expired Buku Pelaut": c.cdcExpiry ? formatDisplayDate(c.cdcExpiry) : '',
+      "Expired BST": c.bstExpiry ? formatDisplayDate(c.bstExpiry) : '',
       "Status KK": c.kkStatus || '',
       "Status Akte": c.akteStatus || '',
       "Status Ijazah": c.ijazahLevel || '',
@@ -588,15 +588,15 @@ function exportDirectoryExcel() {
       "Status SKCK": c.skckStatus || '',
       "Ukuran Baju": c.shirtSize || '',
       "Ukuran Sepatu": c.shoeSize || '',
-      "Tgl Lahir": c.dob || '',
-      "Jenis Kelamin": c.gender || '',
-      "Agama": c.religion || '',
+      "Tgl Lahir": c.dob ? formatDisplayDate(c.dob) : '',
+      "Jenis Kelamin": properCaseText(c.gender),
+      "Agama": properCaseText(c.religion),
       "Status Operasional": c.operationalStatus || c.status || 'STAND_BY',
-      "Kandidat Kapal": c.vesselCandidate || '',
-      "Nama Kapal Penempatan": c.vesselAssigned || '',
-      "Tgl Terbang": c.flightDate || '',
-      "Tgl Finish": c.finishDate || '',
-      "Riwayat Status": c.historyStatus || '',
+      "Kandidat Kapal": properCaseText(c.vesselCandidate),
+      "Nama Kapal Penempatan": properCaseText(c.vesselAssigned),
+      "Tgl Terbang": c.flightDate ? formatDisplayDate(c.flightDate) : '',
+      "Tgl Finish": c.finishDate ? formatDisplayDate(c.finishDate) : '',
+      "Riwayat Status": properCaseText(c.historyStatus),
       "Catatan Admin": c.adminNotes || ''
     };
   });

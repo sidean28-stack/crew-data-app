@@ -127,12 +127,12 @@ function doPost(e) {
     }
     
     // Format Combined Address
-    var combinedAddress = (data.streetAddress || "") +
+    var combinedAddress = properCase_(data.streetAddress) +
       (data.rtRw ? " RT/RW: " + data.rtRw : "") +
-      (data.village ? " Kel/Desa: " + data.village : "") +
-      (data.district ? " Kec: " + data.district : "") +
-      (data.city ? " Kab/Kota: " + data.city : "") +
-      (data.province ? " Prov: " + data.province : "");
+      (data.village ? " Kel/Desa: " + properCase_(data.village) : "") +
+      (data.district ? " Kec: " + properCase_(data.district) : "") +
+      (data.city ? " Kab/Kota: " + properCase_(data.city) : "") +
+      (data.province ? " Prov: " + properCase_(data.province) : "");
 
     // Cek apakah update
     var isUpdate = (action === "update_crew");
@@ -182,21 +182,21 @@ function doPost(e) {
     var rowValues = [
       new Date(),
       data.submissionId || Date.now(),
-      data.fullName || "",
+      properCase_(data.fullName),
       data.chineseName || "",
-      data.rankPosition || "",
+      properCase_(data.rankPosition),
       data.phoneNo || "",
       combinedAddress,
-      (data.fam1Name || "") + " (" + (data.fam1Relation || "") + ")",
+      properCase_(data.fam1Name) + " (" + properCase_(data.fam1Relation) + ")",
       data.fam1Phone || "",
-      (data.fam2Name || "") + " (" + (data.fam2Relation || "") + ")",
+      properCase_(data.fam2Name) + " (" + properCase_(data.fam2Relation) + ")",
       data.fam2Phone || "",
-      data.expLongline || "",
-      data.vesselName || "",
-      data.vesselTypeLongline || "",
-      data.vesselOrigin || "",
-      data.placementCountry || "",
-      Array.isArray(data.skillGeneral) ? data.skillGeneral.join(", ") : (data.skillGeneral || ""),
+      properCase_(data.expLongline),
+      properCase_(data.vesselName),
+      properCase_(data.vesselTypeLongline),
+      properCase_(data.vesselOrigin),
+      properCase_(data.placementCountry),
+      properCase_(Array.isArray(data.skillGeneral) ? data.skillGeneral.join(", ") : data.skillGeneral),
       data.passportNo || "",
       data.passportExpiry || "",
       data.cdcNo || "",
@@ -221,28 +221,28 @@ function doPost(e) {
       data.heightCm || "",
       data.weightKg || "",
       data.operationalStatus || data.status || "STAND_BY",
-      data.vesselCandidate || "",
-      data.vesselAssigned || "",
+      properCase_(data.vesselCandidate),
+      properCase_(data.vesselAssigned),
       data.flightDate || "",
       data.finishDate || "",
-      data.historyStatus || "",
+      properCase_(data.historyStatus),
       data.adminNotes || "",
-      data.pob || "",
+      properCase_(data.pob),
       data.dob || "",
-      data.gender || "",
-      data.religion || "",
-      data.maritalStatus || "",
+      properCase_(data.gender),
+      properCase_(data.religion),
+      properCase_(data.maritalStatus),
       data.bloodType || "",
-      data.streetAddress || "",
+      properCase_(data.streetAddress),
       data.rtRw || "",
-      data.village || "",
-      data.district || "",
-      data.city || "",
-      data.province || "",
-      data.fam1Name || "",
-      data.fam1Relation || "",
-      data.fam2Name || "",
-      data.fam2Relation || "",
+      properCase_(data.village),
+      properCase_(data.district),
+      properCase_(data.city),
+      properCase_(data.province),
+      properCase_(data.fam1Name),
+      properCase_(data.fam1Relation),
+      properCase_(data.fam2Name),
+      properCase_(data.fam2Relation),
       data.submittedAt || ""
     ];
 
@@ -353,6 +353,12 @@ function getCrewSheet_(spreadsheet) {
 function normalizeOperationalStatus_(value) {
   var status = String(value || "").trim().toUpperCase();
   return status === "WAITING" ? "STAND_BY" : status;
+}
+
+function properCase_(value) {
+  return String(value || "").trim().toLowerCase().replace(/(^|[\s\/|,(\-])([a-z])/g, function(match, separator, letter) {
+    return separator + letter.toUpperCase();
+  });
 }
 
 function isOperationalStatus_(value) {
@@ -476,11 +482,11 @@ function updateCrewStatus_(spreadsheet, data) {
 
   sheet.getRange(rowIndex, 41, 1, 7).setValues([[
     operationalStatus,
-    String(data.vesselCandidate || "").trim(),
-    String(data.vesselAssigned || "").trim(),
+    properCase_(data.vesselCandidate),
+    properCase_(data.vesselAssigned),
     data.flightDate || "",
     data.finishDate || "",
-    String(data.historyStatus || "").trim(),
+    properCase_(data.historyStatus),
     String(data.adminNotes || "").trim()
   ]]);
 
