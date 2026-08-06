@@ -119,15 +119,39 @@ window.api = {
         throw new Error(response && response.error ? response.error : 'Respons cloud tidak valid.');
       }
 
-      const seen = new Set();
-      window.crewDatabase = response.crew.filter((crew, index) => {
+      const mergedCrew = new Map();
+      response.crew.forEach((crew, index) => {
         const key = String(
           crew.submissionId || crew.passportNo || crew.cdcNo || `${crew.fullName || 'crew'}-${index}`
         ).trim().toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+
+        if (!mergedCrew.has(key)) {
+          mergedCrew.set(key, crew);
+          return;
+        }
+
+        const current = mergedCrew.get(key);
+        const currentHasProfile = Boolean(String(current.fullName || '').trim());
+        const incomingHasProfile = Boolean(String(crew.fullName || '').trim());
+        const profile = !currentHasProfile && incomingHasProfile
+          ? { ...current, ...crew }
+          : { ...current };
+
+        // Legacy status writes can leave a second, status-only row for the
+        // same ID. Preserve the complete profile and apply its latest status.
+        const statusFields = [
+          'operationalStatus', 'vesselCandidate', 'vesselAssigned',
+          'flightDate', 'finishDate', 'historyStatus', 'adminNotes', 'status'
+        ];
+        statusFields.forEach(field => {
+          const value = crew[field];
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            profile[field] = value;
+          }
+        });
+        mergedCrew.set(key, profile);
       });
+      window.crewDatabase = Array.from(mergedCrew.values());
       this.saveLocalDatabase();
 
       if (typeof updateCloudBanner === 'function') {
