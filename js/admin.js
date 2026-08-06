@@ -1089,11 +1089,11 @@ async function saveCrewOperationalStatus() {
   const statusUpdate = {
     submissionId: crew.submissionId,
     operationalStatus: selectedOpStatus,
-    vesselCandidate: document.getElementById('detailVesselCandidate')?.value.trim() || '',
-    vesselAssigned: document.getElementById('detailVesselAssigned')?.value.trim() || '',
+    vesselCandidate: properCaseText(document.getElementById('detailVesselCandidate')?.value.trim() || ''),
+    vesselAssigned: properCaseText(document.getElementById('detailVesselAssigned')?.value.trim() || ''),
     flightDate: document.getElementById('detailFlightDate')?.value || '',
     finishDate: document.getElementById('detailFinishDate')?.value || '',
-    historyStatus: document.getElementById('detailHistoryStatus')?.value || '',
+    historyStatus: properCaseText(document.getElementById('detailHistoryStatus')?.value || ''),
     adminNotes: document.getElementById('detailAdminNotes')?.value.trim() || ''
   };
 
@@ -1115,9 +1115,9 @@ async function saveCrewOperationalStatus() {
         const cloudSynced = await window.api.syncNow();
         const syncedCrew = window.crewDatabase.find(item => item.submissionId === crew.submissionId);
         statusMatches = Boolean(cloudSynced && syncedCrew &&
-          String(syncedCrew.operationalStatus || '') === statusUpdate.operationalStatus &&
-          String(syncedCrew.vesselCandidate || '') === statusUpdate.vesselCandidate &&
-          String(syncedCrew.vesselAssigned || '') === statusUpdate.vesselAssigned);
+          String(syncedCrew.operationalStatus || '').trim().toUpperCase() === statusUpdate.operationalStatus &&
+          properCaseText(syncedCrew.vesselCandidate) === statusUpdate.vesselCandidate &&
+          properCaseText(syncedCrew.vesselAssigned) === statusUpdate.vesselAssigned);
         if (statusMatches) break;
       }
 
