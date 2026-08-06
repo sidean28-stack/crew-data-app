@@ -136,7 +136,11 @@ window.api = {
       return true;
     } catch (error) {
       console.warn('Cloud database unavailable:', error);
-      window.crewDatabase = [];
+      // Preserve the last successful snapshot so a temporary Apps Script or
+      // network failure does not blank the production UI.
+      if (!Array.isArray(window.crewDatabase) || window.crewDatabase.length === 0) {
+        this.loadLocalDatabase();
+      }
       if (typeof updateCloudBanner === 'function') updateCloudBanner('Offline', null);
       return false;
     }

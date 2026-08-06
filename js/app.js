@@ -64,14 +64,15 @@ async function bootstrap() {
     await sleep(200);
     checkCriticalSystems();
     
-    // 3. Initialize Services. Local storage is an offline cache; cloud is authoritative.
+    // 3. Initialize Services. Render the last known snapshot while cloud data
+    // is being refreshed, so a transient network failure never locks the app.
     updateLoadingText("Connecting to Production Cloud...");
     await sleep(200);
     if (!window.api || typeof window.api.loadCloudDatabase !== 'function') {
       throw new Error("api.js failed to load: window.api is undefined");
     }
+    window.api.loadLocalDatabase();
     const cloudReady = await window.api.loadCloudDatabase();
-    if (!cloudReady) throw new Error('Data produksi tidak dapat dimuat. Periksa koneksi internet lalu coba lagi.');
     
     if (typeof parseUrlParams === 'function') parseUrlParams();
     
@@ -80,6 +81,16 @@ async function bootstrap() {
     await sleep(200);
     initializeUI();
     window.api.startLiveSync();
+
+    if (!cloudReady && typeof notifyWarning === 'function') {
+      const cachedCount = Array.isArray(window.crewDatabase) ? window.crewDatabase.length : 0;
+      notifyWarning(
+        cachedCount > 0
+          ? `Koneksi cloud sementara terputus. Menampilkan ${cachedCount} data kru tersimpan dan akan sinkron otomatis.`
+          : 'Koneksi cloud sementara terputus. Form tetap dapat dibuka dan sinkronisasi akan dicoba otomatis.',
+        { duration: 9000 }
+      );
+    }
     
     // Finish Loading
     updateLoadingText("Loading Completed");
