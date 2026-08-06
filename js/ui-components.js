@@ -192,7 +192,7 @@ function resolveImgSrc(source) {
   if (!source) return '';
   const rawUrl = typeof source === 'string'
     ? source
-    : (source.base64 || source.url || source.link || '');
+    : (source.src || source.base64 || source.url || source.link || '');
   const url = String(rawUrl).trim();
   if (!url) return '';
 
