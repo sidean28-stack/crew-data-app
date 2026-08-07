@@ -644,7 +644,7 @@ function printCrewCV(submissionId) {
   const printWindow = window.open('', '_blank');
   
   // Ambil foto profil (index 0) jika ada, format 4x6
-  let photoHtml = '<div style="margin-top: 80px; font-size: 10pt;">4 x 6 cm</div>';
+  let photoHtml = '<div class="photo-placeholder">3 x 4 cm</div>';
   if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
     const photoSrc = resolveImgSrc(crew.documents.photo[0]);
     if (photoSrc) photoHtml = `<img src="${escapeHTML(photoSrc)}">`;
@@ -660,9 +660,9 @@ function printCrewCV(submissionId) {
   // Format Skills dengan Bullet
   let skillsHtml = '-';
   if (Array.isArray(crew.skillGeneral) && crew.skillGeneral.length > 0) {
-    skillsHtml = crew.skillGeneral.map(s => `&#10003; ${s}`).join('<br>');
+    skillsHtml = crew.skillGeneral.map(s => `&#10003; ${s}`).join(' &nbsp; ');
   } else if (typeof crew.skillGeneral === 'string' && crew.skillGeneral.trim() !== '') {
-    skillsHtml = crew.skillGeneral.split(',').map(s => `&#10003; ${s.trim()}`).join('<br>');
+    skillsHtml = crew.skillGeneral.split(',').map(s => `&#10003; ${s.trim()}`).join(' &nbsp; ');
   }
 
   // Validasi Expiry
@@ -681,6 +681,7 @@ function printCrewCV(submissionId) {
   // Attachments HTML (Halaman 2)
   let attachmentsHtml = '';
   const docNames = {
+    cert: 'Sertifikat / Certificates',
     passport: 'Paspor / Passport / 護照',
     ktp: 'KTP / ID Card / 身份證',
     cdc: 'Buku Pelaut / Seaman Book / 船員手冊',
@@ -698,10 +699,10 @@ function printCrewCV(submissionId) {
           const attachmentSrc = resolveImgSrc(doc);
           if (!attachmentSrc) return;
           attachmentsHtml += `
-            <div style="margin-bottom: 40px; text-align: center; page-break-inside: avoid;">
-              <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${label}</h4>
-              <img src="${escapeHTML(attachmentSrc)}" style="max-width: 100%; max-height: 800px; border: 1px solid #999; padding: 5px;">
-            </div>
+            <article class="attachment-sheet">
+              <h4>${label}</h4>
+              <img src="${escapeHTML(attachmentSrc)}" class="attachment-image">
+            </article>
           `;
         });
       }
@@ -711,14 +712,15 @@ function printCrewCV(submissionId) {
   let page2Html = '';
   if (attachmentsHtml) {
     page2Html = `
-      <div style="page-break-before: always;"></div>
-      <div class="header">
+      <section class="documents-section">
+      <div class="attachment-header">
         <h1>${isZh ? '附件文件' : 'DOCUMENT ATTACHMENTS'}</h1>
         <p>${isZh ? '船員證件' : 'Lampiran Berkas'} - ${escapeHTML(crew.fullName)} (${escapeHTML(crew.submissionId)})</p>
       </div>
       <div class="attachments-container">
         ${attachmentsHtml}
       </div>
+      </section>
     `;
   }
 
@@ -760,9 +762,45 @@ function printCrewCV(submissionId) {
         .qr-container img { width: 80px; height: 80px; border: 1px solid #ccc; padding: 2px; }
         .qr-container p { font-size: 7.5pt; margin: 4px 0 0 0; color: #333; font-weight: bold; }
         .qr-container p.qr-tw { font-weight: normal; margin-top: 2px; }
+
+        @page { size: A4 portrait; margin: 7mm; }
+        html, body { margin: 0; padding: 0; background: #fff; }
+        body { font-size: 7.4pt; line-height: 1.15; }
+        .cv-page { width: 100%; page-break-after: avoid; break-after: avoid-page; }
+        .cv-page .header { padding-bottom: 3px; margin-bottom: 4px; border-bottom-width: 1.5px; }
+        .cv-page .header h1 { font-size: 15pt; line-height: 1; }
+        .cv-page .header h2 { margin-top: 2px; font-size: 9pt; line-height: 1.05; }
+        .cv-page .header p { margin-top: 1px; font-size: 8pt; line-height: 1.05; }
+        .grid { grid-template-columns: 1fr 30mm; gap: 5px; margin-bottom: 3px; align-items: start; }
+        table { table-layout: fixed; margin-bottom: 4px; }
+        th, td { padding: 2px 4px; font-size: 7.3pt; line-height: 1.12; overflow-wrap: anywhere; }
+        th { width: 31%; }
+        .photo-box { box-sizing: border-box; width: 30mm; height: 40mm; padding: 1px; }
+        .photo-placeholder { font-size: 7pt; color: #555; }
+        .lbl-id, .lbl-en, .lbl-tw { display: inline; margin: 0; font-size: 7.1pt; line-height: 1.1; }
+        .lbl-en, .lbl-tw { color: #222; }
+        .lbl-en::before, .lbl-tw::before { content: " / "; font-weight: normal; }
+        .cv-page h3 { margin: 3px 0 2px !important; padding: 2px 3px !important; border: 1px solid #000 !important; background: #f0f0f0; font-size: 8pt; line-height: 1.05; }
+        .skills-cell { line-height: 1.2 !important; }
+        .signature-section { margin-top: 5px; }
+        .signature-box { width: 42%; }
+        .signature-title { font-size: 7pt; }
+        .signature-tw { margin-bottom: 15px; font-size: 6.5pt; }
+        .footer { margin-top: 4px; padding-top: 3px; border-top-width: 1px; font-size: 5.8pt; line-height: 1.1; }
+        .qr-container img { width: 34px; height: 34px; padding: 1px; }
+        .qr-container p { margin-top: 1px; font-size: 5.5pt; }
+        .documents-section { page-break-before: always; break-before: page; }
+        .attachment-header { text-align: center; border-bottom: 1px solid #000; margin-bottom: 4mm; }
+        .attachment-header h1 { margin: 0; font-size: 15pt; }
+        .attachment-header p { margin: 2mm 0; font-size: 9pt; font-weight: bold; }
+        .attachment-sheet { min-height: 268mm; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+        .attachment-sheet + .attachment-sheet { page-break-before: always; break-before: page; }
+        .attachment-sheet h4 { margin: 0 0 3mm; padding-bottom: 2mm; border-bottom: 1px solid #777; font-size: 10pt; }
+        .attachment-image { max-width: 100%; max-height: 250mm; object-fit: contain; border: 1px solid #999; padding: 1mm; box-sizing: border-box; }
       </style>
     </head>
     <body>
+      <main class="cv-page">
       <div class="header">
         <h1>${isZh ? '船員履歷表' : 'CURRICULUM VITAE'}</h1>
         <h2>${isZh ? '遠洋延繩釣船員' : 'LONGLINE FISHING CREW'}</h2>
@@ -799,7 +837,7 @@ function printCrewCV(submissionId) {
             <th>
               ${cvLabel('Tanggal Lahir', 'Date of Birth', '出生日期')}
             </th>
-            <td>${escapeHTML(crew.dob || '-')}</td>
+            <td>${escapeHTML(formatDisplayDate(crew.dob))}</td>
           </tr>
           <tr>
             <th>
@@ -818,6 +856,14 @@ function printCrewCV(submissionId) {
               ${cvLabel('Agama', 'Religion', '宗教')}
             </th>
             <td>${escapeHTML(crew.religion || '-')}</td>
+          </tr>
+          <tr>
+            <th>${cvLabel('Tinggi / Berat', 'Height / Weight', '\u8eab\u9ad8 / \u9ad4\u91cd')}</th>
+            <td>${escapeHTML(crew.heightCm || '-')} cm / ${escapeHTML(crew.weightKg || '-')} kg</td>
+          </tr>
+          <tr>
+            <th>${cvLabel('No. HP / WA', 'Phone / WhatsApp', '\u96fb\u8a71\u865f\u78bc')}</th>
+            <td>${escapeHTML(crew.phoneNo || '-')}</td>
           </tr>
           <tr>
             <th>
@@ -855,16 +901,20 @@ function printCrewCV(submissionId) {
           <td>${escapeHTML(crew.vesselTypeLongline || '-')} (${escapeHTML(crew.vesselOrigin || '-')})</td>
         </tr>
         <tr>
+          <th>${cvLabel('Riwayat Kapal', 'Vessel History', '\u8239\u8236\u7d93\u6b77')}</th>
+          <td>${escapeHTML(crew.vesselName || '-')}</td>
+        </tr>
+        <tr>
           <th>
             ${cvLabel('Negara Penempatan', 'Available For', '可派遣地區')}
           </th>
-          <td><strong>${crew.placementCountry || '-'}</strong></td>
+          <td><strong>${escapeHTML(crew.placementCountry || '-')}</strong></td>
         </tr>
         <tr>
           <th>
             ${cvLabel('Skill Umum', 'General Skills', '一般技能')}
           </th>
-          <td style="line-height: 1.6;">${skillsHtml}</td>
+          <td class="skills-cell">${skillsHtml}</td>
         </tr>
       </table>
 
@@ -930,11 +980,12 @@ function printCrewCV(submissionId) {
         </div>
       </div>
 
+      </main>
       ${page2Html}
 
       <script>
         window.onload = function() { 
-          setTimeout(() => { window.print(); }, 500); 
+          setTimeout(() => { window.print(); }, 1000);
         }
       </script>
     </body>
