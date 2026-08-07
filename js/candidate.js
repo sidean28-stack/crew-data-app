@@ -192,6 +192,7 @@ async function submitCrewForm() {
   const formData = getFormData();
   const isEditing = Boolean(window.editingSubmissionId);
   let cloudPayload = formData;
+  let originalCrew = null;
   
   if (isEditing) {
     formData.submissionId = window.editingSubmissionId;
@@ -202,6 +203,7 @@ async function submitCrewForm() {
     }
 
     const existingCrew = window.crewDatabase[idx];
+    originalCrew = { ...existingCrew };
     delete formData.operationalStatus;
     delete formData.status;
     delete formData.submittedAt;
@@ -243,6 +245,15 @@ async function submitCrewForm() {
       'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus',
       'shirtSize', 'shoeSize', 'heightCm', 'weightKg', 'dob', 'gender', 'religion'
     ];
+    const changedVerificationFields = isEditing && originalCrew
+      ? verificationFields.filter(field =>
+          comparableValue(field, originalCrew[field]) !== comparableValue(field, cloudPayload[field])
+        )
+      : verificationFields;
+    const addressFields = ['streetAddress', 'rtRw', 'village', 'district', 'city', 'province'];
+    const addressWasChanged = Boolean(isEditing && originalCrew && addressFields.some(field =>
+      properCaseText(originalCrew[field]) !== properCaseText(cloudPayload[field])
+    ));
     const expectedAddress = (cloudPayload.streetAddress || '') +
       (cloudPayload.rtRw ? ' RT/RW: ' + cloudPayload.rtRw : '') +
       (cloudPayload.village ? ' Kel/Desa: ' + cloudPayload.village : '') +
@@ -263,10 +274,11 @@ async function submitCrewForm() {
         break;
       }
 
-      const hasMismatch = verificationFields.some(field =>
+      const hasMismatch = changedVerificationFields.some(field =>
         comparableValue(field, cloudCrew[field]) !== comparableValue(field, cloudPayload[field])
       );
-      const addressMismatch = properCaseText(cloudCrew.combinedAddress) !== properCaseText(expectedAddress);
+      const addressMismatch = addressWasChanged &&
+        properCaseText(cloudCrew.combinedAddress) !== properCaseText(expectedAddress);
       if (!hasMismatch && !addressMismatch) {
         cloudConfirmed = true;
         break;
