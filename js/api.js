@@ -47,17 +47,20 @@ window.api = {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs || 120000);
 
     try {
-      await fetch(getGasUrl(), {
+      const response = await fetch(getGasUrl(), {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
         signal: controller.signal
       });
 
-      // Apps Script responses are opaque in no-cors mode. A resolved request only
-      // confirms delivery; the next cloud read remains the source of truth.
-      return { success: true, dispatched: true };
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (!result || result.success !== true) {
+        throw new Error(result?.message || result?.error || 'Backend menolak penyimpanan data.');
+      }
+      return result;
     } catch (error) {
       if (error.name === 'AbortError') {
         throw new Error('Pengiriman ke cloud melewati batas waktu. Periksa koneksi lalu coba lagi.');

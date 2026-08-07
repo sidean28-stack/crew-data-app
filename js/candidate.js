@@ -192,7 +192,6 @@ async function submitCrewForm() {
   const formData = getFormData();
   const isEditing = Boolean(window.editingSubmissionId);
   let cloudPayload = formData;
-  let originalCrew = null;
   
   if (isEditing) {
     formData.submissionId = window.editingSubmissionId;
@@ -203,7 +202,6 @@ async function submitCrewForm() {
     }
 
     const existingCrew = window.crewDatabase[idx];
-    originalCrew = { ...existingCrew };
     delete formData.operationalStatus;
     delete formData.status;
     delete formData.submittedAt;
@@ -223,74 +221,18 @@ async function submitCrewForm() {
 
   try {
     if (!window.api) throw new Error('API cloud tidak tersedia.');
-    if (isEditing) await window.api.updateCrew(cloudPayload);
-    else await window.api.submitCrew(cloudPayload);
+    const saveResult = isEditing
+      ? await window.api.updateCrew(cloudPayload)
+      : await window.api.submitCrew(cloudPayload);
+    if (!saveResult?.success) throw new Error('Backend tidak mengonfirmasi penyimpanan.');
 
-    const descriptiveFields = new Set([
-      'fullName', 'rankPosition', 'fam1Name', 'fam1Relation', 'fam2Name', 'fam2Relation',
-      'expLongline', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry',
-      'gender', 'religion'
-    ]);
-    const dateFields = new Set(['passportExpiry', 'cdcExpiry', 'bstExpiry', 'dob']);
-    const comparableValue = (field, value) => {
-      if (dateFields.has(field)) return formatDateForInput(value);
-      if (descriptiveFields.has(field)) return properCaseText(value);
-      return String(value || '').trim();
-    };
-    const verificationFields = [
-      'fullName', 'chineseName', 'rankPosition', 'phoneNo',
-      'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone',
-      'expLongline', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry',
-      'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus',
-      'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus',
-      'shirtSize', 'shoeSize', 'heightCm', 'weightKg', 'dob', 'gender', 'religion'
-    ];
-    const changedVerificationFields = isEditing && originalCrew
-      ? verificationFields.filter(field =>
-          comparableValue(field, originalCrew[field]) !== comparableValue(field, cloudPayload[field])
-        )
-      : verificationFields;
-    const addressFields = ['streetAddress', 'rtRw', 'village', 'district', 'city', 'province'];
-    const addressWasChanged = Boolean(isEditing && originalCrew && addressFields.some(field =>
-      properCaseText(originalCrew[field]) !== properCaseText(cloudPayload[field])
-    ));
-    const expectedAddress = (cloudPayload.streetAddress || '') +
-      (cloudPayload.rtRw ? ' RT/RW: ' + cloudPayload.rtRw : '') +
-      (cloudPayload.village ? ' Kel/Desa: ' + cloudPayload.village : '') +
-      (cloudPayload.district ? ' Kec: ' + cloudPayload.district : '') +
-      (cloudPayload.city ? ' Kab/Kota: ' + cloudPayload.city : '') +
-      (cloudPayload.province ? ' Prov: ' + cloudPayload.province : '');
-
-    let cloudConfirmed = false;
-    const verificationDelays = [900, 1500, 2400, 3500, 5000];
-    for (const delay of verificationDelays) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      const cloudSynced = await window.api.syncNow();
-      const cloudCrew = window.crewDatabase.find(crew => crew.submissionId === cloudPayload.submissionId);
-      if (!cloudSynced || !cloudCrew) continue;
-
-      if (!isEditing) {
-        cloudConfirmed = true;
-        break;
-      }
-
-      const hasMismatch = changedVerificationFields.some(field =>
-        comparableValue(field, cloudCrew[field]) !== comparableValue(field, cloudPayload[field])
-      );
-      const addressMismatch = addressWasChanged &&
-        properCaseText(cloudCrew.combinedAddress) !== properCaseText(expectedAddress);
-      if (!hasMismatch && !addressMismatch) {
-        cloudConfirmed = true;
-        break;
-      }
-    }
-
-    if (!cloudConfirmed) {
-      throw new Error('Perubahan belum terkonfirmasi pada snapshot cloud.');
-    }
+    const savedIndex = window.crewDatabase.findIndex(crew => crew.submissionId === cloudPayload.submissionId);
+    if (savedIndex >= 0) window.crewDatabase[savedIndex] = { ...window.crewDatabase[savedIndex], ...cloudPayload };
+    else window.crewDatabase.push(cloudPayload);
+    window.api.saveLocalDatabase();
   } catch (error) {
     console.error('Crew cloud sync failed:', error);
-    alert('Perubahan belum terkonfirmasi di cloud. Silakan periksa koneksi lalu simpan kembali.');
+    alert(`Data belum tersimpan di cloud. ${error.message || 'Periksa koneksi lalu coba kembali.'}`);
     return;
   } finally {
     if (submitButton) {
