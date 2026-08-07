@@ -224,34 +224,57 @@ async function submitCrewForm() {
     if (isEditing) await window.api.updateCrew(cloudPayload);
     else await window.api.submitCrew(cloudPayload);
 
-    const cloudSynced = await window.api.syncNow();
-    const cloudCrew = window.crewDatabase.find(crew => crew.submissionId === cloudPayload.submissionId);
-    if (!cloudSynced || !cloudCrew) {
-      throw new Error('Perubahan belum terkonfirmasi pada snapshot cloud.');
+    const descriptiveFields = new Set([
+      'fullName', 'rankPosition', 'fam1Name', 'fam1Relation', 'fam2Name', 'fam2Relation',
+      'expLongline', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry',
+      'gender', 'religion'
+    ]);
+    const dateFields = new Set(['passportExpiry', 'cdcExpiry', 'bstExpiry', 'dob']);
+    const comparableValue = (field, value) => {
+      if (dateFields.has(field)) return formatDateForInput(value);
+      if (descriptiveFields.has(field)) return properCaseText(value);
+      return String(value || '').trim();
+    };
+    const verificationFields = [
+      'fullName', 'chineseName', 'rankPosition', 'phoneNo',
+      'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone',
+      'expLongline', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry',
+      'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus',
+      'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus',
+      'shirtSize', 'shoeSize', 'heightCm', 'weightKg', 'dob', 'gender', 'religion'
+    ];
+    const expectedAddress = (cloudPayload.streetAddress || '') +
+      (cloudPayload.rtRw ? ' RT/RW: ' + cloudPayload.rtRw : '') +
+      (cloudPayload.village ? ' Kel/Desa: ' + cloudPayload.village : '') +
+      (cloudPayload.district ? ' Kec: ' + cloudPayload.district : '') +
+      (cloudPayload.city ? ' Kab/Kota: ' + cloudPayload.city : '') +
+      (cloudPayload.province ? ' Prov: ' + cloudPayload.province : '');
+
+    let cloudConfirmed = false;
+    const verificationDelays = [900, 1500, 2400, 3500, 5000];
+    for (const delay of verificationDelays) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      const cloudSynced = await window.api.syncNow();
+      const cloudCrew = window.crewDatabase.find(crew => crew.submissionId === cloudPayload.submissionId);
+      if (!cloudSynced || !cloudCrew) continue;
+
+      if (!isEditing) {
+        cloudConfirmed = true;
+        break;
+      }
+
+      const hasMismatch = verificationFields.some(field =>
+        comparableValue(field, cloudCrew[field]) !== comparableValue(field, cloudPayload[field])
+      );
+      const addressMismatch = properCaseText(cloudCrew.combinedAddress) !== properCaseText(expectedAddress);
+      if (!hasMismatch && !addressMismatch) {
+        cloudConfirmed = true;
+        break;
+      }
     }
 
-    if (isEditing) {
-      const verificationFields = [
-        'fullName', 'chineseName', 'rankPosition', 'phoneNo',
-        'fam1Name', 'fam1Relation', 'fam1Phone', 'fam2Name', 'fam2Relation', 'fam2Phone',
-        'expLongline', 'vesselName', 'vesselTypeLongline', 'vesselOrigin', 'placementCountry',
-        'passportNo', 'passportExpiry', 'cdcNo', 'cdcExpiry', 'bstExpiry', 'kkStatus',
-        'akteStatus', 'ijazahLevel', 'medicalStatus', 'waliStatus', 'skckStatus',
-        'shirtSize', 'shoeSize', 'heightCm', 'weightKg', 'dob', 'gender', 'religion'
-      ];
-      const hasMismatch = verificationFields.some(field =>
-        String(cloudCrew[field] || '').trim() !== String(cloudPayload[field] || '').trim()
-      );
-      const expectedAddress = (cloudPayload.streetAddress || '') +
-        (cloudPayload.rtRw ? ' RT/RW: ' + cloudPayload.rtRw : '') +
-        (cloudPayload.village ? ' Kel/Desa: ' + cloudPayload.village : '') +
-        (cloudPayload.district ? ' Kec: ' + cloudPayload.district : '') +
-        (cloudPayload.city ? ' Kab/Kota: ' + cloudPayload.city : '') +
-        (cloudPayload.province ? ' Prov: ' + cloudPayload.province : '');
-      const addressMismatch = String(cloudCrew.combinedAddress || '').trim() !== expectedAddress.trim();
-      if (hasMismatch || addressMismatch) {
-        throw new Error('Nilai perubahan belum sama dengan snapshot cloud.');
-      }
+    if (!cloudConfirmed) {
+      throw new Error('Perubahan belum terkonfirmasi pada snapshot cloud.');
     }
   } catch (error) {
     console.error('Crew cloud sync failed:', error);
