@@ -1,4 +1,4 @@
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyt7FqVkzxmGZDed8g6dwNxEXq3s1QIsaou5xL72jDTUZmhodoB56zFSYerFRLHbM1B/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzZp8rnGCbh0lTCB8RZm2QMj6BHbqlyhGBTyj_AZWyp1Lhetep6gblJGdNc9abtJvHE/exec";
 const LEGACY_GAS_DEPLOYMENT_IDS = [
   'AKfycbwgSE70ic5Fuwe6j_e2gaK1Z5227MVmHJIqORI7BEhWTQm5nY8udw689d9uYWKwiVlG',
   'AKfycbwf8iObaafOe69BE0h4rD59ujKMLV8Yr4HH9osx-L7SnMhKNEWvApJd50Asc9DdXDfu'
