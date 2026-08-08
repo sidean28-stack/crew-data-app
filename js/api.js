@@ -1,7 +1,7 @@
-const DEFAULT_GAS_URL = "const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyt7FqVkzxmGZDed8g6dWNxEXq3slQIsaou5xL72jDTUZmhodoB56zFSYerFRLHbMlB/exec
-";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyt7FqVkzxmGZDed8g6dwNxEXq3s1QIsaou5xL72jDTUZmhodoB56zFSYerFRLHbM1B/exec";
 const LEGACY_GAS_DEPLOYMENT_IDS = [
-  'AKfycbyt7FqVkzxmGZDed8g6dWNxEXq3slQIsaou5xL72jDTUZmhodoB56zFSYerFRLHbMlB'
+  'AKfycbwgSE70ic5Fuwe6j_e2gaK1Z5227MVmHJIqORI7BEhWTQm5nY8udw689d9uYWKwiVlG',
+  'AKfycbwf8iObaafOe69BE0h4rD59ujKMLV8Yr4HH9osx-L7SnMhKNEWvApJd50Asc9DdXDfu'
 ];
 
 function getGasUrl() {
@@ -140,8 +140,6 @@ window.api = {
           ? { ...current, ...crew }
           : { ...current };
 
-        // Legacy status writes can leave a second, status-only row for the
-        // same ID. Preserve the complete profile and apply its latest status.
         const statusFields = [
           'operationalStatus', 'vesselCandidate', 'vesselAssigned',
           'flightDate', 'finishDate', 'historyStatus', 'adminNotes', 'status'
@@ -185,8 +183,6 @@ window.api = {
       return true;
     } catch (error) {
       console.warn('Cloud database unavailable:', error);
-      // Preserve the last successful snapshot so a temporary Apps Script or
-      // network failure does not blank the production UI.
       if (!Array.isArray(window.crewDatabase) || window.crewDatabase.length === 0) {
         this.loadLocalDatabase();
       }
@@ -200,19 +196,6 @@ window.api = {
   },
 
   startLiveSync: function () {
-    if (this.liveSyncTimer) clearInterval(this.liveSyncTimer);
-    const refresh = () => {
-      if (document.visibilityState === 'visible') this.loadCloudDatabase().then(() => {
-        if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
-        if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
-      });
-    };
-    this.liveSyncTimer = setInterval(refresh, 30000);
-    window.addEventListener('focus', refresh);
-    document.addEventListener('visibilitychange', refresh);
+    setInterval(() => this.syncNow(), 30000);
   }
 };
-
-window.loadLocalDatabase = window.api.loadLocalDatabase.bind(window.api);
-window.saveLocalDatabase = window.api.saveLocalDatabase.bind(window.api);
-window.loadCloudDatabase = window.api.loadCloudDatabase.bind(window.api);
