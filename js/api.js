@@ -1,7 +1,7 @@
-const DEFAULT_GAS_URL = "const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwHY1lQC7rLMLz8LkUeA69eSYbP3mk1h6Fcu-oe9d2RylZqxmFIyOY_NejvAo3yTWfC/exec";
+const DEFAULT_GAS_URL = "const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyt7FqVkzxmGZDed8g6dWNxEXq3slQIsaou5xL72jDTUZmhodoB56zFSYerFRLHbMlB/exec
 ";
 const LEGACY_GAS_DEPLOYMENT_IDS = [
-  'AKfycbwHY1lQC7rLMLz8LkUeA69eSYbP3mk1h6Fcu-oe9d2RylZqxmFIyOY_NejvAo3yTWfC'
+  'AKfycbyt7FqVkzxmGZDed8g6dWNxEXq3slQIsaou5xL72jDTUZmhodoB56zFSYerFRLHbMlB'
 ];
 
 function getGasUrl() {
