@@ -8,14 +8,14 @@ function switchLanguage(lang) {
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (i18n[lang] && i18n[lang][key]) {
+    if (typeof i18n !== 'undefined' && i18n[lang] && i18n[lang][key]) {
       el.textContent = i18n[lang][key];
     }
   });
 
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
-    if (i18n[lang] && i18n[lang][key]) el.placeholder = i18n[lang][key];
+    if (typeof i18n !== 'undefined' && i18n[lang] && i18n[lang][key]) el.placeholder = i18n[lang][key];
   });
 
   populateDropdowns();
