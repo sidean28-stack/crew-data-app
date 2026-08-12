@@ -109,6 +109,16 @@ function renderReviewSummary() {
   `;
 }
 
+function generateSequentialSubmissionId() {
+  const ids = Array.isArray(window.crewDatabase)
+    ? window.crewDatabase
+        .map(crew => parseInt(String(crew && crew.submissionId || '').match(/(\d+)$/)?.[1] || '0', 10))
+        .filter(value => Number.isFinite(value) && value > 0)
+    : [];
+  const nextNumber = ids.length ? Math.max(...ids) + 1 : 1001;
+  return `CREW-LONG-${nextNumber}`;
+}
+
 function getFormData() {
   const expRadio = document.querySelector('input[name="expLongline"]:checked');
   const skillsChecked = Array.from(document.querySelectorAll('input[name="skillGeneral"]:checked')).map(el => el.value);
@@ -131,7 +141,7 @@ function getFormData() {
   const placementHistoryText = sailingHistory.map((entry, index) => `${index + 1}. ${entry.placement || '-'}`).join(' | ');
 
   return {
-    submissionId: "CREW-LONG-" + Date.now().toString().slice(-6),
+    submissionId: generateSequentialSubmissionId(),
     fullName: properValue('fullName'),
     chineseName: document.getElementById('chineseName').value.trim(),
     rankPosition: properValue('rankPosition'),
@@ -207,7 +217,7 @@ async function submitCrewForm() {
     delete formData.submittedAt;
     cloudPayload = { ...existingCrew, ...formData };
   } else {
-    formData.submissionId = "CRW-" + Date.now();
+    formData.submissionId = generateSequentialSubmissionId();
   }
 
   const submitButton = document.querySelector('.btn-submit');
