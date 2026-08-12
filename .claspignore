@@ -1,3 +1,21 @@
-**/*
-!appsscript.json
-!google_apps_script.gs
+# Exclude git dan node_modules
+.git
+.gitignore
+node_modules
+.github
+
+# Exclude development files
+.claspignore
+.clasp.json
+GEMINI.md
+http_server.log
+COPY_PASTE_GUIDE.txt
+*.zip
+
+# Include semua files yang diperlukan
+!*.gs
+!*.js
+!*.html
+!*.css
+!*.json
+!assets/**

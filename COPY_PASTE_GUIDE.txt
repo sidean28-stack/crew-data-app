@@ -1,0 +1,76 @@
+﻿==========================================
+CREW MANAGEMENT APPS SCRIPT REBUILD
+Copy-Paste Master Guide
+==========================================
+
+SEBELUM MULAI:
+- Pastikan Anda sudah di Apps Script project baru
+- Pastikan appsscript.json sudah di-update dengan manifest
+- Buka folder crew-data-app di file explorer
+
+URUTAN COPY-PASTE (dari atas ke bawah):
+
+== SCRIPT FILES (Copy-paste ke Apps Script sebagai "Script") ==
+
+1. google_apps_script.gs
+   - Nama di Apps Script: google_apps_script
+   - Ini adalah file UTAMA server-side
+
+2. i18n.js
+   - Nama di Apps Script: i18n
+   - Untuk internationalization (multi-bahasa)
+
+3. app.js (root)
+   - Nama di Apps Script: app
+   - Bootstrap utama
+
+4. admin.js (dari js/ folder)
+   - Nama di Apps Script: admin
+   
+5. api.js (dari js/ folder)
+   - Nama di Apps Script: api
+   - API calls ke server
+   
+6. app.js (dari js/ folder - BERBEDA dari #3)
+   - Nama di Apps Script: app_modules
+   - Jangan samakan dengan app.js root
+   
+7. auth.js (dari js/ folder)
+   - Nama di Apps Script: auth
+   
+8. candidate.js (dari js/ folder)
+   - Nama di Apps Script: candidate
+   
+9. config.js (dari js/ folder)
+   - Nama di Apps Script: config
+   - PENTING: Cek apakah ada hardcoded URLs
+   
+10. owner.js (dari js/ folder)
+    - Nama di Apps Script: owner
+    
+11. ui-components.js (dari js/ folder)
+    - Nama di Apps Script: ui_components
+    - Gunakan underscore, bukan dash
+
+== HTML/CSS FILES (Copy-paste sebagai "HTML") ==
+
+12. index.html
+    - Nama di Apps Script: index
+    - File HTML utama
+    
+13. styles.css
+    - Nama di Apps Script: styles
+    - Copy seluruh isinya ke dalam tag <style>...</style>
+
+== FILE YANG TIDAK PERLU DI-COPY ==
+
+- appsscript.json (sudah di-setup di awal)
+- .clasp.json (untuk lokal development saja)
+- .claspignore (untuk lokal development saja)
+- GEMINI.md (dokumentasi, tidak diperlukan)
+- http_server.log (file log, tidak diperlukan)
+- assets/ folder (akan di-handle terpisah)
+
+========================================
+ESTIMASI WAKTU: ~30-45 menit untuk copy semua
+========================================
