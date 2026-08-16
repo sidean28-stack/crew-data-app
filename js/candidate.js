@@ -119,33 +119,6 @@ function generateSequentialSubmissionId() {
   return `CREW-LONG-${nextNumber}`;
 }
 
-function normalizeIdentityValue(value) {
-  return String(value || '').trim().replace(/\s+/g, '').toUpperCase();
-}
-
-function findDuplicateCrewIdentity(payload, excludeSubmissionId) {
-  const passportNo = normalizeIdentityValue(payload?.passportNo);
-  const cdcNo = normalizeIdentityValue(payload?.cdcNo);
-  if (!passportNo && !cdcNo) return null;
-
-  const records = Array.isArray(window.crewDatabase) ? window.crewDatabase : [];
-  for (const crew of records) {
-    if (excludeSubmissionId && crew?.submissionId === excludeSubmissionId) continue;
-
-    const existingPassport = normalizeIdentityValue(crew?.passportNo);
-    const existingCdc = normalizeIdentityValue(crew?.cdcNo);
-
-    if (passportNo && existingPassport && passportNo === existingPassport) {
-      return { field: 'passportNo', existingCrew: crew, value: payload?.passportNo };
-    }
-    if (cdcNo && existingCdc && cdcNo === existingCdc) {
-      return { field: 'cdcNo', existingCrew: crew, value: payload?.cdcNo };
-    }
-  }
-
-  return null;
-}
-
 function getFormData() {
   const expRadio = document.querySelector('input[name="expLongline"]:checked');
   const skillsChecked = Array.from(document.querySelectorAll('input[name="skillGeneral"]:checked')).map(el => el.value);
@@ -215,7 +188,6 @@ function getFormData() {
     waliStatus: document.getElementById('waliStatus').value,
     skckStatus: document.getElementById('skckStatus').value,
     documents: window.uploadedDocuments,
-    removedDocumentUrls: Array.isArray(window.pendingRemovedDocumentUrls) ? [...window.pendingRemovedDocumentUrls] : [],
     operationalStatus: 'STAND_BY',
     status: 'STAND_BY',
     submittedAt: new Date().toISOString()
@@ -229,15 +201,6 @@ async function submitCrewForm() {
   }
   const formData = getFormData();
   const isEditing = Boolean(window.editingSubmissionId);
-  const duplicateConflict = findDuplicateCrewIdentity(formData, isEditing ? window.editingSubmissionId : null);
-  if (duplicateConflict) {
-    const label = duplicateConflict.field === 'passportNo' ? 'Nomor Paspor' : 'Nomor Seaman Book / CDC';
-    const conflictCrew = duplicateConflict.existingCrew || {};
-    const conflictText = conflictCrew.fullName ? `${conflictCrew.fullName} (${conflictCrew.submissionId})` : 'data yang sudah ada';
-    alert(`${label} "${duplicateConflict.value}" sudah dipakai oleh ${conflictText}. Gunakan nomor lain.`);
-    return;
-  }
-
   let cloudPayload = formData;
   
   if (isEditing) {
@@ -322,7 +285,6 @@ function loadSavedDraft() {
 
 function clearDraft() {
   localStorage.removeItem('crew_app_draft');
-  window.pendingRemovedDocumentUrls = [];
   document.getElementById('crewForm').reset();
 }
 
@@ -393,15 +355,6 @@ function renderGallery(docType) {
 }
 
 function removeDoc(docType, idx) {
-  const removedDoc = window.uploadedDocuments[docType][idx];
-  const candidateUrl = typeof removedDoc === 'string' ? removedDoc : (removedDoc && (removedDoc.url || removedDoc.link));
-  if (candidateUrl && /^https?:\/\//i.test(candidateUrl)) {
-    if (!Array.isArray(window.pendingRemovedDocumentUrls)) window.pendingRemovedDocumentUrls = [];
-    if (!window.pendingRemovedDocumentUrls.includes(candidateUrl)) {
-      window.pendingRemovedDocumentUrls.push(candidateUrl);
-    }
-  }
-
   window.uploadedDocuments[docType].splice(idx, 1);
   renderGallery(docType);
 }
