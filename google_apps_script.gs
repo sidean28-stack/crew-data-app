@@ -185,12 +185,12 @@ function doPost(e) {
       properCase_(data.fullName),
       data.chineseName || "",
       properCase_(data.rankPosition),
-      data.phoneNo || "",
+      asPhoneText_(data.phoneNo),
       combinedAddress,
       properCase_(data.fam1Name) + " (" + properCase_(data.fam1Relation) + ")",
-      data.fam1Phone || "",
+      asPhoneText_(data.fam1Phone),
       properCase_(data.fam2Name) + " (" + properCase_(data.fam2Relation) + ")",
-      data.fam2Phone || "",
+      asPhoneText_(data.fam2Phone),
       properCase_(data.expLongline),
       properCase_(data.vesselName),
       properCase_(data.vesselTypeLongline),
@@ -349,6 +349,11 @@ function getCrewSheet_(spreadsheet) {
 
   throw new Error("Sheet data crew tidak ditemukan atau header tidak valid.");
 }
+
+function asPhoneText_(value) {
+  var v = String(value || "").trim();
+  return v ? "'" + v : "";
+  }
 
 function normalizeOperationalStatus_(value) {
   var status = String(value || "").trim().toUpperCase();
