@@ -6,7 +6,7 @@
  * ==============================================================================
  */
 
-var CREW_SPREADSHEET_ID = "18z_NRHfbZDaUrfWmF7hCZiSdzLNNlTcEwYmNvL-i4nY";
+var CREW_SPREADSHEET_ID = "1VY0gIxIyA4mf7yKNwXprgUaDvLIZuBeABlF8MVNMJlA";
 
 function getCrewSpreadsheet_() {
   return SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(CREW_SPREADSHEET_ID);
@@ -185,12 +185,12 @@ function doPost(e) {
       properCase_(data.fullName),
       data.chineseName || "",
       properCase_(data.rankPosition),
-      asPhoneText_(data.phoneNo),
+      data.phoneNo || "",
       combinedAddress,
       properCase_(data.fam1Name) + " (" + properCase_(data.fam1Relation) + ")",
-      asPhoneText_(data.fam1Phone),
+      data.fam1Phone || "",
       properCase_(data.fam2Name) + " (" + properCase_(data.fam2Relation) + ")",
-      asPhoneText_(data.fam2Phone),
+      data.fam2Phone || "",
       properCase_(data.expLongline),
       properCase_(data.vesselName),
       properCase_(data.vesselTypeLongline),
@@ -349,11 +349,6 @@ function getCrewSheet_(spreadsheet) {
 
   throw new Error("Sheet data crew tidak ditemukan atau header tidak valid.");
 }
-
-function asPhoneText_(value) {
-  var v = String(value || "").trim();
-  return v ? "'" + v : "";
-  }
 
 function normalizeOperationalStatus_(value) {
   var status = String(value || "").trim().toUpperCase();
@@ -573,10 +568,8 @@ function saveBase64FileToDrive(folderId, fileObj, fileTag) {
       { fields: "id,webViewLink" }
     );
     setDriveAnyoneView_(driveFile.id);
-    Logger.log("✅ File uploaded: " + fileName + " (ID: " + driveFile.id + ")");
     return driveFile.webViewLink || ("https://drive.google.com/file/d/" + driveFile.id + "/view");
   } catch (e) {
-    Logger.log("❌ ERROR uploading file " + fileTag + ": " + e.toString());
     return null;
   }
 }
