@@ -391,7 +391,7 @@ const i18n = {
 };
 
 // Longline Specific Rank Positions (Khusus Kapal Longline) - Includes SELAM / TUKANG SELAM (潜水员)
-const rankOptions = [
+const i18nRankOptions = [
   { id: "deckhand", nameId: "DECKHAND", nameZh: "普通水手 / DECKHAND" },
   { id: "operator_holer", nameId: "OPERATOR HOLER", nameZh: "起绳机操作员 / OPERATOR HOLER" },
   { id: "koki", nameId: "KOKI", nameZh: "厨师 / KOKI (廚師)" },
@@ -461,7 +461,7 @@ const skillGeneralOptions = [
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     i18n,
-    rankOptions,
+    i18nRankOptions,
     longlineQualifications,
     vesselTypeLonglineOptions,
     vesselOriginOptions,
