@@ -1,5 +1,58 @@
 // js/ui-components.js
 
+var rankOptions = [
+  { nameId: 'AB (Jurumudi)', nameZh: 'AB（Jurumudi）' },
+  { nameId: 'DECKHAND', nameZh: '甲板工' },
+  { nameId: 'OPERATOR HOLER', nameZh: '操作员（Holer）' },
+  { nameId: 'SELAM / TUKANG SELAM', nameZh: '潜水员 / 水下工' },
+  { nameId: 'BOSUN', nameZh: '水手长' },
+  { nameId: 'COOK', nameZh: '厨师' }
+];
+window.rankOptions = rankOptions;
+
+var longlineQualifications = [
+  { nameId: 'Manual & Snap Atas', nameZh: 'Manual & Snap Atas / 上口' },
+  { nameId: 'Manual & Snap Bawah', nameZh: 'Manual & Snap Bawah / 下口' },
+  { nameId: 'Holer', nameZh: 'Holer / 导轮入口' },
+  { nameId: 'Selam', nameZh: 'Selam / 潜水' }
+];
+window.longlineQualifications = longlineQualifications;
+
+var vesselTypeLonglineOptions = [
+  { nameId: 'CT4 SNAP ATAS 车筒下口' },
+  { nameId: 'CT5 SNAP ATAS 车筒下口' },
+  { nameId: 'CT-6/7 导轮入口' },
+  { nameId: 'LAINNYA' }
+];
+window.vesselTypeLonglineOptions = vesselTypeLonglineOptions;
+
+var vesselOriginOptions = [
+  { nameId: 'Taiwan 台湾' },
+  { nameId: 'China 中国' },
+  { nameId: 'Indonesia Indonesia' },
+  { nameId: 'Japan 日本' }
+];
+window.vesselOriginOptions = vesselOriginOptions;
+
+var placementCountryOptions = [
+  { nameId: 'Mauritius 毛里求斯' },
+  { nameId: 'Capetown 开普敦' },
+  { nameId: 'Solomon 所罗门' },
+  { nameId: 'Taiwan 台湾' },
+  { nameId: 'Japan 日本' }
+];
+window.placementCountryOptions = placementCountryOptions;
+
+var skillGeneralOptions = [
+  { nameId: 'Gulung Yoka', nameZh: '手工捲繩' },
+  { nameId: 'Proses Ikan', nameZh: '殺魚' },
+  { nameId: 'Tukang Es', nameZh: '冰工' },
+  { nameId: 'Holler', nameZh: '辊仔車' },
+  { nameId: 'Kemudi Holing', nameZh: '开船' },
+  { nameId: 'Selam / Tukang Selam', nameZh: '潜水' }
+];
+window.skillGeneralOptions = skillGeneralOptions;
+
 function switchLanguage(lang) {
   window.currentLang = lang;
   document.getElementById('btnLangID').classList.toggle('active', lang === 'id');

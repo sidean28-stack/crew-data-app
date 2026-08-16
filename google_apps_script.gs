@@ -6,7 +6,7 @@
  * ==============================================================================
  */
 
-var CREW_SPREADSHEET_ID = "1VY0gIxIyA4mf7yKNwXprgUaDvLIZuBeABlF8MVNMJlA";
+var CREW_SPREADSHEET_ID = "18z_NRHfbZDaUrfWmF7hCZiSdzLNNlTcEwYmNvL-i4nY";
 
 function getCrewSpreadsheet_() {
   return SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(CREW_SPREADSHEET_ID);
@@ -568,8 +568,10 @@ function saveBase64FileToDrive(folderId, fileObj, fileTag) {
       { fields: "id,webViewLink" }
     );
     setDriveAnyoneView_(driveFile.id);
+    Logger.log("✅ File uploaded: " + fileName + " (ID: " + driveFile.id + ")");
     return driveFile.webViewLink || ("https://drive.google.com/file/d/" + driveFile.id + "/view");
   } catch (e) {
+    Logger.log("❌ ERROR uploading file " + fileTag + ": " + e.toString());
     return null;
   }
 }
