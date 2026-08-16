@@ -4,7 +4,8 @@
  * Specialization: Longline Crew Data, Catalogue, Booking Basket & Security
  */
 
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbx7NtoL8tSBDuKTM_cIDYEdUgBcVveqgOisb871XjD4icGiQjULgOfXOzeJD4pyQuHm/exec";
+const DEFAULT_GAS_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnQs6QoX5n9WhMiKlbALyXxVne2lE77H05nEZIEajutRLtxXiVGdteGJV9_kwVBS6JIW0-mHvD5QTBmFDqnoHBkeYCDBvVnbR-HjmrCGz34DfsGmMD5_6o13OAqSIvpqGcGTG4QfRhqDEBrn0XkDsA6WeImr6g3N0JCRU33E6tPBxD7eOHRQcQPBoRZNDaAKpDqkU5J_Cz1q8oXDVipK7BJu_rkGtTRK6dHG5pAJusFjXl0cLtb3EuhThajRIhhSAnccYSscbNw2V-Bu8EE&lib=MWXtw9lwuPUCgEy8iGs-2YCekRsELq_92";
+
 // Global State
 let currentLang = 'id';
 let currentRole = 'admin'; // 'admin', 'owner', 'candidate'
