@@ -35,6 +35,56 @@ function getCrewSpreadsheet_() {
   throw new Error("Spreadsheet data crew tidak dapat diakses. Harap atur Script Properties 'SPREADSHEET_ID' atau beri akses izin spreadsheet.");
 }
 
+function ensureUserRulesSheet_(ss) {
+  try {
+    if (!ss) return;
+    var sheetName = "📌 ATURAN_USER";
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName, 0);
+    }
+    if (sheet.getLastRow() < 2) {
+      sheet.clear();
+      var data = [
+        ["PANDUAN & ATURAN PENGEDITAN DATA MANUAL DI GOOGLE SHEETS"],
+        ["Sistem Aplikasi Crew Data - PT ALINDA PRIMA SENTOSA / Wantaifeng International Co Ltd"],
+        [""],
+        ["❓ Apakah Edit Manual di Google Sheets Bermasalah di Produksi?"],
+        ["TIDAK BERMASALAH. Aplikasi Web (crew-data-app) dirancang untuk selalu membaca data secara real-time dari Google Sheets."],
+        [""],
+        ["🟢 HAL YANG SANGAT AMAN DILAKUKAN:"],
+        ["1. Mengedit Teks & Informasi Kru: Nama Lengkap, No. Paspor, No. Buku Pelaut, No. HP, Masa Berlaku, Ukuran Baju/Sepatu, Catatan Admin."],
+        ["2. Mengubah Status Operasional: Mengubah status kru secara manual (STAND_BY, ON_BOAT, FINISHED, atau RESIGNED)."],
+        ["3. Menambahkan Kru Baru: Memasukkan baris kru baru di paling bawah sheet, selama mengisi Nama Lengkap."],
+        [""],
+        ["⚠️ 3 ATURAN PENGAMANAN WAJIB (JANGAN DILAKUKAN):"],
+        ["1. JANGAN UBAH / HAPUS NILAI 'ID KRU' (KOLOM ID)"],
+        ["   ID Kru (seperti IMP-... atau CREW-...) adalah kunci utama yang menghubungkan kru ke Google Drive & Riwayat Pekerjaan."],
+        ["2. JANGAN UBAH / HAPUS BARIS 1 (HEADER KOLOM)"],
+        ["   Sistem membaca data menggunakan header di Baris 1. Jika nama header diubah, sistem tidak mengenali kolom tersebut."],
+        ["   Jika ingin menambah kolom baru, selalu buat di UJUNG PALING KANAN."],
+        ["3. GUNAKAN FORMAT TANGGAL & STATUS STANDAR"],
+        ["   - Tanggal: Format YYYY-MM-DD (contoh: 1995-08-20)."],
+        ["   - Status Operasional: STAND_BY, ON_BOAT, FINISHED, atau RESIGNED."],
+        [""],
+        ["💡 KEUNGGULAN SMART IMPORT V2:"],
+        ["Saat Anda melakukan Import Excel dari Web App, sistem otomatis mencocokkan data (matching) dengan editan manual di Sheet tanpa membuat duplikat."]
+      ];
+
+      sheet.getRange(1, 1, data.length, 1).setValues(data);
+      sheet.getRange("A1").setFontSize(14).setFontWeight("bold").setFontColor("#1a73e8");
+      sheet.getRange("A2").setFontSize(10).setFontItalic(true).setFontColor("#5f6368");
+      sheet.getRange("A4").setFontSize(11).setFontWeight("bold").setFontColor("#202124");
+      sheet.getRange("A7").setFontSize(11).setFontWeight("bold").setFontColor("#137333");
+      sheet.getRange("A12").setFontSize(11).setFontWeight("bold").setFontColor("#c5221f");
+      sheet.getRange("A21").setFontSize(11).setFontWeight("bold").setFontColor("#1a73e8");
+      sheet.setColumnWidth(1, 900);
+    }
+  } catch (e) {
+    Logger.log("User rules sheet notice: " + e.toString());
+  }
+}
+
 
 function normalizeIdentity_(value) {
   return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
