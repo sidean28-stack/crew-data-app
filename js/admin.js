@@ -364,6 +364,79 @@ function cancelEditMode() {
 
 let pendingExcelData = [];
 
+function normalizeCrewIdentifier(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizeCrewName(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeCrewDob(value) {
+  const v = String(value || '').trim();
+  if (!v) return '';
+  const d = new Date(v);
+  if (!isNaN(d.getTime())) return UtilitiesCrewDateKey(d);
+  return v.replace(/[^0-9]/g, '');
+}
+
+function UtilitiesCrewDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function extractKtpFromCrew(crew) {
+  const text = String(crew.adminNotes || crew.ktpNo || '').trim();
+  const m = text.match(/(?:KTP|NIK)\s*[:=]?\s*([0-9]{10,20})/i);
+  return m ? normalizeCrewIdentifier(m[1]) : normalizeCrewIdentifier(crew.ktpNo || '');
+}
+
+function findCrewIdentityMatch(crewData) {
+  const db = Array.isArray(window.crewDatabase) ? window.crewDatabase : [];
+  const sid = String(crewData.submissionId || '').trim();
+  const passport = normalizeCrewIdentifier(crewData.passportNo);
+  const cdc = normalizeCrewIdentifier(crewData.cdcNo);
+  const ktp = extractKtpFromCrew(crewData);
+  const name = normalizeCrewName(crewData.fullName);
+  const dob = normalizeCrewDob(crewData.dob);
+
+  if (sid) {
+    const exactId = db.find(c => String(c.submissionId || '').trim() === sid);
+    if (exactId) return { type: 'CREW_ID', crew: exactId };
+  }
+
+  const strong = [];
+  db.forEach(c => {
+    const matches = [];
+    if (passport && normalizeCrewIdentifier(c.passportNo) === passport) matches.push('PASSPORT');
+    if (cdc && normalizeCrewIdentifier(c.cdcNo) === cdc) matches.push('SEAMAN_BOOK');
+    if (ktp && extractKtpFromCrew(c) === ktp) matches.push('NIK_KTP');
+    if (matches.length) strong.push({ crew: c, matches });
+  });
+
+  const uniqueStrong = [];
+  strong.forEach(x => {
+    if (!uniqueStrong.some(y => y.crew.submissionId === x.crew.submissionId)) uniqueStrong.push(x);
+  });
+
+  if (uniqueStrong.length === 1) {
+    return { type: uniqueStrong[0].matches.join('+'), crew: uniqueStrong[0].crew };
+  }
+  if (uniqueStrong.length > 1) {
+    return { type: 'CONFLICT_STRONG_IDENTIFIERS', candidates: uniqueStrong };
+  }
+
+  if (name && dob) {
+    const samePerson = db.filter(c => normalizeCrewName(c.fullName) === name && normalizeCrewDob(c.dob) === dob);
+    if (samePerson.length === 1) return { type: 'NAME+DOB', crew: samePerson[0] };
+    if (samePerson.length > 1) return { type: 'CONFLICT_NAME_DOB', candidates: samePerson.map(c => ({ crew: c, matches: ['NAME+DOB'] })) };
+  }
+
+  return null;
+}
+
 async function handleExcelImport(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -382,7 +455,9 @@ async function handleExcelImport(event) {
   const mapKey = (headerName) => {
     headerName = String(headerName || '').toLowerCase().replace(/\s+/g, ' ').trim();
     if (headerName.includes("nama mandarin") || headerName.includes("chinese name") || headerName.includes("中文姓名")) return "chineseName";
-    if (headerName.includes("id submisi") || headerName === "id") return "submissionId";
+    if (headerName.includes("id submisi") || headerName === "id" || headerName.includes("crew id")) return "submissionId";
+    if (headerName.includes("id pelaut") || headerName.includes("seafarer id") || headerName.includes("pelaut id")) return "pelautId";
+    if (headerName.includes("nik") || headerName.includes("no ktp") || headerName.includes("nomor ktp") || headerName.includes("ktp")) return "ktpNo";
     if ((headerName.includes("nama lengkap") && !headerName.includes("keluarga")) || headerName.includes("full name")) return "fullName";
     if (headerName.includes("jabatan") || headerName.includes("posisi")) return "rankPosition";
     if (headerName.includes("tempat lahir") || headerName.includes("出生地")) return "pob";
@@ -391,8 +466,8 @@ async function handleExcelImport(event) {
     if (headerName.includes("agama") || headerName.includes("宗教")) return "religion";
     if (headerName.includes("status perkawinan") || headerName.includes("婚姻状况")) return "maritalStatus";
     if (headerName.includes("golongan darah") || headerName.includes("血型")) return "bloodType";
-    if (headerName.includes("tinggi badan") || headerName.includes("身高")) return "heightCm";
-    if (headerName.includes("berat badan") || headerName.includes("体重")) return "weightKg";
+    if (headerName.includes("tinggi badan") || headerName.includes("tinggi (cm)") || headerName.includes("身高")) return "heightCm";
+    if (headerName.includes("berat badan") || headerName.includes("berat (kg)") || headerName.includes("体重")) return "weightKg";
     if (headerName.includes("ukuran baju") || headerName.includes("服装尺寸")) return "shirtSize";
     if (headerName.includes("ukuran sepatu") || headerName.includes("鞋码")) return "shoeSize";
     if (headerName.includes("rt/rw") || headerName.includes("社区编号")) return "rtRw";
@@ -416,6 +491,12 @@ async function handleExcelImport(event) {
     if (headerName.includes("asal kapal")) return "vesselOrigin";
     if (headerName.includes("penempatan") || headerName.includes("negara")) return "placementCountry";
     if (headerName.includes("skill")) return "skillGeneral";
+    if (headerName.includes("status operasional") || headerName.includes("operational status")) return "operationalStatus";
+    if (headerName.includes("kapal penempatan") || headerName.includes("vessel assigned")) return "vesselAssigned";
+    if (headerName.includes("tgl terbang") || headerName.includes("flight date")) return "flightDate";
+    if (headerName.includes("tgl finish") || headerName.includes("finish date")) return "finishDate";
+    if (headerName.includes("riwayat status") || headerName.includes("history status")) return "historyStatus";
+    if (headerName.includes("catatan admin") || headerName.includes("admin notes")) return "adminNotes";
     if (headerName.includes("paspor") || headerName.includes("passpor") || headerName.includes("passport")) {
       if (headerName.includes("expired") || headerName.includes("exp") || headerName.includes("masa berlaku") || headerName.includes("有效期") || headerName.includes("到期日")) return "passportExpiry";
       return "passportNo";
@@ -437,37 +518,41 @@ async function handleExcelImport(event) {
   let totalParsed = 0;
   let duplicateCount = 0;
   let newCount = 0;
+  let conflictCount = 0;
   pendingExcelData = [];
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     let crewData = {};
-    
+
     for (let key in row) {
       const mappedKey = mapKey(key);
-      if (mappedKey && row[key] && !crewData[mappedKey]) {
+      if (mappedKey && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '' && !crewData[mappedKey]) {
         crewData[mappedKey] = String(row[key]).trim();
       }
     }
-    
-    if (!crewData.submissionId) crewData.submissionId = "IMP-" + Date.now() + "-" + i;
-    if (!crewData.fullName) continue; 
 
-    const existing = window.crewDatabase.find(c => 
-      c.submissionId === crewData.submissionId || 
-      (crewData.passportNo && c.passportNo === crewData.passportNo) ||
-      (crewData.cdcNo && c.cdcNo === crewData.cdcNo)
-    );
-    
-    if (existing) {
-       crewData._isDuplicate = true;
-       crewData._existingId = existing.submissionId;
-       duplicateCount++;
+    if (!crewData.submissionId) crewData.submissionId = "IMP-" + Date.now() + "-" + i;
+    if (!crewData.fullName) continue;
+
+    if (crewData.ktpNo && !crewData.adminNotes) crewData.adminNotes = "KTP: " + crewData.ktpNo;
+
+    const match = findCrewIdentityMatch(crewData);
+    if (match && match.crew) {
+      crewData._isDuplicate = true;
+      crewData._existingId = match.crew.submissionId;
+      crewData._matchType = match.type;
+      duplicateCount++;
+    } else if (match && match.candidates) {
+      crewData._needsReview = true;
+      crewData._matchType = match.type;
+      crewData._candidates = match.candidates.map(x => x.crew.submissionId);
+      conflictCount++;
     } else {
-       crewData._isDuplicate = false;
-       newCount++;
+      crewData._isDuplicate = false;
+      newCount++;
     }
-    
+
     pendingExcelData.push(crewData);
     totalParsed++;
   }
@@ -475,10 +560,11 @@ async function handleExcelImport(event) {
   document.getElementById("excelPreviewStats").innerHTML = `
     <ul style="list-style: none; padding: 0;">
       <li><strong>Total Baris Ditemukan:</strong> ${totalParsed}</li>
-      <li><strong style="color: var(--status-error);">Kru Duplikat (Akan Ditimpa):</strong> ${duplicateCount}</li>
-      <li><strong style="color: var(--status-success);">Kru Baru:</strong> ${newCount}</li>
+      <li><strong style="color: var(--status-error);">Existing Crew (UPDATE/REJOIN):</strong> ${duplicateCount}</li>
+      <li><strong style="color: var(--status-success);">Crew Baru (APPEND):</strong> ${newCount}</li>
+      <li><strong style="color: var(--accent-amber);">Conflict (MANUAL REVIEW):</strong> ${conflictCount}</li>
     </ul>
-    <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">Catatan: Sistem mendeteksi duplikat dari Nomor Paspor, Buku Pelaut, atau ID.</p>
+    <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">Matching: Crew ID → NIK/KTP → Passport → Seaman Book → Nama + Tanggal Lahir. Format nomor dokumen dinormalisasi agar spasi/tanda hubung tidak membuat duplicate.</p>
   `;
 
   document.getElementById("excelImportProgressContainer").style.display = "none";
@@ -495,68 +581,72 @@ function closeExcelPreview() {
 async function confirmExcelImport() {
   document.getElementById("excelPreviewButtons").style.display = "none";
   document.getElementById("excelImportProgressContainer").style.display = "block";
-  
+
   const progressBar = document.getElementById("excelProgressBar");
   const progressText = document.getElementById("excelProgressText");
   const progressPercentage = document.getElementById("excelProgressPercentage");
-  
-  let importedCount = 0;
-  const total = pendingExcelData.length;
+
+  let processedCount = 0;
+  let skippedConflict = 0;
+  const safeRows = pendingExcelData.filter(x => !x._needsReview);
+  const total = safeRows.length;
+
+  if (pendingExcelData.some(x => x._needsReview)) {
+    skippedConflict = pendingExcelData.filter(x => x._needsReview).length;
+    alert(`${skippedConflict} crew berstatus CONFLICT dan TIDAK diinjeksikan. Silakan cek manual terlebih dahulu.`);
+  }
 
   for (let i = 0; i < total; i++) {
-    const crewData = pendingExcelData[i];
+    const crewData = safeRows[i];
     let action = "submit_crew";
-    
     let payload = { ...crewData };
     delete payload._isDuplicate;
     delete payload._existingId;
-    
+    delete payload._matchType;
+    delete payload._needsReview;
+    delete payload._candidates;
+
     if (crewData._isDuplicate) {
-       const idx = window.crewDatabase.findIndex(c => c.submissionId === crewData._existingId);
-       if (idx !== -1) {
-          window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...payload };
-          // the payload sent to GAS should have the full merged data, especially existing submissionId
-          payload = { ...window.crewDatabase[idx] };
-       }
-       action = "update_crew";
+      const idx = window.crewDatabase.findIndex(c => c.submissionId === crewData._existingId);
+      if (idx !== -1) {
+        window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...payload };
+        payload = { ...window.crewDatabase[idx] };
+      }
+      action = "update_crew";
     } else {
-       payload.status = "WAITING";
-       payload.documents = { passport:[], ktp:[], cdc:[], medical:[], photo:[] };
-       window.crewDatabase.unshift(payload);
+      payload.status = payload.operationalStatus || "WAITING";
+      payload.documents = { passport:[], ktp:[], cdc:[], medical:[], photo:[] };
+      window.crewDatabase.unshift(payload);
     }
-    
-    // UI Update immediate
-    importedCount++;
-    const pct = Math.round((importedCount / total) * 100);
+
+    processedCount++;
+    const pct = total ? Math.round((processedCount / total) * 100) : 100;
     progressBar.style.width = pct + "%";
-    progressText.innerText = `Memproses Kru ${importedCount} dari ${total}`;
+    progressText.innerText = `Memproses Kru ${processedCount} dari ${total}`;
     progressPercentage.innerText = pct + "%";
-    
+
     try {
       payload.action = action;
-      // Backup UI changes before sending to backend
       if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
-      
       await fetch(getGasUrl(), {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      // Added a tiny delay to prevent Apps Script concurrent request limitation drop
       await new Promise(resolve => setTimeout(resolve, 300));
-    } catch(e) { 
+    } catch(e) {
       console.error("GAS Sync Error:", e);
     }
   }
-  
-  progressText.innerText = `Berhasil Import ${importedCount} Kru!`;
+
+  progressText.innerText = `Import selesai: ${processedCount} diproses, ${skippedConflict} conflict ditahan.`;
   loadDirectoryTable();
   if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
-  
+
   setTimeout(() => {
     closeExcelPreview();
-  }, 2000);
+  }, 2500);
 }
 
 function exportDirectoryExcel() {

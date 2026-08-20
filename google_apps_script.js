@@ -6,23 +6,175 @@
  * ==============================================================================
  */
 
-var CREW_SPREADSHEET_ID = "1fLubUMSSBb3XpE2EuJa9uSXd5D7h5T1nQECX7ldavss";
+var PRODUCTION_SPREADSHEET_ID = "1VY0gIxIyA4mf7yKNwXprgUaDvLIZuBeABlF8MVNMJlA";
 
 function getCrewSpreadsheet_() {
+  // 1. Check Script Properties for environment-specific override (e.g. SPREADSHEET_ID in Staging)
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (ss) return ss;
+    var propId = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
+    if (propId) {
+      var propSheet = SpreadsheetApp.openById(propId);
+      if (propSheet) return propSheet;
+    }
   } catch (e) {}
 
-  if (CREW_SPREADSHEET_ID && CREW_SPREADSHEET_ID !== "PASTE_YOUR_SPREADSHEET_ID_HERE") {
-    try {
-      return SpreadsheetApp.openById(CREW_SPREADSHEET_ID);
-    } catch (e) {
-      throw new Error("Dokumen Google Sheets dengan ID '" + CREW_SPREADSHEET_ID + "' tidak ada/tidak dapat diakses. Harap ganti variabel CREW_SPREADSHEET_ID di Apps Script dengan ID Google Sheet Anda yang aktif.");
+  // 2. Check Container-Bound Spreadsheet (Staging / Production bound sheet)
+  try {
+    var active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (e) {}
+
+  // 3. Fallback to Production Spreadsheet ID
+  try {
+    if (PRODUCTION_SPREADSHEET_ID) {
+      var prodSheet = SpreadsheetApp.openById(PRODUCTION_SPREADSHEET_ID);
+      if (prodSheet) return prodSheet;
+    }
+  } catch (e) {}
+
+  throw new Error("Spreadsheet data crew tidak dapat diakses. Harap atur Script Properties 'SPREADSHEET_ID' atau beri akses izin spreadsheet.");
+}
+
+
+function normalizeIdentity_(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizeName_(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeDob_(value) {
+  var v = String(value || '').trim();
+  if (!v) return '';
+  var d = new Date(v);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, Session.getScriptTimeZone() || 'Asia/Jakarta', 'yyyy-MM-dd');
+  }
+  return v.replace(/[^0-9]/g, '');
+}
+
+function extractKtp_(dataOrRow) {
+  var text = '';
+  var rawKtp = '';
+  if (dataOrRow && typeof dataOrRow === 'object' && !Array.isArray(dataOrRow)) {
+    text = String(dataOrRow.adminNotes || '');
+    rawKtp = String(dataOrRow.ktpNo || '');
+  } else {
+    text = String(dataOrRow || '');
+  }
+  var m = text.match(/(?:KTP|NIK)\s*[:=]?\s*([0-9]{10,20})/i);
+  if (m) return normalizeIdentity_(m[1]);
+  if (rawKtp) return normalizeIdentity_(rawKtp);
+  var rawMatch = text.match(/([0-9]{16})/);
+  if (rawMatch) return normalizeIdentity_(rawMatch[1]);
+  return '';
+}
+
+function findCrewIdentityInSheet_(sheet, data) {
+  if (!sheet || sheet.getLastRow() < 2) return { match: null, candidates: [] };
+  var values = sheet.getDataRange().getDisplayValues();
+  var sid = String(data.submissionId || '').trim();
+  var passport = normalizeIdentity_(data.passportNo);
+  var cdc = normalizeIdentity_(data.cdcNo);
+  var ktp = extractKtp_(data);
+  var name = normalizeName_(data.fullName);
+  var dob = normalizeDob_(data.dob);
+
+  // 1. Immutable/current crew ID exact match.
+  if (sid) {
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][1] || '').trim() === sid) {
+        return { match: { rowIndex: i + 1, submissionId: String(values[i][1]), type: 'CREW_ID' }, candidates: [] };
+      }
     }
   }
 
-  throw new Error("Google Sheet tidak terhubung. Harap buat Google Sheet baru dan buka menu Extensi -> Apps Script, atau masukkan Sheet ID pada variabel CREW_SPREADSHEET_ID.");
+  var strong = [];
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    var rowPassport = normalizeIdentity_(row[17]);
+    var rowCdc = normalizeIdentity_(row[19]);
+    var rowKtp = extractKtp_({ adminNotes: row[46], ktpNo: row[46] });
+    var matches = [];
+    if (passport && rowPassport === passport) matches.push('PASSPORT');
+    if (cdc && rowCdc === cdc) matches.push('SEAMAN_BOOK');
+    if (ktp && rowKtp === ktp) matches.push('NIK_KTP');
+    if (matches.length) strong.push({ rowIndex: r + 1, submissionId: String(row[1] || ''), type: matches.join('+') });
+  }
+
+  var uniqueStrong = [];
+  strong.forEach(function(item) {
+    if (!uniqueStrong.some(function(x) { return x.submissionId === item.submissionId; })) uniqueStrong.push(item);
+  });
+  if (uniqueStrong.length === 1) return { match: uniqueStrong[0], candidates: [] };
+  if (uniqueStrong.length > 1) return { match: null, candidates: uniqueStrong, conflict: 'CONFLICT_STRONG_IDENTIFIERS' };
+
+  // 4. Fallback: normalized name + DOB. Never use name alone.
+  if (name && dob) {
+    var same = [];
+    for (var n = 1; n < values.length; n++) {
+      var rowName = normalizeName_(values[n][2]);
+      var rowDob = normalizeDob_(values[n][48] || values[n][30]);
+      if (rowName === name && rowDob === dob) {
+        same.push({ rowIndex: n + 1, submissionId: String(values[n][1] || ''), type: 'NAME+DOB' });
+      }
+    }
+    if (same.length === 1) return { match: same[0], candidates: [] };
+    if (same.length > 1) return { match: null, candidates: same, conflict: 'CONFLICT_NAME_DOB' };
+  }
+
+  return { match: null, candidates: [] };
+}
+
+function getEmploymentHistorySheet_(spreadsheet) {
+  var sheet = spreadsheet.getSheetByName('Crew Employment History');
+  if (!sheet) sheet = spreadsheet.insertSheet('Crew Employment History');
+  if (sheet.getLastRow() === 0) {
+    var headers = ['Timestamp','Crew ID','Nama Lengkap','Event','Old Status','New Status','Vessel','Join Date','Finish Date','History Status','Source'];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#0f172a').setFontColor('#ffffff');
+  }
+  return sheet;
+}
+
+function classifyEmploymentEvent_(oldStatus, newStatus, oldHistory, newHistory) {
+  var oldS = String(oldStatus || '').toUpperCase();
+  var newS = String(newStatus || '').toUpperCase();
+  var oldH = String(oldHistory || '').toUpperCase();
+  var newH = String(newHistory || '').toUpperCase();
+  var terminal = ['FINISHED','BROKEN','RESIGNED','INACTIVE','FINISH','RESIGN'];
+  var active = ['ON_BOAT','ONBOARD','SELECTED'];
+  if (terminal.some(function(x){ return oldS.indexOf(x) >= 0 || oldH.indexOf(x) >= 0; }) && active.indexOf(newS) >= 0) return 'REJOIN';
+  if (active.indexOf(newS) >= 0 && active.indexOf(oldS) < 0) return 'ONBOARD';
+  if (newH.indexOf('BROKEN') >= 0) return 'BROKEN';
+  if (newH.indexOf('FINISH') >= 0) return 'FINISHED';
+  if (newH.indexOf('RESIGN') >= 0) return 'RESIGNED';
+  if (oldS !== newS || oldH !== newH) return 'STATUS_CHANGE';
+  return '';
+}
+
+function logEmploymentEvent_(spreadsheet, crew, oldValues, isNew) {
+  var newStatus = normalizeOperationalStatus_(crew.operationalStatus || crew.status || 'STAND_BY');
+  var oldStatus = isNew ? '' : String(oldValues[40] || '');
+  var oldHistory = isNew ? '' : String(oldValues[45] || '');
+  var newHistory = String(crew.historyStatus || '');
+  var event = isNew ? 'CREATED' : classifyEmploymentEvent_(oldStatus, newStatus, oldHistory, newHistory);
+  if (!event) return;
+  var sheet = getEmploymentHistorySheet_(spreadsheet);
+  sheet.appendRow([
+    new Date(),
+    String(crew.submissionId || ''),
+    properCase_(crew.fullName),
+    event,
+    oldStatus,
+    newStatus,
+    properCase_(crew.vesselAssigned || crew.vesselName || ''),
+    crew.flightDate || '',
+    crew.finishDate || '',
+    properCase_(newHistory),
+    'EXCEL_IMPORT'
+  ]);
 }
 
 function authorizeProduction() {
@@ -147,24 +299,28 @@ function doPost(e) {
       (data.city ? " Kab/Kota: " + properCase_(data.city) : "") +
       (data.province ? " Prov: " + properCase_(data.province) : "");
 
-    // Cek apakah update
-    var isUpdate = (action === "update_crew");
-    var updateRowIndex = -1;
+    // SMART IDENTITY UPSERT:
+    // Crew ID -> NIK/KTP -> Passport -> Seaman Book -> Name + DOB.
+    // Rejoin memakai Crew ID lama; tidak membuat person baru.
+    var identity = findCrewIdentityInSheet_(sheet, data);
+    if (identity.conflict) {
+      return jsonResponse_({ success: false, conflict: true, message: "Identity conflict: perlu verifikasi manual.", candidates: identity.candidates });
+    }
+
+    var isUpdate = (action === "update_crew") || !!identity.match;
+    var updateRowIndex = identity.match ? identity.match.rowIndex : -1;
     var existingFolderUrl = "";
 
-    if (isUpdate) {
-      var dataRange = sheet.getDataRange();
-      var values = dataRange.getValues();
-      for (var i = 1; i < values.length; i++) {
-        if (String(values[i][1] || "").trim() === String(data.submissionId || "").trim()) {
-          updateRowIndex = i + 1;
-          existingFolderUrl = values[i][31] || "";
-          break;
-        }
+    if (identity.match) {
+      data.submissionId = identity.match.submissionId;
+      action = "update_crew";
+      if (updateRowIndex > 0) {
+        existingFolderUrl = sheet.getRange(updateRowIndex, 32).getValue() || "";
       }
-      if (updateRowIndex === -1) {
-        return jsonResponse_({ success: false, message: "Crew yang akan diupdate tidak ditemukan." });
-      }
+    }
+
+    if (isUpdate && updateRowIndex === -1) {
+      return jsonResponse_({ success: false, message: "Crew yang akan diupdate tidak ditemukan." });
     }
 
     // Save Uploaded Files to Drive
@@ -186,11 +342,6 @@ function doPost(e) {
               if (fileUrl && docUrls[docType]) {
                 docUrls[docType].push(fileUrl);
               }
-            } else {
-              var existingUrl = getExistingDocumentUrl_(fileObj);
-              if (existingUrl && docUrls[docType] && docUrls[docType].indexOf(existingUrl) === -1) {
-                docUrls[docType].push(existingUrl);
-              }
             }
           });
         }
@@ -199,7 +350,7 @@ function doPost(e) {
 
     var rowValues = [
       new Date(),
-      normalizeCrewSubmissionId_(sheet, data.submissionId),
+      data.submissionId || Date.now(),
       properCase_(data.fullName),
       data.chineseName || "",
       properCase_(data.rankPosition),
@@ -264,6 +415,10 @@ function doPost(e) {
       data.submittedAt || ""
     ];
 
+    var oldValuesForHistory = isUpdate && updateRowIndex !== -1
+      ? sheet.getRange(updateRowIndex, 1, 1, 64).getValues()[0]
+      : null;
+
     if (isUpdate && updateRowIndex !== -1) {
       var maxCol = sheet.getMaxColumns();
       if (maxCol < 64) {
@@ -271,23 +426,13 @@ function doPost(e) {
       }
       
       var oldValues = sheet.getRange(updateRowIndex, 1, 1, 64).getValues()[0];
-      var removedDocumentUrls = [];
-      var documentColumns = { passport: 32, ktp: 33, cdc: 34, medical: 35, cert: 36, photo: 37 };
-      Object.keys(documentColumns).forEach(function(docType) {
-        var columnIndex = documentColumns[docType];
-        var hasFinalList = data.documents && Object.prototype.hasOwnProperty.call(data.documents, docType);
-        if (!hasFinalList) {
-          rowValues[columnIndex] = oldValues[columnIndex];
-          return;
+      for (var c = 32; c <= 37; c++) {
+        if (rowValues[c] === "" && oldValues[c] !== "") {
+          rowValues[c] = oldValues[c];
+        } else if (rowValues[c] !== "" && oldValues[c] !== "") {
+          rowValues[c] = oldValues[c] + " \n" + rowValues[c];
         }
-
-        var finalUrls = uniqueDocumentUrls_(docUrls[docType]);
-        var oldUrls = splitDocumentUrls_(oldValues[columnIndex]);
-        rowValues[columnIndex] = finalUrls.join(" \n");
-        oldUrls.forEach(function(oldUrl) {
-          if (finalUrls.indexOf(oldUrl) === -1) removedDocumentUrls.push(oldUrl);
-        });
-      });
+      }
       var preservedFields = [
         [38, "heightCm"],
         [39, "weightKg"],
@@ -311,21 +456,13 @@ function doPost(e) {
       });
       rowValues[0] = oldValues[0];
       sheet.getRange(updateRowIndex, 1, 1, 64).setValues([rowValues]);
-      removedDocumentUrls.forEach(trashDriveDocumentByUrl_);
     } else {
       sheet.appendRow(rowValues);
     }
 
-    var deletionResult = { success: true, deletedFiles: 0, failedDeletions: [] };
-    removedDocumentUrls.forEach(function(url) {
-      var result = trashDriveDocumentByUrl_(url);
-      if (result.success) {
-        deletionResult.deletedFiles++;
-      } else {
-        deletionResult.failedDeletions.push(result.error);
-      }
-    });
-
+    // Record lifecycle event without replacing the Crew Master identity.
+    logEmploymentEvent_(ss, data, oldValuesForHistory, !isUpdate);
+    
     return ContentService
       .createTextOutput(JSON.stringify({
         success: true,
@@ -333,7 +470,6 @@ function doPost(e) {
         folderUrl: crewFolderUrl,
         submissionId: data.submissionId,
         total: sheet.getLastRow() - 1,
-        deletionStatus: deletionResult,
         lastSync: new Date().toISOString()
       }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -379,45 +515,15 @@ function getCrewSheet_(spreadsheet) {
 
   var sheets = spreadsheet.getSheets();
   for (var i = 0; i < sheets.length; i++) {
-    var sheet = sheets[i];
-    var lastRow = sheet.getLastRow();
-    var maxCols = sheet.getMaxColumns();
-    if (lastRow < 1 || maxCols < 2) continue;
-
-    var sampleRows = sheet.getRange(1, 1, Math.min(lastRow, 5), Math.min(maxCols, 64)).getDisplayValues();
-    for (var r = 0; r < sampleRows.length; r++) {
-      var row = sampleRows[r];
-      var hasSubmissionId = false;
-      var hasFullName = false;
-      for (var c = 0; c < row.length; c++) {
-        var cellText = String(row[c] || "").trim().toLowerCase();
-        if (cellText === "id submisi") hasSubmissionId = true;
-        if (cellText === "nama lengkap") hasFullName = true;
-      }
-      if (hasSubmissionId && hasFullName) {
-        if (sheet.getName() !== "Data Crew Longline") {
-          try {
-            sheet.setName("Data Crew Longline");
-          } catch (renameError) {
-            Logger.log("Rename sheet skipped: " + renameError.toString());
-          }
-        }
-        return sheet;
-      }
+    if (sheets[i].getLastRow() < 1 || sheets[i].getMaxColumns() < 3) continue;
+    var headers = sheets[i].getRange(1, 1, 1, 3).getDisplayValues()[0];
+    if (String(headers[1] || "").trim() === "ID Submisi" &&
+        String(headers[2] || "").trim() === "Nama Lengkap") {
+      return sheets[i];
     }
   }
 
-  var fallbackSheet = spreadsheet.getSheetByName("Data Crew Longline");
-  if (!fallbackSheet) {
-    fallbackSheet = spreadsheet.insertSheet("Data Crew Longline");
-  }
-
-  fallbackSheet.clearContents();
-  fallbackSheet.getRange(1, 1, 1, getCrewHeaders_().length).setValues([getCrewHeaders_()]);
-  fallbackSheet.getRange(1, 1, 1, getCrewHeaders_().length)
-    .setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
-
-  return fallbackSheet;
+  throw new Error("Sheet data crew tidak ditemukan atau header tidak valid.");
 }
 
 function normalizeOperationalStatus_(value) {
@@ -503,149 +609,6 @@ function migrateCrewSchema_(sheet) {
   };
 }
 
-function parseCrewSubmissionNumber_(submissionId) {
-  if (!submissionId) return 0;
-  var normalized = String(submissionId).trim().toUpperCase();
-  var match = normalized.match(/CREW[-_ ]?LONG[-_ ]?(\d+)/i) || normalized.match(/(\d{3,})/);
-  if (!match) return 0;
-  var number = Number(match[1]);
-  return isFinite(number) ? number : 0;
-}
-
-function getNextCrewSubmissionNumber_(sheet) {
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 2) return 1000;
-
-  var ids = sheet.getRange(2, 2, lastRow - 1, 1).getDisplayValues();
-  var highest = 1000;
-  for (var i = 0; i < ids.length; i++) {
-    var value = parseCrewSubmissionNumber_(ids[i][0]);
-    if (value > highest) highest = value;
-  }
-  return highest;
-}
-
-function normalizeCrewSubmissionId_(sheet, submissionId) {
-  var raw = String(submissionId || "").trim();
-  if (!raw) return "CREW-LONG-" + (getNextCrewSubmissionNumber_(sheet) + 1);
-
-  var normalized = raw.trim().toUpperCase();
-  var directMatch = normalized.match(/^CREW[-_ ]?LONG[-_ ]?(\d+)$/i);
-  if (directMatch) return "CREW-LONG-" + Number(directMatch[1]);
-
-  if (/T\d\d\d\d\d\dZ|\d{8}T\d{6}Z/i.test(raw) || raw.length > 24) {
-    return "CREW-LONG-" + (getNextCrewSubmissionNumber_(sheet) + 1);
-  }
-
-  var trailingMatch = normalized.match(/(?:^|[-_ ])(\d{3,})$/);
-  if (trailingMatch && Number(trailingMatch[1]) > 999) {
-    return "CREW-LONG-" + Number(trailingMatch[1]);
-  }
-
-  return "CREW-LONG-" + (getNextCrewSubmissionNumber_(sheet) + 1);
-}
-
-function normalizeCrewSubmissionIds_(sheet) {
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 2) return { updated: 0, total: 0 };
-
-  var rows = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
-  var nextNumber = 1000;
-  var updated = 0;
-  var seen = {};
-
-  for (var i = 0; i < rows.length; i++) {
-    var rowId = String(rows[i][1] || "").trim();
-    var cleanId = normalizeCrewSubmissionId_(sheet, rowId);
-    while (seen[cleanId]) {
-      nextNumber++;
-      cleanId = "CREW-LONG-" + nextNumber;
-    }
-    seen[cleanId] = true;
-    nextNumber = Math.max(nextNumber, parseCrewSubmissionNumber_(cleanId));
-
-    if (rowId !== cleanId) {
-      sheet.getRange(i + 2, 2).setValue(cleanId);
-      updated++;
-    }
-  }
-
-  return { updated: updated, total: rows.length };
-}
-
-function cleanupDuplicateCrewDriveData_() {
-  var legacyFolderName = "Crew_Longline_Uploads_PT_ALINDA-20260808T093003Z-1-001";
-  var deletedLegacyFolders = 0;
-  var deletedDuplicateFolders = 0;
-  var deletedDuplicateFiles = 0;
-
-  var legacyFolderIterator = DriveApp.getFoldersByName(legacyFolderName);
-  while (legacyFolderIterator.hasNext()) {
-    var legacyFolder = legacyFolderIterator.next();
-    legacyFolder.setTrashed(true);
-    deletedLegacyFolders++;
-  }
-
-  var rootFolderId = PropertiesService.getScriptProperties().getProperty("CREW_UPLOAD_ROOT_FOLDER_ID");
-  if (rootFolderId) {
-    try {
-      var rootFolder = DriveApp.getFolderById(rootFolderId);
-      var folderMap = {};
-      var folderIterator = rootFolder.getFolders();
-      while (folderIterator.hasNext()) {
-        var folder = folderIterator.next();
-        var folderName = String(folder.getName() || "");
-        var key = folderName.toLowerCase().replace(/_\d+$/, "");
-        if (!folderMap[key]) folderMap[key] = [];
-        folderMap[key].push(folder);
-      }
-
-      Object.keys(folderMap).forEach(function(key) {
-        var groups = folderMap[key];
-        if (groups.length < 2) return;
-        groups.slice(1).forEach(function(folder) {
-          var files = folder.getFiles();
-          var seenFiles = {};
-          while (files.hasNext()) {
-            var file = files.next();
-            var fileKey = String(file.getName() || "").toLowerCase();
-            if (seenFiles[fileKey]) {
-              file.setTrashed(true);
-              deletedDuplicateFiles++;
-            } else {
-              seenFiles[fileKey] = true;
-            }
-          }
-          folder.setTrashed(true);
-          deletedDuplicateFolders++;
-        });
-      });
-
-      var rootFiles = rootFolder.getFiles();
-      var seenRootFiles = {};
-      while (rootFiles.hasNext()) {
-        var file = rootFiles.next();
-        var fileKey = String(file.getName() || "").toLowerCase();
-        if (seenRootFiles[fileKey]) {
-          file.setTrashed(true);
-          deletedDuplicateFiles++;
-        } else {
-          seenRootFiles[fileKey] = true;
-        }
-      }
-    } catch (folderError) {
-      Logger.log("Cleanup folder error: " + folderError.toString());
-    }
-  }
-
-  return {
-    deletedLegacyFolders: deletedLegacyFolders,
-    deletedDuplicateFolders: deletedDuplicateFolders,
-    deletedDuplicateFiles: deletedDuplicateFiles,
-    cleanedAt: new Date().toISOString()
-  };
-}
-
 function findCrewRowById_(sheet, submissionId) {
   var searchId = String(submissionId || "").trim();
   if (!searchId || sheet.getLastRow() < 2) return -1;
@@ -693,6 +656,7 @@ function updateCrewStatus_(spreadsheet, data) {
     return jsonResponse_({ success: false, message: "Status operasional tidak valid." });
   }
 
+  var oldValues = sheet.getRange(rowIndex, 1, 1, 64).getValues()[0];
   sheet.getRange(rowIndex, 41, 1, 7).setValues([[
     operationalStatus,
     properCase_(data.vesselCandidate),
@@ -703,6 +667,16 @@ function updateCrewStatus_(spreadsheet, data) {
     String(data.adminNotes || "").trim()
   ]]);
 
+  logEmploymentEvent_(spreadsheet, {
+    submissionId: data.submissionId,
+    fullName: oldValues[2],
+    operationalStatus: operationalStatus,
+    vesselAssigned: data.vesselAssigned,
+    flightDate: data.flightDate,
+    finishDate: data.finishDate,
+    historyStatus: data.historyStatus
+  }, oldValues, false);
+
   return jsonResponse_({ success: true, submissionId: String(data.submissionId) });
 }
 
@@ -710,44 +684,6 @@ function isNewBase64Upload_(fileObj) {
   if (!fileObj || !fileObj.base64) return false;
   var value = String(fileObj.base64).trim();
   return value.length > 100 && !/^https?:\/\//i.test(value);
-}
-
-function getExistingDocumentUrl_(fileObj) {
-  if (typeof fileObj === "string") return /^https?:\/\//i.test(fileObj.trim()) ? fileObj.trim() : "";
-  if (!fileObj || typeof fileObj !== "object") return "";
-  var value = String(fileObj.url || fileObj.link || fileObj.base64 || "").trim();
-  return /^https?:\/\//i.test(value) ? value : "";
-}
-
-function splitDocumentUrls_(value) {
-  return uniqueDocumentUrls_(String(value || "").split(/\r?\n/).map(function(url) {
-    return url.trim();
-  }).filter(Boolean));
-}
-
-function uniqueDocumentUrls_(urls) {
-  var seen = {};
-  return (urls || []).filter(function(url) {
-    var normalized = String(url || "").trim();
-    if (!normalized || seen[normalized]) return false;
-    seen[normalized] = true;
-    return true;
-  });
-}
-
-function trashDriveDocumentByUrl_(url) {
-  try {
-    var value = String(url || "");
-    var match = value.match(/\/d\/([a-zA-Z0-9_-]+)/) || value.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (!match) return { success: false, error: "File ID tidak dapat diparse dari URL: " + value };
-
-    var fileId = match[1];
-    var file = DriveApp.getFileById(fileId);
-    file.setTrashed(true);
-    return { success: true, fileId: fileId };
-  } catch (error) {
-    return { success: false, error: "Dokumen tidak dapat dihapus: " + error.toString() };
-  }
 }
 
 function setDriveAnyoneView_(fileId) {
@@ -828,18 +764,6 @@ function saveBase64FileToDrive(folderId, fileObj, fileTag) {
 function doGet(e) {
   var action = e.parameter.action;
   
-  if (action === "cleanup_crew_data" || action === "normalize_crew_submission_ids") {
-    try {
-      var ss = getCrewSpreadsheet_();
-      var sheet = getCrewSheet_(ss);
-      var driveCleanup = cleanupDuplicateCrewDriveData_();
-      var idNormalization = normalizeCrewSubmissionIds_(sheet);
-      return jsonResponse_({ success: true, cleanup: driveCleanup, idNormalization: idNormalization });
-    } catch (error) {
-      return jsonResponse_({ success: false, error: error.toString() });
-    }
-  }
-
   if (action === "getAllCrew") {
     try {
       var ss = getCrewSpreadsheet_();

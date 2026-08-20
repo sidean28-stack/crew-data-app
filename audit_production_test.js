@@ -1,4 +1,8 @@
-const GAS_URL = "https://script.google.com/macros/s/AKfycbx2yPUDkKAOhJcIIWH9QHijMBKOFiHsOLhpPuBruNZ7MjtmAXdQvN8erlWXZUKzH-VT/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbw7s1nryPGWXKwOopf4zXU-PIN73sVsDXi87ie9UL40VICaBDxcxOirQrQvzfEH-LmT/exec";
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function runProductionAudit() {
   console.log("=================================================");
@@ -69,6 +73,9 @@ async function runProductionAudit() {
     return;
   }
 
+  // Menunggu sinkronisasi sheet sebelum update
+  await sleep(2500);
+
   // ---------------------------------------------------------
   // TAHAP 2: EDIT DATA KRU UJI (UPDATE)
   // ---------------------------------------------------------
@@ -135,6 +142,9 @@ async function runProductionAudit() {
     return;
   }
 
+  // Menunggu sinkronisasi sheet sebelum read
+  await sleep(2500);
+
   // ---------------------------------------------------------
   // TAHAP 3: BACA & VERIFIKASI DATA KRU (READ)
   // ---------------------------------------------------------
@@ -167,6 +177,23 @@ async function runProductionAudit() {
     }
   } catch (err) {
     console.error("❌ TAHAP 3 ERROR READ:", err.message);
+  }
+
+  // ---------------------------------------------------------
+  // CLEANUP: HAPUS CREW UJI SINTESIS DARI SHEET (DELETE)
+  // ---------------------------------------------------------
+  console.log("\n🧹 [CLEANUP] MENGHAPUS CREW UJI SINTESIS...");
+  try {
+    const deleteRes = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete_crew", submissionId: testId })
+    });
+    const deleteText = await deleteRes.text();
+    console.log("Response Cleanup Delete Body:", deleteText);
+    console.log("✅ CLEANUP SELESAI: Synthetic test record removed.");
+  } catch (err) {
+    console.error("⚠️ Cleanup error:", err.message);
   }
 }
 

@@ -6,10 +6,175 @@
  * ==============================================================================
  */
 
-var CREW_SPREADSHEET_ID = "1VY0gIxIyA4mf7yKNwXprgUaDvLIZuBeABlF8MVNMJlA";
+var PRODUCTION_SPREADSHEET_ID = "1VY0gIxIyA4mf7yKNwXprgUaDvLIZuBeABlF8MVNMJlA";
 
 function getCrewSpreadsheet_() {
-  return SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(CREW_SPREADSHEET_ID);
+  // 1. Check Script Properties for environment-specific override (e.g. SPREADSHEET_ID in Staging)
+  try {
+    var propId = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
+    if (propId) {
+      var propSheet = SpreadsheetApp.openById(propId);
+      if (propSheet) return propSheet;
+    }
+  } catch (e) {}
+
+  // 2. Check Container-Bound Spreadsheet (Staging / Production bound sheet)
+  try {
+    var active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (e) {}
+
+  // 3. Fallback to Production Spreadsheet ID
+  try {
+    if (PRODUCTION_SPREADSHEET_ID) {
+      var prodSheet = SpreadsheetApp.openById(PRODUCTION_SPREADSHEET_ID);
+      if (prodSheet) return prodSheet;
+    }
+  } catch (e) {}
+
+  throw new Error("Spreadsheet data crew tidak dapat diakses. Harap atur Script Properties 'SPREADSHEET_ID' atau beri akses izin spreadsheet.");
+}
+
+
+function normalizeIdentity_(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizeName_(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeDob_(value) {
+  var v = String(value || '').trim();
+  if (!v) return '';
+  var d = new Date(v);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, Session.getScriptTimeZone() || 'Asia/Jakarta', 'yyyy-MM-dd');
+  }
+  return v.replace(/[^0-9]/g, '');
+}
+
+function extractKtp_(dataOrRow) {
+  var text = '';
+  var rawKtp = '';
+  if (dataOrRow && typeof dataOrRow === 'object' && !Array.isArray(dataOrRow)) {
+    text = String(dataOrRow.adminNotes || '');
+    rawKtp = String(dataOrRow.ktpNo || '');
+  } else {
+    text = String(dataOrRow || '');
+  }
+  var m = text.match(/(?:KTP|NIK)\s*[:=]?\s*([0-9]{10,20})/i);
+  if (m) return normalizeIdentity_(m[1]);
+  if (rawKtp) return normalizeIdentity_(rawKtp);
+  var rawMatch = text.match(/([0-9]{16})/);
+  if (rawMatch) return normalizeIdentity_(rawMatch[1]);
+  return '';
+}
+
+function findCrewIdentityInSheet_(sheet, data) {
+  if (!sheet || sheet.getLastRow() < 2) return { match: null, candidates: [] };
+  var values = sheet.getDataRange().getDisplayValues();
+  var sid = String(data.submissionId || '').trim();
+  var passport = normalizeIdentity_(data.passportNo);
+  var cdc = normalizeIdentity_(data.cdcNo);
+  var ktp = extractKtp_(data);
+  var name = normalizeName_(data.fullName);
+  var dob = normalizeDob_(data.dob);
+
+  // 1. Immutable/current crew ID exact match.
+  if (sid) {
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][1] || '').trim() === sid) {
+        return { match: { rowIndex: i + 1, submissionId: String(values[i][1]), type: 'CREW_ID' }, candidates: [] };
+      }
+    }
+  }
+
+  var strong = [];
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    var rowPassport = normalizeIdentity_(row[17]);
+    var rowCdc = normalizeIdentity_(row[19]);
+    var rowKtp = extractKtp_({ adminNotes: row[46], ktpNo: row[46] });
+    var matches = [];
+    if (passport && rowPassport === passport) matches.push('PASSPORT');
+    if (cdc && rowCdc === cdc) matches.push('SEAMAN_BOOK');
+    if (ktp && rowKtp === ktp) matches.push('NIK_KTP');
+    if (matches.length) strong.push({ rowIndex: r + 1, submissionId: String(row[1] || ''), type: matches.join('+') });
+  }
+
+  var uniqueStrong = [];
+  strong.forEach(function(item) {
+    if (!uniqueStrong.some(function(x) { return x.submissionId === item.submissionId; })) uniqueStrong.push(item);
+  });
+  if (uniqueStrong.length === 1) return { match: uniqueStrong[0], candidates: [] };
+  if (uniqueStrong.length > 1) return { match: null, candidates: uniqueStrong, conflict: 'CONFLICT_STRONG_IDENTIFIERS' };
+
+  // 4. Fallback: normalized name + DOB. Never use name alone.
+  if (name && dob) {
+    var same = [];
+    for (var n = 1; n < values.length; n++) {
+      var rowName = normalizeName_(values[n][2]);
+      var rowDob = normalizeDob_(values[n][48] || values[n][30]);
+      if (rowName === name && rowDob === dob) {
+        same.push({ rowIndex: n + 1, submissionId: String(values[n][1] || ''), type: 'NAME+DOB' });
+      }
+    }
+    if (same.length === 1) return { match: same[0], candidates: [] };
+    if (same.length > 1) return { match: null, candidates: same, conflict: 'CONFLICT_NAME_DOB' };
+  }
+
+  return { match: null, candidates: [] };
+}
+
+function getEmploymentHistorySheet_(spreadsheet) {
+  var sheet = spreadsheet.getSheetByName('Crew Employment History');
+  if (!sheet) sheet = spreadsheet.insertSheet('Crew Employment History');
+  if (sheet.getLastRow() === 0) {
+    var headers = ['Timestamp','Crew ID','Nama Lengkap','Event','Old Status','New Status','Vessel','Join Date','Finish Date','History Status','Source'];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#0f172a').setFontColor('#ffffff');
+  }
+  return sheet;
+}
+
+function classifyEmploymentEvent_(oldStatus, newStatus, oldHistory, newHistory) {
+  var oldS = String(oldStatus || '').toUpperCase();
+  var newS = String(newStatus || '').toUpperCase();
+  var oldH = String(oldHistory || '').toUpperCase();
+  var newH = String(newHistory || '').toUpperCase();
+  var terminal = ['FINISHED','BROKEN','RESIGNED','INACTIVE','FINISH','RESIGN'];
+  var active = ['ON_BOAT','ONBOARD','SELECTED'];
+  if (terminal.some(function(x){ return oldS.indexOf(x) >= 0 || oldH.indexOf(x) >= 0; }) && active.indexOf(newS) >= 0) return 'REJOIN';
+  if (active.indexOf(newS) >= 0 && active.indexOf(oldS) < 0) return 'ONBOARD';
+  if (newH.indexOf('BROKEN') >= 0) return 'BROKEN';
+  if (newH.indexOf('FINISH') >= 0) return 'FINISHED';
+  if (newH.indexOf('RESIGN') >= 0) return 'RESIGNED';
+  if (oldS !== newS || oldH !== newH) return 'STATUS_CHANGE';
+  return '';
+}
+
+function logEmploymentEvent_(spreadsheet, crew, oldValues, isNew) {
+  var newStatus = normalizeOperationalStatus_(crew.operationalStatus || crew.status || 'STAND_BY');
+  var oldStatus = isNew ? '' : String(oldValues[40] || '');
+  var oldHistory = isNew ? '' : String(oldValues[45] || '');
+  var newHistory = String(crew.historyStatus || '');
+  var event = isNew ? 'CREATED' : classifyEmploymentEvent_(oldStatus, newStatus, oldHistory, newHistory);
+  if (!event) return;
+  var sheet = getEmploymentHistorySheet_(spreadsheet);
+  sheet.appendRow([
+    new Date(),
+    String(crew.submissionId || ''),
+    properCase_(crew.fullName),
+    event,
+    oldStatus,
+    newStatus,
+    properCase_(crew.vesselAssigned || crew.vesselName || ''),
+    crew.flightDate || '',
+    crew.finishDate || '',
+    properCase_(newHistory),
+    'EXCEL_IMPORT'
+  ]);
 }
 
 function authorizeProduction() {
@@ -134,24 +299,28 @@ function doPost(e) {
       (data.city ? " Kab/Kota: " + properCase_(data.city) : "") +
       (data.province ? " Prov: " + properCase_(data.province) : "");
 
-    // Cek apakah update
-    var isUpdate = (action === "update_crew");
-    var updateRowIndex = -1;
+    // SMART IDENTITY UPSERT:
+    // Crew ID -> NIK/KTP -> Passport -> Seaman Book -> Name + DOB.
+    // Rejoin memakai Crew ID lama; tidak membuat person baru.
+    var identity = findCrewIdentityInSheet_(sheet, data);
+    if (identity.conflict) {
+      return jsonResponse_({ success: false, conflict: true, message: "Identity conflict: perlu verifikasi manual.", candidates: identity.candidates });
+    }
+
+    var isUpdate = (action === "update_crew") || !!identity.match;
+    var updateRowIndex = identity.match ? identity.match.rowIndex : -1;
     var existingFolderUrl = "";
 
-    if (isUpdate) {
-      var dataRange = sheet.getDataRange();
-      var values = dataRange.getValues();
-      for (var i = 1; i < values.length; i++) {
-        if (String(values[i][1]) === String(data.submissionId)) {
-          updateRowIndex = i + 1;
-          existingFolderUrl = values[i][31] || "";
-          break;
-        }
+    if (identity.match) {
+      data.submissionId = identity.match.submissionId;
+      action = "update_crew";
+      if (updateRowIndex > 0) {
+        existingFolderUrl = sheet.getRange(updateRowIndex, 32).getValue() || "";
       }
-      if (updateRowIndex === -1) {
-        return jsonResponse_({ success: false, message: "Crew yang akan diupdate tidak ditemukan." });
-      }
+    }
+
+    if (isUpdate && updateRowIndex === -1) {
+      return jsonResponse_({ success: false, message: "Crew yang akan diupdate tidak ditemukan." });
     }
 
     // Save Uploaded Files to Drive
@@ -246,6 +415,10 @@ function doPost(e) {
       data.submittedAt || ""
     ];
 
+    var oldValuesForHistory = isUpdate && updateRowIndex !== -1
+      ? sheet.getRange(updateRowIndex, 1, 1, 64).getValues()[0]
+      : null;
+
     if (isUpdate && updateRowIndex !== -1) {
       var maxCol = sheet.getMaxColumns();
       if (maxCol < 64) {
@@ -286,6 +459,9 @@ function doPost(e) {
     } else {
       sheet.appendRow(rowValues);
     }
+
+    // Record lifecycle event without replacing the Crew Master identity.
+    logEmploymentEvent_(ss, data, oldValuesForHistory, !isUpdate);
     
     return ContentService
       .createTextOutput(JSON.stringify({
@@ -480,6 +656,7 @@ function updateCrewStatus_(spreadsheet, data) {
     return jsonResponse_({ success: false, message: "Status operasional tidak valid." });
   }
 
+  var oldValues = sheet.getRange(rowIndex, 1, 1, 64).getValues()[0];
   sheet.getRange(rowIndex, 41, 1, 7).setValues([[
     operationalStatus,
     properCase_(data.vesselCandidate),
@@ -489,6 +666,16 @@ function updateCrewStatus_(spreadsheet, data) {
     properCase_(data.historyStatus),
     String(data.adminNotes || "").trim()
   ]]);
+
+  logEmploymentEvent_(spreadsheet, {
+    submissionId: data.submissionId,
+    fullName: oldValues[2],
+    operationalStatus: operationalStatus,
+    vesselAssigned: data.vesselAssigned,
+    flightDate: data.flightDate,
+    finishDate: data.finishDate,
+    historyStatus: data.historyStatus
+  }, oldValues, false);
 
   return jsonResponse_({ success: true, submissionId: String(data.submissionId) });
 }
