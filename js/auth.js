@@ -111,6 +111,11 @@ function openLoginModal(isMandatory = false) {
   const modal = document.getElementById('loginModal');
   if (!modal) return;
 
+  // Immediately hide app loading overlay so it never blocks the login modal
+  const loader = document.getElementById('appLoadingOverlay');
+  if (loader) loader.classList.add('hidden');
+
+  modal.style.zIndex = '25000';
   modal.classList.add('active');
   const closeBtn = modal.querySelector('.modal-close-btn');
   const cancelBtn = document.getElementById('btnLoginCancel');
