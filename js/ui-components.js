@@ -33,27 +33,165 @@ function initLanguage() {
   switchLanguage(window.currentLang);
 }
 
-function toggleTheme() {
-  document.body.classList.toggle('light-theme');
-  const icon = document.querySelector('#themeToggleBtn i');
-  icon.className = document.body.classList.contains('light-theme') ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+function changeTheme(themeName) {
+  const allowedThemes = ['dark-glass', 'light-crystal', 'cyber-midnight', 'emerald-glass', 'midnight-slate', 'dark-vibrant'];
+  const theme = allowedThemes.includes(themeName) ? themeName : 'dark-glass';
+  
+  const body = document.body;
+  allowedThemes.forEach(t => body.classList.remove(`theme-${t}`));
+  body.classList.remove('light-theme');
+  
+  body.classList.add(`theme-${theme}`);
+  if (theme === 'light-crystal') body.classList.add('light-theme');
+  localStorage.setItem('crew_app_theme', theme);
+  
+  const select = document.getElementById('appThemeSelect');
+  if (select) select.value = theme;
 }
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('crew_app_theme') || 'dark-glass';
+  changeTheme(savedTheme);
+}
+
+function toggleTheme() {
+  const current = localStorage.getItem('crew_app_theme') || 'dark-glass';
+  const next = (current === 'light-crystal') ? 'dark-glass' : 'light-crystal';
+  changeTheme(next);
+}
+
+window.changeTheme = changeTheme;
+window.initTheme = initTheme;
+window.toggleTheme = toggleTheme;
+
+function matchFilterValue(dataVal, filterVal) {
+  if (!filterVal) return true;
+  if (!dataVal) return false;
+
+  const d = String(dataVal).trim().toLowerCase();
+  const f = String(filterVal).trim().toLowerCase();
+
+  if (d === f || d.includes(f) || f.includes(d)) return true;
+
+  const clean = str => str.replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(t => t.length > 2);
+  const dTokens = clean(d);
+  const fTokens = clean(f);
+
+  if (!dTokens.length || !fTokens.length) return false;
+
+  const isSimilarToken = (t1, t2) => {
+    if (t1 === t2 || t1.includes(t2) || t2.includes(t1)) return true;
+    const norm = s => s.replace(/ck/g, 'k').replace(/ll/g, 'l');
+    return norm(t1) === norm(t2);
+  };
+
+  return fTokens.some(ft => dTokens.some(dt => isSimilarToken(dt, ft)));
+}
+window.matchFilterValue = matchFilterValue;
+
+function populateFilterRankOptions() {
+  const dirFilterRank = document.getElementById('dirFilterRank');
+  const catFilterRank = document.getElementById('catFilterRank');
+  if (!dirFilterRank && !catFilterRank) return;
+
+  const currentDirVal = dirFilterRank ? dirFilterRank.value : '';
+  const currentCatVal = catFilterRank ? catFilterRank.value : '';
+
+  const lang = window.currentLang || 'id';
+  const defaultText = i18n[lang]?.filterRank || 'Semua Jabatan';
+  const defaultHtml = `<option value="">${escapeHTML(defaultText)}</option>`;
+
+  const optionsMap = new Map();
+  if (Array.isArray(rankOptions)) {
+    rankOptions.forEach(opt => {
+      const label = lang === 'zh' ? opt.nameZh : opt.nameId;
+      optionsMap.set(opt.nameId.toUpperCase(), { value: opt.nameId, label: label });
+    });
+  }
+
+  if (Array.isArray(window.crewDatabase)) {
+    window.crewDatabase.forEach(crew => {
+      const r = String(crew.rankPosition || '').trim();
+      if (r) {
+        const key = r.toUpperCase();
+        const exists = [...optionsMap.keys()].some(existingKey => matchFilterValue(existingKey, key));
+        if (!exists) {
+          optionsMap.set(key, { value: r, label: r });
+        }
+      }
+    });
+  }
+
+  let html = defaultHtml;
+  optionsMap.forEach(opt => {
+    html += `<option value="${escapeHTML(opt.value)}">${escapeHTML(opt.label)}</option>`;
+  });
+
+  if (dirFilterRank) {
+    dirFilterRank.innerHTML = html;
+    dirFilterRank.value = currentDirVal;
+  }
+  if (catFilterRank) {
+    catFilterRank.innerHTML = html;
+    catFilterRank.value = currentCatVal;
+  }
+}
+window.populateFilterRankOptions = populateFilterRankOptions;
+
+function populateFilterVesselOptions() {
+  const dirFilterVesselName = document.getElementById('dirFilterVesselName');
+  const catFilterVesselName = document.getElementById('catFilterVesselName');
+  if (!dirFilterVesselName && !catFilterVesselName) return;
+
+  const currentDirVal = dirFilterVesselName ? dirFilterVesselName.value : '';
+  const currentCatVal = catFilterVesselName ? catFilterVesselName.value : '';
+
+  const lang = window.currentLang || 'id';
+  const defaultText = i18n[lang]?.filterVesselName || 'Semua Nama Kapal';
+  const defaultHtml = `<option value="">${escapeHTML(defaultText)}</option>`;
+
+  const vesselSet = new Set();
+  if (Array.isArray(window.crewDatabase)) {
+    window.crewDatabase.forEach(crew => {
+      [crew.vesselName, crew.vesselAssigned, crew.vesselCandidate].forEach(vField => {
+        if (!vField) return;
+        String(vField).split('|').forEach(part => {
+          const cleaned = part.replace(/\([^()]*\)/g, '').trim();
+          if (cleaned) vesselSet.add(cleaned);
+        });
+      });
+    });
+  }
+
+  const sortedVessels = Array.from(vesselSet).sort((a, b) => a.localeCompare(b));
+  let html = defaultHtml;
+  sortedVessels.forEach(vName => {
+    html += `<option value="${escapeHTML(vName)}">${escapeHTML(vName)}</option>`;
+  });
+
+  if (dirFilterVesselName) {
+    dirFilterVesselName.innerHTML = html;
+    dirFilterVesselName.value = currentDirVal;
+  }
+  if (catFilterVesselName) {
+    catFilterVesselName.innerHTML = html;
+    catFilterVesselName.value = currentCatVal;
+  }
+}
+window.populateFilterVesselOptions = populateFilterVesselOptions;
 
 function populateDropdowns() {
   const rankSelect = document.getElementById('rankPosition');
-  const dirFilterRank = document.getElementById('dirFilterRank');
-  const catFilterRank = document.getElementById('catFilterRank');
+  if (rankSelect) {
+    rankSelect.innerHTML = `<option value="">${i18n[window.currentLang].selectRank}</option>`;
+    rankOptions.forEach(opt => {
+      const label = window.currentLang === 'zh' ? opt.nameZh : opt.nameId;
+      rankSelect.innerHTML += `<option value="${opt.nameId}">${label}</option>`;
+    });
+  }
 
-  rankSelect.innerHTML = `<option value="">${i18n[window.currentLang].selectRank}</option>`;
-  if (dirFilterRank) dirFilterRank.innerHTML = `<option value="">${i18n[window.currentLang].filterRank}</option>`;
-  if (catFilterRank) catFilterRank.innerHTML = `<option value="">${i18n[window.currentLang].filterRank}</option>`;
-
-  rankOptions.forEach(opt => {
-    const label = window.currentLang === 'zh' ? opt.nameZh : opt.nameId;
-    rankSelect.innerHTML += `<option value="${opt.nameId}">${label}</option>`;
-    if (dirFilterRank) dirFilterRank.innerHTML += `<option value="${opt.nameId}">${label}</option>`;
-    if (catFilterRank) catFilterRank.innerHTML += `<option value="${opt.nameId}">${label}</option>`;
-  });
+  populateFilterRankOptions();
+  populateFilterVesselOptions();
 
   const catFilterQual = document.getElementById('catFilterQual');
   if (catFilterQual) {
