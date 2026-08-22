@@ -1,15 +1,34 @@
 // js/auth.js
 
+function getAuthUser() {
+  return sessionStorage.getItem('auth_user') || localStorage.getItem('auth_user');
+}
+
+function getAuthRole() {
+  return sessionStorage.getItem('auth_role') || localStorage.getItem('auth_role');
+}
+
+function getAuthToken() {
+  return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+}
+
 function hideGatekeeper() {
   const gatekeeper = document.getElementById('startupLoginGatekeeper');
   if (gatekeeper) {
     if (typeof forceDisableOverlay === 'function') {
       forceDisableOverlay(gatekeeper);
     } else {
+      gatekeeper.classList.remove('active');
       gatekeeper.style.display = 'none';
       gatekeeper.style.pointerEvents = 'none';
       gatekeeper.style.visibility = 'hidden';
       gatekeeper.style.opacity = '0';
+    }
+  }
+  const loadingOverlay = document.getElementById('appLoadingOverlay');
+  if (loadingOverlay && (loadingOverlay.classList.contains('hidden') || getAuthUser())) {
+    if (typeof forceDisableOverlay === 'function') {
+      forceDisableOverlay(loadingOverlay);
     }
   }
 }
@@ -30,7 +49,7 @@ function showGatekeeper() {
 function checkMandatoryStartupLogin() {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
-  const authUser = sessionStorage.getItem('auth_user');
+  const authUser = getAuthUser();
 
   if (token) {
     window.activeToken = token;
@@ -81,7 +100,7 @@ function showSecurityBanner(msg) {
 }
 
 function switchRole(role) {
-  const savedRole = sessionStorage.getItem('auth_role');
+  const savedRole = getAuthRole();
   
   if (role === 'admin' || role === 'superadmin') {
     if (!savedRole) {
@@ -104,8 +123,8 @@ function switchRole(role) {
 
 function updateRoleUI() {
   const currentRole = window.currentRole || 'admin';
-  const savedRole = sessionStorage.getItem('auth_role') || currentRole;
-  const authUser = sessionStorage.getItem('auth_user');
+  const savedRole = getAuthRole() || currentRole;
+  const authUser = getAuthUser();
 
   // Synchronize dropdown selection with current active role
   const roleSel = document.getElementById('userRoleSelect');
@@ -173,14 +192,18 @@ function openLoginModal(isMandatory = false) {
 }
 
 function closeLoginModal() {
-  const authUser = sessionStorage.getItem('auth_user');
+  const authUser = getAuthUser();
   if (!authUser && !window.activeToken) {
-    if (typeof showNotification === 'function') showNotification('Silakan login terlebih dahulu untuk mengakses sistem.', 'warning');
+    hideGatekeeper();
+    window.currentRole = 'candidate';
+    const roleSel = document.getElementById('userRoleSelect');
+    if (roleSel) roleSel.value = 'candidate';
+    if (typeof switchTab === 'function') switchTab('form');
     return;
   }
   const modal = document.getElementById('loginModal');
   if (modal) modal.classList.remove('active');
-  if (authUser) hideGatekeeper();
+  hideGatekeeper();
 }
 
 async function executeLogin(e) {
@@ -214,10 +237,13 @@ async function executeLogin(e) {
     sessionStorage.setItem('auth_user', username);
     sessionStorage.setItem('auth_role', role);
     sessionStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_user', username);
+    localStorage.setItem('auth_role', role);
+    localStorage.setItem('auth_token', token);
 
     window.currentRole = role;
     const roleSel = document.getElementById('userRoleSelect');
-    if (roleSel) roleSel.value = 'admin';
+    if (roleSel) roleSel.value = role;
 
     hideGatekeeper();
 
@@ -243,10 +269,13 @@ async function executeLogin(e) {
       sessionStorage.setItem('auth_user', res.username || username);
       sessionStorage.setItem('auth_role', res.role || 'admin');
       sessionStorage.setItem('auth_token', res.token || '');
+      localStorage.setItem('auth_user', res.username || username);
+      localStorage.setItem('auth_role', res.role || 'admin');
+      localStorage.setItem('auth_token', res.token || '');
 
       window.currentRole = res.role || 'admin';
       const roleSel = document.getElementById('userRoleSelect');
-      if (roleSel) roleSel.value = 'admin';
+      if (roleSel) roleSel.value = res.role || 'admin';
 
       hideGatekeeper();
 
@@ -272,6 +301,9 @@ function executeLogout() {
   sessionStorage.removeItem('auth_user');
   sessionStorage.removeItem('auth_role');
   sessionStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  localStorage.removeItem('auth_role');
+  localStorage.removeItem('auth_token');
   window.currentRole = 'candidate';
   const roleSel = document.getElementById('userRoleSelect');
   if (roleSel) roleSel.value = 'candidate';
