@@ -46,6 +46,7 @@ function switchRole(role) {
 function updateRoleUI() {
   const currentRole = window.currentRole || 'admin';
   const savedRole = sessionStorage.getItem('auth_role') || currentRole;
+  const authUser = sessionStorage.getItem('auth_user');
 
   if (currentRole === 'candidate') {
     switchTab('form');
@@ -54,6 +55,20 @@ function updateRoleUI() {
     switchTab('catalog');
   } else if (currentRole === 'admin' || currentRole === 'superadmin') {
     switchTab('directory');
+  }
+
+  // Header Login & Logout Buttons State
+  const btnLogin = document.getElementById('btnOpenLogin');
+  const btnLogout = document.getElementById('btnExecuteLogout');
+  if (btnLogin && btnLogout) {
+    if (authUser) {
+      btnLogin.style.display = 'none';
+      btnLogout.style.display = 'inline-flex';
+      btnLogout.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> <span>Keluar (${escapeHtml(authUser)})</span>`;
+    } else {
+      btnLogin.style.display = 'inline-flex';
+      btnLogout.style.display = 'none';
+    }
   }
 
   // Super Admin Audit Log Button Visibility
