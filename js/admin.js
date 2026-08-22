@@ -24,6 +24,10 @@ function loadDirectoryTable() {
 
   const searchQuery = (document.getElementById('dirSearchInput')?.value || '').trim().toLowerCase();
   const filterRank = document.getElementById('dirFilterRank')?.value || '';
+  const filterVesselName = document.getElementById('dirFilterVesselName')?.value || '';
+  const filterStatus = document.getElementById('dirFilterStatus')?.value || '';
+
+  const matcher = window.matchFilterValue || matchFilterValue;
 
   const filtered = window.crewDatabase.filter(crew => {
     const matchesSearch = !searchQuery || 
@@ -35,8 +39,26 @@ function loadDirectoryTable() {
       (crew.cdcNo || "").toLowerCase().includes(searchQuery) ||
       (crew.vesselName || "").toLowerCase().includes(searchQuery) ||
       (crew.phoneNo || "").toLowerCase().includes(searchQuery);
-    const matchesRank = !filterRank || crew.rankPosition === filterRank;
-    return matchesSearch && matchesRank;
+
+    const matchesRank = matcher(crew.rankPosition, filterRank);
+
+    const matchesVesselName = !filterVesselName || 
+      matcher(crew.vesselName, filterVesselName) || 
+      matcher(crew.vesselAssigned, filterVesselName) || 
+      matcher(crew.vesselCandidate, filterVesselName);
+
+    let matchesStatus = true;
+    if (filterStatus) {
+      const opStatus = String(crew.operationalStatus || crew.status || 'STAND_BY').toUpperCase();
+      const selStatus = String(crew.ownerReview?.status || '').toUpperCase();
+      if (filterStatus === 'ON_BOAT_SELECTED') {
+        matchesStatus = opStatus === 'ON_BOAT' || opStatus === 'SELECTED' || selStatus === 'SELECTED';
+      } else {
+        matchesStatus = opStatus === filterStatus || (filterStatus === 'SELECTED' && selStatus === 'SELECTED');
+      }
+    }
+
+    return matchesSearch && matchesRank && matchesVesselName && matchesStatus;
   });
 
   if (countText) countText.textContent = filtered.length;

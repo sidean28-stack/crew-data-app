@@ -8,6 +8,8 @@ function renderCatalogGrid() {
   const filterRank = document.getElementById('catFilterRank')?.value || '';
   const filterQual = document.getElementById('catFilterQual')?.value || '';
   const filterVessel = document.getElementById('catFilterVessel')?.value || '';
+  const filterVesselName = document.getElementById('catFilterVesselName')?.value || '';
+  const filterStatus = document.getElementById('catFilterStatus')?.value || '';
   const normalizeOwnerIdentity = value => String(value || '').trim().toLocaleLowerCase().replace(/\s+/g, ' ');
   const activeOwnerName = normalizeOwnerIdentity(window.tokenOwnerName);
   const canCurrentOwnerViewRestrictedCrew = crew => {
@@ -25,6 +27,14 @@ function renderCatalogGrid() {
     empty:'Tidak ada kandidat kru yang cocok.', photo:'CREW PHOTO', code:'Kode Kru:', experience:'Pengalaman:', vessel:'Kapal:', physique:'Tinggi / Berat:',
     view:'Lihat Profil & Nilai', waiting:'Menunggu', selected:'Terpilih', priority:'Prioritas', rejected:'Ditolak'
   };
+  const matchFilterValue = (dataVal, filterVal) => {
+    if (!filterVal) return true;
+    if (!dataVal) return false;
+    const d = String(dataVal).trim().toLowerCase();
+    const f = String(filterVal).trim().toLowerCase();
+    return d === f || d.includes(f) || f.includes(d);
+  };
+
   const filtered = window.crewDatabase.filter(crew => {
     const operationalStatus = String(crew.operationalStatus || crew.status || 'STAND_BY').toUpperCase();
     const selectionStatus = String(crew.ownerReview?.status || '').toUpperCase();
@@ -35,10 +45,25 @@ function renderCatalogGrid() {
       (crew.chineseName && crew.chineseName.toLowerCase().includes(searchQuery)) ||
       crew.rankPosition.toLowerCase().includes(searchQuery) ||
       (crew.vesselName && crew.vesselName.toLowerCase().includes(searchQuery));
-    const matchesRank = !filterRank || crew.rankPosition === filterRank;
-    const matchesQual = !filterQual || crew.expLongline === filterQual;
-    const matchesVessel = !filterVessel || crew.vesselTypeLongline === filterVessel;
-    return matchesSearch && matchesRank && matchesQual && matchesVessel;
+    const matcher = window.matchFilterValue || matchFilterValue;
+    const matchesRank = matcher(crew.rankPosition, filterRank);
+    const matchesQual = matcher(crew.expLongline, filterQual);
+    const matchesVessel = matcher(crew.vesselTypeLongline, filterVessel);
+    const matchesVesselName = !filterVesselName || 
+      matcher(crew.vesselName, filterVesselName) || 
+      matcher(crew.vesselAssigned, filterVesselName) || 
+      matcher(crew.vesselCandidate, filterVesselName);
+
+    let matchesStatus = true;
+    if (filterStatus) {
+      if (filterStatus === 'ON_BOAT_SELECTED') {
+        matchesStatus = operationalStatus === 'ON_BOAT' || operationalStatus === 'SELECTED' || selectionStatus === 'SELECTED';
+      } else {
+        matchesStatus = operationalStatus === filterStatus || (filterStatus === 'SELECTED' && selectionStatus === 'SELECTED');
+      }
+    }
+
+    return matchesSearch && matchesRank && matchesQual && matchesVessel && matchesVesselName && matchesStatus;
   });
 
   if (filtered.length === 0) {

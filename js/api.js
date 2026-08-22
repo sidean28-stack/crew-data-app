@@ -176,6 +176,12 @@ window.api = {
         return normalized;
       });
       this.saveLocalDatabase();
+      if (typeof populateFilterRankOptions === 'function') {
+        populateFilterRankOptions();
+      }
+      if (typeof populateFilterVesselOptions === 'function') {
+        populateFilterVesselOptions();
+      }
 
       if (typeof updateCloudBanner === 'function') {
         updateCloudBanner('Connected', response.lastSync || null);
