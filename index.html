@@ -74,10 +74,18 @@
           </button>
         </div>
 
-        <!-- Dark/Light Theme Toggle -->
-        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme">
-          <i class="fa-solid fa-moon"></i>
-        </button>
+        <!-- Theme Selector Dropdown -->
+        <div class="theme-selector-wrapper" style="display: flex; align-items: center; gap: 6px;">
+          <span style="color: var(--accent); font-size: 0.95rem; margin-right: 2px;"><i class="fa-solid fa-palette"></i></span>
+          <select id="appThemeSelect" class="form-control" onchange="changeTheme(this.value)" style="width: auto; padding: 4px 10px; font-size: 0.82rem; border-radius: 20px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: var(--text-main); cursor: pointer;">
+            <option value="dark-glass" data-i18n="themeDarkGlass">🌌 Dark Ocean Transparan</option>
+            <option value="light-crystal" data-i18n="themeLightCrystal">☀️ Light Crystal Transparan</option>
+            <option value="cyber-midnight" data-i18n="themeCyber">💜 Cyberpunk Transparan</option>
+            <option value="emerald-glass" data-i18n="themeEmerald">🌲 Emerald Glass Transparan</option>
+            <option value="midnight-slate" data-i18n="themeSlate">🔲 Slate Transparan</option>
+            <option value="dark-vibrant" data-i18n="themeDarkVibrant">🔥 Dark Vibrant Transparan</option>
+          </select>
+        </div>
       </div>
     </div>
   </header>
@@ -685,6 +693,18 @@
         <select id="catFilterVessel" class="form-control" onchange="renderCatalogGrid()">
           <option value="" data-i18n="filterVessel">Semua Jenis Kapal</option>
         </select>
+
+        <select id="catFilterVesselName" class="form-control" onchange="renderCatalogGrid()">
+          <option value="" data-i18n="filterVesselName">Semua Nama Kapal</option>
+        </select>
+
+        <select id="catFilterStatus" class="form-control" onchange="renderCatalogGrid()">
+          <option value="" data-i18n="filterStatus">Semua Status Operasional</option>
+          <option value="ON_BOAT" data-i18n="statusOnBoat">ON_BOAT (Di Atas Kapal)</option>
+          <option value="SELECTED" data-i18n="statusSelected">SELECTED (Terpilih)</option>
+          <option value="STAND_BY" data-i18n="statusStandBy">STAND_BY</option>
+          <option value="ON_BOAT_SELECTED" data-i18n="statusOnBoatSelected">ON_BOAT & SELECTED</option>
+        </select>
       </div>
 
       <!-- Crew Cards Grid -->
@@ -701,7 +721,10 @@
             <h2><i class="fa-solid fa-database"></i> <span data-i18n="adminTitle">Direktori Data Crew & Kelola Berkas</span></h2>
             <p><span data-i18n="totalCrewCount">Total Crew Terdaftar</span>: <strong id="totalCrewCountText">0</strong></p>
           </div>
-          <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+            <button class="btn-secondary" id="btnAuditLog" onclick="openAuditLogModal()" style="display: none; border-color: var(--accent); color: var(--accent);">
+              <i class="fa-solid fa-clock-rotate-left"></i> <span>Riwayat Audit (Super Admin)</span>
+            </button>
             <button class="btn-primary" onclick="openOneTimeLinkModal()">
               <i class="fa-solid fa-key"></i> <span data-i18n="generateOneTimeLink">Buat Link Sekali Pakai (One-Time Link)</span>
             </button>
@@ -722,9 +745,19 @@
             <input type="text" id="dirSearchInput" class="form-control" placeholder="Cari nama, jabatan, paspor..." onkeyup="filterDirectory()">
           </div>
           
-          <div style="display: flex; gap: 10px;">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <select id="dirFilterRank" class="form-control" style="width: auto;" onchange="filterDirectory()">
               <option value="" data-i18n="filterRank">Semua Jabatan</option>
+            </select>
+            <select id="dirFilterVesselName" class="form-control" style="width: auto;" onchange="filterDirectory()">
+              <option value="" data-i18n="filterVesselName">Semua Nama Kapal</option>
+            </select>
+            <select id="dirFilterStatus" class="form-control" style="width: auto;" onchange="filterDirectory()">
+              <option value="" data-i18n="filterStatus">Semua Status Operasional</option>
+              <option value="ON_BOAT" data-i18n="statusOnBoat">ON_BOAT (Di Atas Kapal)</option>
+              <option value="SELECTED" data-i18n="statusSelected">SELECTED (Terpilih)</option>
+              <option value="STAND_BY" data-i18n="statusStandBy">STAND_BY</option>
+              <option value="ON_BOAT_SELECTED" data-i18n="statusOnBoatSelected">ON_BOAT & SELECTED</option>
             </select>
           </div>
         </div>
@@ -1004,6 +1037,70 @@
 
         </div>
 
+      </div>
+    </div>
+  <!-- 3. USERNAME & PASSWORD LOGIN MODAL -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-card" style="max-width: 420px;">
+      <button class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
+      <h2 style="margin-bottom: 6px; text-align: center;"><i class="fa-solid fa-user-lock" style="color: var(--accent);"></i> Login Keamanan Sistem</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px; text-align: center;">Masukkan username & password untuk mengakses modul ini.</p>
+
+      <form onsubmit="executeLogin(event)">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label><i class="fa-solid fa-user"></i> Username *</label>
+          <input type="text" id="loginUsername" class="form-control" placeholder="superadmin / admin" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label><i class="fa-solid fa-key"></i> Password *</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password" required>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn-secondary" onclick="closeLoginModal()">Batal</button>
+          <button type="submit" id="btnLoginSubmit" class="btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Masuk Sekarang</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. SUPER ADMIN AUDIT TRAIL HISTORY MODAL -->
+  <div class="modal-overlay" id="auditLogModal">
+    <div class="modal-card" style="max-width: 920px; width: 95%;">
+      <button class="modal-close-btn" onclick="closeAuditLogModal()">&times;</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+        <h2><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent);"></i> Catatan Riwayat Audit Aksi (Super Admin)</h2>
+        <button class="btn-secondary" onclick="loadAuditLogs()"><i class="fa-solid fa-arrows-rotate"></i> Refresh Log</button>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+        <input type="text" id="auditLogSearch" class="form-control" style="flex: 1; min-width: 200px;" placeholder="Cari aksi, user, ID kru, atau rincian..." onkeyup="renderAuditLogs()">
+        <select id="auditLogFilterAction" class="form-control" style="width: auto;" onchange="renderAuditLogs()">
+          <option value="">Semua Jenis Aksi</option>
+          <option value="INPUT_CREW">INPUT (Tambah Kru Baru)</option>
+          <option value="UPDATE_CREW">UPDATE (Edit Data Kru)</option>
+          <option value="DELETE_CREW">DELETE (Hapus Kru)</option>
+          <option value="UPDATE_STATUS">STATUS CHANGE (Perubahan Status)</option>
+          <option value="LOGIN_SUCCESS">LOGIN (Masuk Sistem)</option>
+        </select>
+      </div>
+
+      <div class="table-responsive" style="max-height: 440px; overflow-y: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 170px;">WAKTU (TIMESTAMP)</th>
+              <th style="width: 130px;">AKSI</th>
+              <th style="width: 140px;">USER / ROLE</th>
+              <th style="width: 160px;">TARGET / ID KRU</th>
+              <th>RINCIAN PERUBAHAN</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogTableBody">
+            <tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">Memuat riwayat log audit...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

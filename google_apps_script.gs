@@ -260,6 +260,41 @@ function doPost(e) {
 
     var ss = getCrewSpreadsheet_();
 
+    // ACTION: LOGIN (Username & Password Validation)
+    if (action === "login") {
+      var username = String(data.username || "").trim().toLowerCase();
+      var password = String(data.password || "").trim();
+      
+      var isSuperAdmin = (username === "superadmin" && password === "SuperAdmin123!");
+      var isAdmin = (username === "admin" && password === "Admin123!");
+
+      if (isSuperAdmin || isAdmin) {
+        var role = isSuperAdmin ? "superadmin" : "admin";
+        var token = "token_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+        logAuditAction_(ss, "LOGIN_SUCCESS", username, role, "Berhasil masuk ke sistem");
+        return jsonResponse_({
+          success: true,
+          message: "Login berhasil!",
+          role: role,
+          username: username,
+          token: token
+        });
+      } else {
+        logAuditAction_(ss, "LOGIN_FAILED", username, "UNKNOWN", "Gagal masuk: Username/Password salah");
+        return jsonResponse_({ success: false, message: "Username atau Password salah!" });
+      }
+    }
+
+    // ACTION: GET AUDIT LOGS (Khusus Super Admin)
+    if (action === "get_audit_logs") {
+      var userRole = String(data.role || data.userRole || "").toLowerCase();
+      var username = String(data.username || "").toLowerCase();
+      if (userRole !== "superadmin" && username !== "superadmin") {
+        return jsonResponse_({ success: false, message: "Akses ditolak. Khusus Super Admin." });
+      }
+      return jsonResponse_({ success: true, logs: getAuditLogs_(ss) });
+    }
+
     // 1. ACTION: BOOKING REQUEST FROM SHIP OWNER
     if (action === "booking_request") {
       var bookingSheet = ss.getSheetByName("Pemesanan Kru (Booking)") || ss.insertSheet("Pemesanan Kru (Booking)");
@@ -280,6 +315,7 @@ function doPost(e) {
         selectedList
       ]);
 
+      logAuditAction_(ss, "BOOKING_REQUEST", data.ownerName || "SHIP_OWNER", "OWNER", "Order booking: " + (data.selectedCrew ? data.selectedCrew.length : 0) + " kru");
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Booking order registered successfully!" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -512,6 +548,7 @@ function doPost(e) {
 
     // Record lifecycle event without replacing the Crew Master identity.
     logEmploymentEvent_(ss, data, oldValuesForHistory, !isUpdate);
+    logAuditAction_(ss, isUpdate ? "UPDATE_CREW" : "INPUT_CREW", data.submissionId, data.performedBy || data.userRole || "ADMIN", "Nama: " + data.fullName + ", Jabatan: " + (data.rankPosition || "-"));
     
     return ContentService
       .createTextOutput(JSON.stringify({
@@ -689,6 +726,7 @@ function deleteCrew_(spreadsheet, data) {
   if (deletedCount === 0) {
     return jsonResponse_({ success: false, message: "Crew tidak ditemukan." });
   }
+  logAuditAction_(spreadsheet, "DELETE_CREW", searchId, data.performedBy || data.userRole || "ADMIN", "Kru dihapus dari spreadsheet");
   return jsonResponse_({ success: true, deletedId: searchId, deletedCount: deletedCount });
 }
 
@@ -716,6 +754,8 @@ function updateCrewStatus_(spreadsheet, data) {
     properCase_(data.historyStatus),
     String(data.adminNotes || "").trim()
   ]]);
+
+  logAuditAction_(spreadsheet, "UPDATE_STATUS", data.submissionId, data.performedBy || data.userRole || "ADMIN", "Status diubah ke " + operationalStatus + (data.vesselAssigned ? " (Kapal: " + data.vesselAssigned + ")" : ""));
 
   logEmploymentEvent_(spreadsheet, {
     submissionId: data.submissionId,
@@ -947,4 +987,47 @@ function doGet(e) {
   }
 
   return ContentService.createTextOutput("Crew Data System Endpoint (PT ALINDA PRIMA SENTOSA) is Active.");
+}
+
+function getAuditSheet_(ss) {
+  var sheet = ss.getSheetByName("Audit_Logs") || ss.insertSheet("Audit_Logs");
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Timestamp", "Action", "Crew ID / Target", "User / Role", "Details"]);
+    sheet.getRange(1, 1, 1, 5).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
+  }
+  return sheet;
+}
+
+function logAuditAction_(ss, actionName, targetId, userRole, details) {
+  try {
+    var sheet = getAuditSheet_(ss);
+    sheet.appendRow([
+      new Date(),
+      String(actionName || "UNKNOWN").toUpperCase(),
+      String(targetId || "-"),
+      String(userRole || "ADMIN").toUpperCase(),
+      typeof details === "object" ? JSON.stringify(details) : String(details || "")
+    ]);
+  } catch (e) {
+    Logger.log("Audit log failed: " + e.toString());
+  }
+}
+
+function getAuditLogs_(ss) {
+  var sheet = getAuditSheet_(ss);
+  if (sheet.getLastRow() < 2) return [];
+  var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 5).getValues();
+  var logs = [];
+  for (var i = values.length - 1; i >= 0; i--) {
+    var row = values[i];
+    logs.push({
+      timestamp: row[0] instanceof Date ? row[0].toISOString() : String(row[0] || ""),
+      action: String(row[1] || ""),
+      targetId: String(row[2] || ""),
+      userRole: String(row[3] || ""),
+      details: String(row[4] || "")
+    });
+    if (logs.length >= 200) break;
+  }
+  return logs;
 }

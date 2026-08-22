@@ -95,6 +95,14 @@ window.api = {
     return this.postData({ ...data, action: 'submit_review' });
   },
 
+  login: function (credentials) {
+    return this.postData({ ...credentials, action: 'login' });
+  },
+
+  getAuditLogs: function (data) {
+    return this.postData({ ...data, action: 'get_audit_logs' });
+  },
+
   saveLocalDatabase: function () {
     localStorage.setItem('crew_app_database', JSON.stringify(window.crewDatabase || []));
   },
@@ -176,6 +184,12 @@ window.api = {
         return normalized;
       });
       this.saveLocalDatabase();
+      if (typeof populateFilterRankOptions === 'function') {
+        populateFilterRankOptions();
+      }
+      if (typeof populateFilterVesselOptions === 'function') {
+        populateFilterVesselOptions();
+      }
 
       if (typeof updateCloudBanner === 'function') {
         updateCloudBanner('Connected', response.lastSync || null);

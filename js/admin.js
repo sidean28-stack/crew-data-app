@@ -24,6 +24,10 @@ function loadDirectoryTable() {
 
   const searchQuery = (document.getElementById('dirSearchInput')?.value || '').trim().toLowerCase();
   const filterRank = document.getElementById('dirFilterRank')?.value || '';
+  const filterVesselName = document.getElementById('dirFilterVesselName')?.value || '';
+  const filterStatus = document.getElementById('dirFilterStatus')?.value || '';
+
+  const matcher = window.matchFilterValue || matchFilterValue;
 
   const filtered = window.crewDatabase.filter(crew => {
     const matchesSearch = !searchQuery || 
@@ -35,8 +39,26 @@ function loadDirectoryTable() {
       (crew.cdcNo || "").toLowerCase().includes(searchQuery) ||
       (crew.vesselName || "").toLowerCase().includes(searchQuery) ||
       (crew.phoneNo || "").toLowerCase().includes(searchQuery);
-    const matchesRank = !filterRank || crew.rankPosition === filterRank;
-    return matchesSearch && matchesRank;
+
+    const matchesRank = matcher(crew.rankPosition, filterRank);
+
+    const matchesVesselName = !filterVesselName || 
+      matcher(crew.vesselName, filterVesselName) || 
+      matcher(crew.vesselAssigned, filterVesselName) || 
+      matcher(crew.vesselCandidate, filterVesselName);
+
+    let matchesStatus = true;
+    if (filterStatus) {
+      const opStatus = String(crew.operationalStatus || crew.status || 'STAND_BY').toUpperCase();
+      const selStatus = String(crew.ownerReview?.status || '').toUpperCase();
+      if (filterStatus === 'ON_BOAT_SELECTED') {
+        matchesStatus = opStatus === 'ON_BOAT' || opStatus === 'SELECTED' || selStatus === 'SELECTED';
+      } else {
+        matchesStatus = opStatus === filterStatus || (filterStatus === 'SELECTED' && selStatus === 'SELECTED');
+      }
+    }
+
+    return matchesSearch && matchesRank && matchesVesselName && matchesStatus;
   });
 
   if (countText) countText.textContent = filtered.length;
@@ -1320,3 +1342,102 @@ function triggerPrintFromDetail() {
     printCrewCV(window.currentDetailSubmissionId);
   }
 }
+
+// --- SUPER ADMIN AUDIT TRAIL LOG VIEWER ---
+window.auditLogsCache = [];
+
+function openAuditLogModal() {
+  const modal = document.getElementById('auditLogModal');
+  if (modal) {
+    modal.classList.add('active');
+    loadAuditLogs();
+  }
+}
+
+function closeAuditLogModal() {
+  const modal = document.getElementById('auditLogModal');
+  if (modal) modal.classList.remove('active');
+}
+
+async function loadAuditLogs() {
+  const tbody = document.getElementById('auditLogTableBody');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data log audit dari cloud...</td></tr>';
+  }
+
+  try {
+    const role = sessionStorage.getItem('auth_role') || window.currentRole || 'admin';
+    const user = sessionStorage.getItem('auth_user') || 'superadmin';
+    
+    let res = null;
+    if (window.api && typeof window.api.getAuditLogs === 'function') {
+      res = await window.api.getAuditLogs({ role: role, username: user });
+    }
+
+    if (res && res.success && Array.isArray(res.logs)) {
+      window.auditLogsCache = res.logs;
+    } else {
+      window.auditLogsCache = JSON.parse(localStorage.getItem('crew_app_audit_logs') || '[]');
+    }
+
+    renderAuditLogs();
+  } catch (err) {
+    console.error("Load audit logs error:", err);
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--status-error); padding: 15px;">Gagal memuat log audit: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+}
+
+function renderAuditLogs() {
+  const tbody = document.getElementById('auditLogTableBody');
+  if (!tbody) return;
+
+  const searchVal = String(document.getElementById('auditLogSearch')?.value || '').toLowerCase().trim();
+  const filterAction = String(document.getElementById('auditLogFilterAction')?.value || '').toUpperCase().trim();
+
+  let logs = window.auditLogsCache || [];
+
+  if (filterAction) {
+    logs = logs.filter(l => String(l.action || '').toUpperCase() === filterAction);
+  }
+
+  if (searchVal) {
+    logs = logs.filter(l => 
+      String(l.timestamp || '').toLowerCase().includes(searchVal) ||
+      String(l.action || '').toLowerCase().includes(searchVal) ||
+      String(l.targetId || '').toLowerCase().includes(searchVal) ||
+      String(l.userRole || '').toLowerCase().includes(searchVal) ||
+      String(l.details || '').toLowerCase().includes(searchVal)
+    );
+  }
+
+  if (logs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">Tidak ada riwayat audit log yang cocok.</td></tr>';
+    return;
+  }
+
+  const actionBadge = (act) => {
+    const a = String(act || '').toUpperCase();
+    if (a.includes('DELETE')) return `<span style="background: rgba(239,68,68,0.2); color: #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">${escapeHtml(a)}</span>`;
+    if (a.includes('INPUT') || a.includes('SUBMIT')) return `<span style="background: rgba(16,185,129,0.2); color: #10b981; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">${escapeHtml(a)}</span>`;
+    if (a.includes('UPDATE') || a.includes('STATUS')) return `<span style="background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">${escapeHtml(a)}</span>`;
+    if (a.includes('LOGIN')) return `<span style="background: rgba(168,85,247,0.2); color: #c084fc; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">${escapeHtml(a)}</span>`;
+    return `<span style="background: rgba(255,255,255,0.1); color: var(--text-main); padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">${escapeHtml(a)}</span>`;
+  };
+
+  tbody.innerHTML = logs.map(l => `
+    <tr>
+      <td style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(l.timestamp ? new Date(l.timestamp).toLocaleString('id-ID') : '-')}</td>
+      <td>${actionBadge(l.action)}</td>
+      <td style="font-weight: 600; font-size: 0.84rem; color: var(--accent);">${escapeHtml(l.userRole || 'ADMIN')}</td>
+      <td style="font-family: monospace; font-size: 0.82rem;">${escapeHtml(l.targetId || '-')}</td>
+      <td style="font-size: 0.84rem;">${escapeHtml(l.details || '-')}</td>
+    </tr>
+  `).join('');
+}
+
+window.openAuditLogModal = openAuditLogModal;
+window.closeAuditLogModal = closeAuditLogModal;
+window.loadAuditLogs = loadAuditLogs;
+window.renderAuditLogs = renderAuditLogs;
