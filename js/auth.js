@@ -4,6 +4,7 @@ function checkMandatoryStartupLogin() {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
   const authUser = sessionStorage.getItem('auth_user');
+  const gatekeeper = document.getElementById('startupLoginGatekeeper');
 
   if (token) {
     window.activeToken = token;
@@ -12,11 +13,14 @@ function checkMandatoryStartupLogin() {
     const roleSel = document.getElementById('userRoleSelect');
     if (roleSel) roleSel.value = 'owner';
     showSecurityBanner(`船东专用一次性访问链接已验证：${window.tokenOwnerName}。资料已解锁并加水印。`);
+    if (gatekeeper) gatekeeper.style.display = 'none';
     return;
   }
 
   if (!authUser) {
-    setTimeout(() => { openLoginModal(true); }, 200);
+    if (gatekeeper) gatekeeper.style.display = 'flex';
+  } else {
+    if (gatekeeper) gatekeeper.style.display = 'none';
   }
 }
 
@@ -108,10 +112,17 @@ function updateRoleUI() {
 }
 
 function openLoginModal(isMandatory = false) {
+  const gatekeeper = document.getElementById('startupLoginGatekeeper');
+  if (gatekeeper) {
+    gatekeeper.style.display = 'flex';
+    const input = document.getElementById('loginUsername');
+    if (input) setTimeout(() => input.focus(), 150);
+    return;
+  }
+
   const modal = document.getElementById('loginModal');
   if (!modal) return;
 
-  // Immediately hide app loading overlay so it never blocks the login modal
   const loader = document.getElementById('appLoadingOverlay');
   if (loader) loader.classList.add('hidden');
 
@@ -135,7 +146,7 @@ function openLoginModal(isMandatory = false) {
   }
 
   const input = document.getElementById('loginUsername');
-  if (input) setTimeout(() => input.focus(), 200);
+  if (input) setTimeout(() => input.focus(), 150);
 }
 
 function closeLoginModal() {
@@ -146,6 +157,8 @@ function closeLoginModal() {
   }
   const modal = document.getElementById('loginModal');
   if (modal) modal.classList.remove('active');
+  const gatekeeper = document.getElementById('startupLoginGatekeeper');
+  if (gatekeeper && authUser) gatekeeper.style.display = 'none';
 }
 
 async function executeLogin(e) {
@@ -193,16 +206,10 @@ async function executeLogin(e) {
       const roleSel = document.getElementById('userRoleSelect');
       if (roleSel) roleSel.value = 'admin';
 
-      // Unlock modal completely
-      const modal = document.getElementById('loginModal');
-      if (modal) {
-        const closeBtn = modal.querySelector('.modal-close-btn');
-        const cancelBtn = document.getElementById('btnLoginCancel');
-        if (closeBtn) closeBtn.style.display = 'block';
-        if (cancelBtn) cancelBtn.style.display = 'inline-block';
-        modal.classList.remove('active');
-      }
+      const gatekeeper = document.getElementById('startupLoginGatekeeper');
+      if (gatekeeper) gatekeeper.style.display = 'none';
 
+      closeLoginModal();
       if (typeof showNotification === 'function') {
         showNotification(`Selamat datang, ${res.username || username}! (Role: ${res.role || 'admin'})`, 'success');
       }
@@ -227,8 +234,11 @@ function executeLogout() {
   const roleSel = document.getElementById('userRoleSelect');
   if (roleSel) roleSel.value = 'candidate';
   updateRoleUI();
+
+  const gatekeeper = document.getElementById('startupLoginGatekeeper');
+  if (gatekeeper) gatekeeper.style.display = 'flex';
+
   if (typeof showNotification === 'function') showNotification('Anda telah keluar dari sistem.', 'info');
-  openLoginModal(true);
 }
 
 window.checkMandatoryStartupLogin = checkMandatoryStartupLogin;

@@ -15,6 +15,45 @@
 </head>
 <body>
 
+  <!-- ================= MANDATORY STARTUP LOGIN GATEKEEPER ================= -->
+  <div id="startupLoginGatekeeper" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e293b 100%); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <div class="modal-card" style="max-width: 440px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); background: rgba(15, 23, 42, 0.94); border-radius: 16px; padding: 32px;">
+      
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(2, 132, 199, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; border: 1px solid var(--accent);">
+          <i class="fa-solid fa-user-shield" style="font-size: 1.9rem; color: var(--accent);"></i>
+        </div>
+        <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 6px; color: #ffffff;">Sistem Data Crew Longline</h2>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">Wantaifeng International Co Ltd - PT ALINDA</p>
+        <div style="margin-top: 12px; padding: 6px 14px; background: rgba(255,255,255,0.06); border-radius: 20px; display: inline-block;">
+          <span style="font-size: 0.82rem; color: var(--accent); font-weight: 600;"><i class="fa-solid fa-lock"></i> Login Keamanan Wajib</span>
+        </div>
+      </div>
+
+      <form onsubmit="executeLogin(event)">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;"><i class="fa-solid fa-user" style="color: var(--accent);"></i> Username *</label>
+          <input type="text" id="loginUsername" class="form-control" placeholder="superadmin / admin" required style="padding: 10px 14px; border-radius: 8px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;"><i class="fa-solid fa-key" style="color: var(--accent);"></i> Password *</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password" required style="padding: 10px 14px; border-radius: 8px;">
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i class="fa-solid fa-right-to-bracket"></i> <span>Masuk ke Aplikasi</span>
+        </button>
+      </form>
+
+      <div style="margin-top: 22px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+        <p style="font-size: 0.78rem; color: var(--text-dim);">Super Admin: <code style="color: var(--accent);">superadmin</code> / <code style="color: var(--accent);">SuperAdmin123!</code></p>
+        <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">Admin Agency: <code style="color: var(--accent);">admin</code> / <code style="color: var(--accent);">Admin123!</code></p>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ================= PHASE 3: LOADING SYSTEM ================= -->
   <div id="appLoadingOverlay" class="loading-overlay">
     <div class="loading-content">
@@ -1124,12 +1163,12 @@
 
   <div id="appNotificationRegion" class="app-notification-region" aria-live="polite" aria-atomic="false"></div>
 
-  <script src="js/api.js?v=20260823.5"></script>
-  <script src="js/ui-components.js?v=20260823.5"></script>
-  <script src="js/auth.js?v=20260823.5"></script>
-  <script src="js/candidate.js?v=20260823.5"></script>
-  <script src="js/owner.js?v=20260823.5"></script>
-  <script src="js/admin.js?v=20260823.5"></script>
-  <script src="js/app.js?v=20260823.5"></script>
+  <script src="js/api.js?v=20260823.6"></script>
+  <script src="js/ui-components.js?v=20260823.6"></script>
+  <script src="js/auth.js?v=20260823.6"></script>
+  <script src="js/candidate.js?v=20260823.6"></script>
+  <script src="js/owner.js?v=20260823.6"></script>
+  <script src="js/admin.js?v=20260823.6"></script>
+  <script src="js/app.js?v=20260823.6"></script>
 </body>
 </html>
