@@ -33,11 +33,36 @@ function initLanguage() {
   switchLanguage(window.currentLang);
 }
 
-function toggleTheme() {
-  document.body.classList.toggle('light-theme');
-  const icon = document.querySelector('#themeToggleBtn i');
-  icon.className = document.body.classList.contains('light-theme') ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+function changeTheme(themeName) {
+  const allowedThemes = ['dark-glass', 'light-crystal', 'cyber-midnight', 'emerald-glass', 'midnight-slate'];
+  const theme = allowedThemes.includes(themeName) ? themeName : 'dark-glass';
+  
+  const body = document.body;
+  allowedThemes.forEach(t => body.classList.remove(`theme-${t}`));
+  body.classList.remove('light-theme');
+  
+  body.classList.add(`theme-${theme}`);
+  if (theme === 'light-crystal') body.classList.add('light-theme');
+  localStorage.setItem('crew_app_theme', theme);
+  
+  const select = document.getElementById('appThemeSelect');
+  if (select) select.value = theme;
 }
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('crew_app_theme') || 'dark-glass';
+  changeTheme(savedTheme);
+}
+
+function toggleTheme() {
+  const current = localStorage.getItem('crew_app_theme') || 'dark-glass';
+  const next = (current === 'light-crystal') ? 'dark-glass' : 'light-crystal';
+  changeTheme(next);
+}
+
+window.changeTheme = changeTheme;
+window.initTheme = initTheme;
+window.toggleTheme = toggleTheme;
 
 function matchFilterValue(dataVal, filterVal) {
   if (!filterVal) return true;

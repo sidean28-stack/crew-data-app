@@ -120,6 +120,7 @@ function checkCriticalSystems() {
 
 function initializeUI() {
   initLanguage();
+  if (typeof initTheme === 'function') initTheme();
   populateDropdowns();
   renderDynamicRadioAndCheckboxes();
   if (typeof loadSavedDraft === 'function') loadSavedDraft();
