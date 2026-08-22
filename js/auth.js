@@ -17,6 +17,10 @@ function parseUrlParams() {
     const roleSel = document.getElementById('userRoleSelect');
     if (roleSel) roleSel.value = roleParam;
   }
+
+  if (urlParams.get('login') === '1' || urlParams.has('login')) {
+    setTimeout(() => { openLoginModal(); }, 400);
+  }
 }
 
 function showSecurityBanner(msg) {
@@ -60,14 +64,18 @@ function updateRoleUI() {
   // Header Login & Logout Buttons State
   const btnLogin = document.getElementById('btnOpenLogin');
   const btnLogout = document.getElementById('btnExecuteLogout');
+  const floatBtn = document.getElementById('floatingLoginBtn');
+
   if (btnLogin && btnLogout) {
     if (authUser) {
       btnLogin.style.display = 'none';
       btnLogout.style.display = 'inline-flex';
       btnLogout.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> <span>Keluar (${escapeHtml(authUser)})</span>`;
+      if (floatBtn) floatBtn.style.display = 'none';
     } else {
       btnLogin.style.display = 'inline-flex';
       btnLogout.style.display = 'none';
+      if (floatBtn) floatBtn.style.display = 'flex';
     }
   }
 
