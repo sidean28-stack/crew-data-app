@@ -769,6 +769,9 @@
             <button class="btn-secondary" id="btnAuditLog" onclick="openAuditLogModal()" style="display: none; border-color: var(--accent); color: var(--accent);">
               <i class="fa-solid fa-clock-rotate-left"></i> <span>Riwayat Audit (Super Admin)</span>
             </button>
+            <button class="btn-secondary" id="btnUserManagement" onclick="openUserManagementModal()" style="display: none; border-color: #a855f7; color: #c084fc;">
+              <i class="fa-solid fa-users-gear"></i> <span>Kelola User & Password (Super Admin)</span>
+            </button>
             <button class="btn-primary" onclick="openOneTimeLinkModal()">
               <i class="fa-solid fa-key"></i> <span data-i18n="generateOneTimeLink">Buat Link Sekali Pakai (One-Time Link)</span>
             </button>
@@ -1193,6 +1196,58 @@
     </div>
   </div>
 
+  <!-- 12. SUPER ADMIN USER MANAGEMENT MODAL -->
+  <div class="modal-overlay" id="userManagementModal" style="z-index: 25000;">
+    <div class="modal-card" style="max-width: 780px; width: 95%;">
+      <button class="modal-close-btn" onclick="closeUserManagementModal()">&times;</button>
+      <h3 style="margin-bottom: 6px; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-users-gear" style="color: #c084fc;"></i> <span>Kelola User & Password (Super Admin)</span></h3>
+      <p style="color: var(--text-muted); font-size: 0.84rem; margin-bottom: 16px;">Tambah user baru, perbarui password, atau kelola kredensial pengguna aplikasi.</p>
+
+      <form onsubmit="saveUserFromModal(event)" style="background: var(--bg-surface-dim); padding: 16px; border-radius: 8px; margin-bottom: 18px; border: 1px solid var(--border-color);">
+        <input type="hidden" id="userMgmtId" value="">
+        <h4 id="userFormTitle" style="margin-bottom: 12px; font-size: 0.92rem; color: var(--accent);"><i class="fa-solid fa-user-plus"></i> Tambah User Baru</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 4px;"><i class="fa-solid fa-user"></i> Username *</label>
+            <input type="text" id="userMgmtUsername" class="form-control" placeholder="Contoh: admin2" required style="padding: 8px 12px; font-size: 0.85rem; width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 4px;"><i class="fa-solid fa-key"></i> Password *</label>
+            <input type="password" id="userMgmtPassword" class="form-control" placeholder="Password baru" required style="padding: 8px 12px; font-size: 0.85rem; width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 4px;"><i class="fa-solid fa-shield-halved"></i> Peran (Role) *</label>
+            <select id="userMgmtRole" class="form-control" style="padding: 8px 12px; font-size: 0.85rem; width: 100%;">
+              <option value="admin">Admin Manning Agency</option>
+              <option value="superadmin">Super Admin</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn-secondary" onclick="resetUserForm()" style="padding: 6px 14px; font-size: 0.82rem;">Batal / Reset</button>
+          <button type="submit" class="btn-primary" style="padding: 6px 16px; font-size: 0.82rem;"><i class="fa-solid fa-floppy-disk"></i> Simpan User</button>
+        </div>
+      </form>
+
+      <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+        <table class="data-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+          <thead>
+            <tr style="background: var(--bg-surface-dim); position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--border-color);">
+              <th style="padding: 8px; width: 35px; text-align: center;">No</th>
+              <th style="padding: 8px;">Username</th>
+              <th style="padding: 8px;">Role</th>
+              <th style="padding: 8px;">Status Login</th>
+              <th style="padding: 8px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="userManagementTbody">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script src="i18n.js?v=20260823.3"></script>
   <script src="js/config.js?v=20260823.3"></script>
   <!-- Floating Quick Login Button -->
@@ -1202,12 +1257,12 @@
 
   <div id="appNotificationRegion" class="app-notification-region" aria-live="polite" aria-atomic="false"></div>
 
-  <script src="js/api.js?v=20260823.11"></script>
-  <script src="js/ui-components.js?v=20260823.11"></script>
-  <script src="js/auth.js?v=20260823.11"></script>
-  <script src="js/candidate.js?v=20260823.11"></script>
-  <script src="js/owner.js?v=20260823.11"></script>
-  <script src="js/admin.js?v=20260823.11"></script>
-  <script src="js/app.js?v=20260823.11"></script>
+  <script src="js/api.js?v=20260823.12"></script>
+  <script src="js/ui-components.js?v=20260823.12"></script>
+  <script src="js/auth.js?v=20260823.12"></script>
+  <script src="js/candidate.js?v=20260823.12"></script>
+  <script src="js/owner.js?v=20260823.12"></script>
+  <script src="js/admin.js?v=20260823.12"></script>
+  <script src="js/app.js?v=20260823.12"></script>
 </body>
 </html>

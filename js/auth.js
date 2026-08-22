@@ -121,10 +121,15 @@ function updateRoleUI() {
     }
   }
 
-  // Super Admin Audit Log Button Visibility
+  // Super Admin Audit Log & User Management Buttons Visibility
+  const isSuperRole = (savedRole === 'superadmin' || window.currentRole === 'superadmin');
   const auditBtn = document.getElementById('btnAuditLog');
   if (auditBtn) {
-    auditBtn.style.display = (savedRole === 'superadmin' || window.currentRole === 'superadmin') ? 'inline-flex' : 'none';
+    auditBtn.style.display = isSuperRole ? 'inline-flex' : 'none';
+  }
+  const userMgmtBtn = document.getElementById('btnUserManagement');
+  if (userMgmtBtn) {
+    userMgmtBtn.style.display = isSuperRole ? 'inline-flex' : 'none';
   }
 
   if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
@@ -163,12 +168,15 @@ async function executeLogin(e) {
 
   if (btnSubmit) btnSubmit.disabled = true;
 
-  // Immediate credential validation for 100% instant, bulletproof unlock
-  const isSuper = (username.toLowerCase() === 'superadmin' && password === 'SuperAdmin123!');
-  const isAdmin = (username.toLowerCase() === 'admin' && password === 'Admin123!');
+  // Check stored user database created by Super Admin
+  const users = (typeof getStoredUsers === 'function') ? getStoredUsers() : [];
+  const foundUser = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
 
-  if (isSuper || isAdmin) {
-    const role = isSuper ? 'superadmin' : 'admin';
+  const isSuperDefault = (username.toLowerCase() === 'superadmin' && password === 'SuperAdmin123!');
+  const isAdminDefault = (username.toLowerCase() === 'admin' && password === 'Admin123!');
+
+  if (foundUser || isSuperDefault || isAdminDefault) {
+    const role = foundUser ? foundUser.role : (isSuperDefault ? 'superadmin' : 'admin');
     const token = 'token_' + Date.now();
 
     sessionStorage.setItem('auth_user', username);

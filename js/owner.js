@@ -71,7 +71,17 @@ function renderCatalogGrid() {
     return;
   }
 
-  const isUnmasked = (window.currentRole === 'admin' || window.activeToken !== null);
+  const savedRole = sessionStorage.getItem('auth_role');
+  const authUser = sessionStorage.getItem('auth_user');
+  const isUnmasked = (
+    window.currentRole === 'admin' || 
+    window.currentRole === 'superadmin' || 
+    window.currentRole === 'owner' || 
+    savedRole === 'admin' || 
+    savedRole === 'superadmin' || 
+    !!authUser || 
+    window.activeToken !== null
+  );
 
   container.innerHTML = filtered.map(crew => {
     const displayName = isUnmasked ? crew.fullName : maskName(crew.fullName);
@@ -119,7 +129,17 @@ function openOwnerCrewDetailModal(submissionId) {
   const crew = window.crewDatabase.find(c => c.submissionId === submissionId);
   if (!crew) return;
 
-  const isUnmasked = (window.currentRole === 'admin' || window.activeToken !== null);
+  const savedRole = sessionStorage.getItem('auth_role');
+  const authUser = sessionStorage.getItem('auth_user');
+  const isUnmasked = (
+    window.currentRole === 'admin' || 
+    window.currentRole === 'superadmin' || 
+    window.currentRole === 'owner' || 
+    savedRole === 'admin' || 
+    savedRole === 'superadmin' || 
+    !!authUser || 
+    window.activeToken !== null
+  );
   const displayName = isUnmasked ? crew.fullName : maskName(crew.fullName);
   const displayPhone = isUnmasked ? crew.phoneNo : maskString(crew.phoneNo, 4);
   const address = isUnmasked ? crew.combinedAddress : '*** Masked ***';

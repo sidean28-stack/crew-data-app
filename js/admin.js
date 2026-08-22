@@ -71,7 +71,16 @@ function loadDirectoryTable() {
     return;
   }
 
-  const isUnmasked = (window.currentRole === 'admin' || window.activeToken !== null);
+  const savedRole = sessionStorage.getItem('auth_role');
+  const authUser = sessionStorage.getItem('auth_user');
+  const isUnmasked = (
+    window.currentRole === 'admin' || 
+    window.currentRole === 'superadmin' || 
+    savedRole === 'admin' || 
+    savedRole === 'superadmin' || 
+    !!authUser || 
+    window.activeToken !== null
+  );
 
   tbody.innerHTML = filtered.map(crew => {
     const displayName = isUnmasked ? crew.fullName : maskName(crew.fullName);
@@ -1685,3 +1694,218 @@ window.openAuditLogModal = openAuditLogModal;
 window.closeAuditLogModal = closeAuditLogModal;
 window.loadAuditLogs = loadAuditLogs;
 window.renderAuditLogs = renderAuditLogs;
+
+/* ==============================================================================
+ * SUPER ADMIN USER MANAGEMENT MODULE
+ * Allows Super Admin to view, create, edit, and delete system users & passwords.
+ * ==============================================================================
+ */
+
+const DEFAULT_USERS_DB = [
+  { id: 'usr_superadmin', username: 'superadmin', password: 'SuperAdmin123!', role: 'superadmin', createdAt: '2026-08-23' },
+  { id: 'usr_admin', username: 'admin', password: 'Admin123!', role: 'admin', createdAt: '2026-08-23' }
+];
+
+function getStoredUsers() {
+  try {
+    const raw = localStorage.getItem('app_users_db');
+    if (!raw) {
+      localStorage.setItem('app_users_db', JSON.stringify(DEFAULT_USERS_DB));
+      return DEFAULT_USERS_DB;
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.setItem('app_users_db', JSON.stringify(DEFAULT_USERS_DB));
+      return DEFAULT_USERS_DB;
+    }
+    return parsed;
+  } catch (e) {
+    console.error("Error reading app_users_db:", e);
+    return DEFAULT_USERS_DB;
+  }
+}
+
+function saveStoredUsers(users) {
+  try {
+    localStorage.setItem('app_users_db', JSON.stringify(users));
+  } catch (e) {
+    console.error("Error saving app_users_db:", e);
+  }
+}
+
+function openUserManagementModal() {
+  const modal = document.getElementById('userManagementModal');
+  if (!modal) return;
+  resetUserForm();
+  renderUserManagementTable();
+  modal.classList.add('active');
+}
+
+function closeUserManagementModal() {
+  const modal = document.getElementById('userManagementModal');
+  if (modal) modal.classList.remove('active');
+  resetUserForm();
+}
+
+function resetUserForm() {
+  const formTitle = document.getElementById('userFormTitle');
+  const inputId = document.getElementById('userMgmtId');
+  const inputUser = document.getElementById('userMgmtUsername');
+  const inputPass = document.getElementById('userMgmtPassword');
+  const inputRole = document.getElementById('userMgmtRole');
+
+  if (formTitle) formTitle.innerHTML = '<i class="fa-solid fa-user-plus"></i> Tambah User Baru';
+  if (inputId) inputId.value = '';
+  if (inputUser) {
+    inputUser.value = '';
+    inputUser.disabled = false;
+  }
+  if (inputPass) inputPass.value = '';
+  if (inputRole) inputRole.value = 'admin';
+}
+
+function renderUserManagementTable() {
+  const tbody = document.getElementById('userManagementTbody');
+  if (!tbody) return;
+
+  const users = getStoredUsers();
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">Belum ada user terdaftar.</td></tr>';
+    return;
+  }
+
+  const currentUser = sessionStorage.getItem('auth_user') || 'superadmin';
+
+  let html = '';
+  users.forEach((u, i) => {
+    const isSuper = u.role === 'superadmin';
+    const roleBadge = isSuper 
+      ? '<span style="background: rgba(168,85,247,0.18); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">Super Admin</span>'
+      : '<span style="background: rgba(56,189,248,0.18); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">Admin Manning</span>';
+    
+    const isSelf = u.username.toLowerCase() === currentUser.toLowerCase();
+
+    html += `
+      <tr style="border-bottom: 1px solid var(--border-color);">
+        <td style="text-align: center; padding: 8px; color: var(--text-muted);">${i + 1}</td>
+        <td style="font-weight: 600; padding: 8px; color: var(--text-main);">${escapeHTML(u.username)} ${isSelf ? ' <small style="color: var(--status-success);">(Aktif)</small>' : ''}</td>
+        <td style="padding: 8px;">${roleBadge}</td>
+        <td style="font-size: 0.8rem; padding: 8px; color: var(--text-muted);">Password Set (${u.password ? '••••••••' : 'Default'})</td>
+        <td style="text-align: center; padding: 8px; display: flex; gap: 6px; justify-content: center;">
+          <button class="btn-secondary" onclick="editUserInModal('${escapeHTML(u.id)}')" style="padding: 3px 8px; font-size: 0.75rem;" title="Edit Password / Role">
+            <i class="fa-solid fa-pen-to-square"></i> Edit
+          </button>
+          ${!isSelf && u.username !== 'superadmin' ? `
+            <button class="btn-secondary" onclick="deleteUserInModal('${escapeHTML(u.id)}')" style="padding: 3px 8px; font-size: 0.75rem; color: var(--status-error); border-color: var(--status-error);" title="Hapus User">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          ` : ''}
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+
+function saveUserFromModal(e) {
+  if (e) e.preventDefault();
+
+  const inputId = document.getElementById('userMgmtId');
+  const inputUser = document.getElementById('userMgmtUsername');
+  const inputPass = document.getElementById('userMgmtPassword');
+  const inputRole = document.getElementById('userMgmtRole');
+
+  const userId = inputId ? inputId.value.trim() : '';
+  const username = inputUser ? inputUser.value.trim() : '';
+  const password = inputPass ? inputPass.value.trim() : '';
+  const role = inputRole ? inputRole.value : 'admin';
+
+  if (!username || !password) {
+    if (typeof showNotification === 'function') showNotification('Username dan password wajib diisi.', 'warning');
+    return;
+  }
+
+  let users = getStoredUsers();
+
+  if (userId) {
+    // Editing existing user
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      users[idx].password = password;
+      users[idx].role = role;
+      users[idx].updatedAt = new Date().toISOString().split('T')[0];
+      if (typeof showNotification === 'function') showNotification(`User '${username}' berhasil diperbarui.`, 'success');
+    }
+  } else {
+    // Creating new user
+    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+      if (typeof showNotification === 'function') showNotification(`Username '${username}' sudah terdaftar. Gunakan username lain.`, 'error');
+      return;
+    }
+
+    const newUser = {
+      id: 'usr_' + Date.now(),
+      username: username,
+      password: password,
+      role: role,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    users.push(newUser);
+    if (typeof showNotification === 'function') showNotification(`User baru '${username}' berhasil ditambahkan!`, 'success');
+  }
+
+  saveStoredUsers(users);
+  resetUserForm();
+  renderUserManagementTable();
+}
+
+function editUserInModal(userId) {
+  const users = getStoredUsers();
+  const target = users.find(u => u.id === userId);
+  if (!target) return;
+
+  const formTitle = document.getElementById('userFormTitle');
+  const inputId = document.getElementById('userMgmtId');
+  const inputUser = document.getElementById('userMgmtUsername');
+  const inputPass = document.getElementById('userMgmtPassword');
+  const inputRole = document.getElementById('userMgmtRole');
+
+  if (formTitle) formTitle.innerHTML = `<i class="fa-solid fa-user-pen"></i> Edit User: <strong>${escapeHTML(target.username)}</strong>`;
+  if (inputId) inputId.value = target.id;
+  if (inputUser) {
+    inputUser.value = target.username;
+    inputUser.disabled = true; // Username cannot be changed once created
+  }
+  if (inputPass) inputPass.value = target.password || '';
+  if (inputRole) inputRole.value = target.role || 'admin';
+}
+
+function deleteUserInModal(userId) {
+  const users = getStoredUsers();
+  const target = users.find(u => u.id === userId);
+  if (!target) return;
+
+  if (target.username === 'superadmin') {
+    if (typeof showNotification === 'function') showNotification('User superadmin utama tidak dapat dihapus.', 'error');
+    return;
+  }
+
+  if (!confirm(`Apakah Anda yakin ingin menghapus user '${target.username}'?`)) return;
+
+  const updatedUsers = users.filter(u => u.id !== userId);
+  saveStoredUsers(updatedUsers);
+  renderUserManagementTable();
+  if (typeof showNotification === 'function') showNotification(`User '${target.username}' berhasil dihapus.`, 'info');
+}
+
+window.getStoredUsers = getStoredUsers;
+window.saveStoredUsers = saveStoredUsers;
+window.openUserManagementModal = openUserManagementModal;
+window.closeUserManagementModal = closeUserManagementModal;
+window.resetUserForm = resetUserForm;
+window.renderUserManagementTable = renderUserManagementTable;
+window.saveUserFromModal = saveUserFromModal;
+window.editUserInModal = editUserInModal;
+window.deleteUserInModal = deleteUserInModal;
