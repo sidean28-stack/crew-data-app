@@ -118,7 +118,7 @@ function loadDirectoryTable() {
             <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.78rem; color: var(--accent-amber);" onclick="editCrew('${escapeHTML(crew.submissionId)}')" title="Edit Data Kru">
               <i class="fa-solid fa-pen"></i>
             </button>
-            ${window.currentRole === 'admin' ? `
+            ${(window.currentRole === 'admin' || window.currentRole === 'superadmin') ? `
               <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.78rem; color: var(--status-error);" onclick="openDeleteModal('${escapeHTML(crew.submissionId)}')" title="Hapus Data Kru">
                 <i class="fa-solid fa-trash"></i>
               </button>

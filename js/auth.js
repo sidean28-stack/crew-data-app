@@ -74,14 +74,21 @@ function showSecurityBanner(msg) {
 }
 
 function switchRole(role) {
+  const savedRole = sessionStorage.getItem('auth_role');
+  
   if (role === 'admin' || role === 'superadmin') {
-    const savedRole = sessionStorage.getItem('auth_role');
     if (!savedRole) {
       window.pendingTargetRole = role;
       openLoginModal(true);
       return;
     }
-    window.currentRole = savedRole;
+    // Allow switching between admin and superadmin when logged in as superadmin,
+    // or keep as admin when logged in as admin.
+    if (savedRole === 'superadmin') {
+      window.currentRole = role;
+    } else {
+      window.currentRole = 'admin';
+    }
   } else {
     window.currentRole = role;
   }
@@ -92,6 +99,18 @@ function updateRoleUI() {
   const currentRole = window.currentRole || 'admin';
   const savedRole = sessionStorage.getItem('auth_role') || currentRole;
   const authUser = sessionStorage.getItem('auth_user');
+
+  // Synchronize dropdown selection with current active role
+  const roleSel = document.getElementById('userRoleSelect');
+  if (roleSel) {
+    if (savedRole === 'superadmin' && !roleSel.querySelector('option[value="superadmin"]')) {
+      const opt = document.createElement('option');
+      opt.value = 'superadmin';
+      opt.textContent = 'Super Admin';
+      roleSel.insertBefore(opt, roleSel.firstChild);
+    }
+    roleSel.value = currentRole;
+  }
 
   if (currentRole === 'candidate') {
     switchTab('form');
@@ -122,7 +141,8 @@ function updateRoleUI() {
   }
 
   // Super Admin Audit Log & User Management Buttons Visibility
-  const isSuperRole = (savedRole === 'superadmin' || window.currentRole === 'superadmin');
+  // Only display Super Admin features when current active role view is 'superadmin'
+  const isSuperRole = (savedRole === 'superadmin' && currentRole === 'superadmin');
   const auditBtn = document.getElementById('btnAuditLog');
   if (auditBtn) {
     auditBtn.style.display = isSuperRole ? 'inline-flex' : 'none';
@@ -130,6 +150,11 @@ function updateRoleUI() {
   const userMgmtBtn = document.getElementById('btnUserManagement');
   if (userMgmtBtn) {
     userMgmtBtn.style.display = isSuperRole ? 'inline-flex' : 'none';
+  }
+
+  // Cleanup: Ensure startup login gatekeeper does not block clicks when authenticated
+  if (authUser) {
+    hideGatekeeper();
   }
 
   if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
