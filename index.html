@@ -685,6 +685,18 @@
         <select id="catFilterVessel" class="form-control" onchange="renderCatalogGrid()">
           <option value="" data-i18n="filterVessel">Semua Jenis Kapal</option>
         </select>
+
+        <select id="catFilterVesselName" class="form-control" onchange="renderCatalogGrid()">
+          <option value="" data-i18n="filterVesselName">Semua Nama Kapal</option>
+        </select>
+
+        <select id="catFilterStatus" class="form-control" onchange="renderCatalogGrid()">
+          <option value="" data-i18n="filterStatus">Semua Status Operasional</option>
+          <option value="ON_BOAT" data-i18n="statusOnBoat">ON_BOAT (Di Atas Kapal)</option>
+          <option value="SELECTED" data-i18n="statusSelected">SELECTED (Terpilih)</option>
+          <option value="STAND_BY" data-i18n="statusStandBy">STAND_BY</option>
+          <option value="ON_BOAT_SELECTED" data-i18n="statusOnBoatSelected">ON_BOAT & SELECTED</option>
+        </select>
       </div>
 
       <!-- Crew Cards Grid -->
@@ -722,9 +734,19 @@
             <input type="text" id="dirSearchInput" class="form-control" placeholder="Cari nama, jabatan, paspor..." onkeyup="filterDirectory()">
           </div>
           
-          <div style="display: flex; gap: 10px;">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <select id="dirFilterRank" class="form-control" style="width: auto;" onchange="filterDirectory()">
               <option value="" data-i18n="filterRank">Semua Jabatan</option>
+            </select>
+            <select id="dirFilterVesselName" class="form-control" style="width: auto;" onchange="filterDirectory()">
+              <option value="" data-i18n="filterVesselName">Semua Nama Kapal</option>
+            </select>
+            <select id="dirFilterStatus" class="form-control" style="width: auto;" onchange="filterDirectory()">
+              <option value="" data-i18n="filterStatus">Semua Status Operasional</option>
+              <option value="ON_BOAT" data-i18n="statusOnBoat">ON_BOAT (Di Atas Kapal)</option>
+              <option value="SELECTED" data-i18n="statusSelected">SELECTED (Terpilih)</option>
+              <option value="STAND_BY" data-i18n="statusStandBy">STAND_BY</option>
+              <option value="ON_BOAT_SELECTED" data-i18n="statusOnBoatSelected">ON_BOAT & SELECTED</option>
             </select>
           </div>
         </div>
