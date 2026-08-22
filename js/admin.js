@@ -459,6 +459,91 @@ function findCrewIdentityMatch(crewData) {
   return null;
 }
 
+let currentPreviewFilter = 'ALL';
+
+function filterPreviewTab(filter) {
+  currentPreviewFilter = filter || 'ALL';
+  ['All', 'Update', 'Rejoin', 'Append', 'Hold'].forEach(f => {
+    const btn = document.getElementById('btnFilter' + f);
+    if (btn) btn.classList.toggle('active', f.toUpperCase() === currentPreviewFilter);
+  });
+  renderExcelPreviewTable(currentPreviewFilter);
+}
+
+function renderExcelPreviewTable(filter = 'ALL') {
+  const tbody = document.getElementById('excelPreviewTbody');
+  const noticeBox = document.getElementById('excelHoldNotice');
+  if (!tbody) return;
+
+  const data = Array.isArray(window.pendingExcelData) ? window.pendingExcelData : [];
+  
+  let countUpdate = 0;
+  let countRejoin = 0;
+  let countAppend = 0;
+  let countHold = 0;
+
+  data.forEach(item => {
+    const act = (item._importAction || 'APPEND').toUpperCase();
+    if (act === 'UPDATE') countUpdate++;
+    else if (act === 'REJOIN') countRejoin++;
+    else if (act === 'APPEND') countAppend++;
+    else if (act === 'HOLD') countHold++;
+  });
+
+  const elAll = document.getElementById('cntAll');
+  const elUpdate = document.getElementById('cntUpdate');
+  const elRejoin = document.getElementById('cntRejoin');
+  const elAppend = document.getElementById('cntAppend');
+  const elHold = document.getElementById('cntHold');
+
+  if (elAll) elAll.textContent = data.length;
+  if (elUpdate) elUpdate.textContent = countUpdate;
+  if (elRejoin) elRejoin.textContent = countRejoin;
+  if (elAppend) elAppend.textContent = countAppend;
+  if (elHold) elHold.textContent = countHold;
+
+  if (noticeBox) {
+    noticeBox.style.display = countHold > 0 ? 'block' : 'none';
+  }
+
+  const filtered = data.filter(item => {
+    if (filter === 'ALL') return true;
+    return (item._importAction || 'APPEND').toUpperCase() === filter;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 18px; color: var(--text-muted);">Tidak ada data kru untuk kategori filter '${filter}'.</td></tr>`;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach((item, idx) => {
+    const action = (item._importAction || 'APPEND').toUpperCase();
+    let badgeClass = 'badge-import-append';
+    if (action === 'UPDATE') badgeClass = 'badge-import-update';
+    else if (action === 'REJOIN') badgeClass = 'badge-import-rejoin';
+    else if (action === 'HOLD') badgeClass = 'badge-import-hold';
+
+    const docStr = (item.passportNo ? `Pass: ${escapeHTML(item.passportNo)}` : '') + 
+                   (item.cdcNo ? (item.passportNo ? ' | ' : '') + `CDC: ${escapeHTML(item.cdcNo)}` : '') || '-';
+    
+    const crewId = item._existingId || item.submissionId || '-';
+
+    html += `
+      <tr style="border-bottom: 1px solid var(--border-color);">
+        <td style="text-align: center; font-size: 0.8rem; color: var(--text-muted); padding: 6px 8px;">${idx + 1}</td>
+        <td style="font-weight: 600; padding: 6px 8px;">${escapeHTML(item.fullName || '-')}</td>
+        <td style="font-family: monospace; font-size: 0.78rem; padding: 6px 8px; color: var(--accent);">${escapeHTML(crewId)}</td>
+        <td style="font-size: 0.8rem; padding: 6px 8px; color: var(--text-muted);">${docStr}</td>
+        <td style="text-align: center; padding: 6px 8px;"><span class="badge-import-action ${badgeClass}">${action}</span></td>
+        <td style="font-size: 0.8rem; padding: 6px 8px; color: var(--text-muted);">${escapeHTML(item._matchReason || '-')}</td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+
 async function handleExcelImport(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -470,7 +555,7 @@ async function handleExcelImport(event) {
   const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: "yyyy-mm-dd" });
 
   if (rows.length === 0) {
-    alert("Excel kosong.");
+    if (typeof showNotification === 'function') showNotification('File Excel kosong atau format tidak valid.', 'warning');
     return;
   }
 
@@ -538,10 +623,11 @@ async function handleExcelImport(event) {
   };
 
   let totalParsed = 0;
-  let duplicateCount = 0;
+  let updateCount = 0;
+  let rejoinCount = 0;
   let newCount = 0;
   let conflictCount = 0;
-  pendingExcelData = [];
+  const pendingExcelData = [];
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -561,17 +647,50 @@ async function handleExcelImport(event) {
 
     const match = findCrewIdentityMatch(crewData);
     if (match && match.crew) {
+      const isFinishedOrResigned = (
+        String(match.crew.operationalStatus || '').toUpperCase().includes('FINISHED') ||
+        String(match.crew.operationalStatus || '').toUpperCase().includes('RESIGNED') ||
+        String(match.crew.historyStatus || '').toUpperCase().includes('FINISHED') ||
+        String(match.crew.historyStatus || '').toUpperCase().includes('RESIGNED')
+      );
+
+      if (isFinishedOrResigned) {
+        crewData._importAction = 'REJOIN';
+        crewData._matchReason = `Existing ${match.crew.operationalStatus || 'TERMINATED'} Crew -> REJOIN (${match.crew.submissionId})`;
+        rejoinCount++;
+      } else {
+        crewData._importAction = 'UPDATE';
+        let reasonType = match.type || 'IDENTIFIER';
+        if (reasonType === 'CREW_ID') reasonType = 'Crew ID';
+        else if (reasonType.includes('PASSPORT')) reasonType = `Passport (${crewData.passportNo || ''})`;
+        else if (reasonType.includes('SEAMAN_BOOK')) reasonType = `Buku Pelaut (${crewData.cdcNo || ''})`;
+        else if (reasonType.includes('NIK_KTP')) reasonType = `NIK KTP (${crewData.ktpNo || ''})`;
+        else if (reasonType.includes('NAME+DOB')) reasonType = 'Nama Lengkap + Tanggal Lahir';
+        crewData._matchReason = `Matched via ${reasonType}`;
+        updateCount++;
+      }
+
       crewData._isDuplicate = true;
       crewData._existingId = match.crew.submissionId;
-      crewData._matchType = match.type;
-      duplicateCount++;
+      crewData._needsReview = false;
     } else if (match && match.candidates) {
+      crewData._importAction = 'HOLD';
       crewData._needsReview = true;
       crewData._matchType = match.type;
       crewData._candidates = match.candidates.map(x => x.crew.submissionId);
+      if (match.type === 'CONFLICT_STRONG_IDENTIFIERS') {
+        crewData._matchReason = 'Conflict: Strong Identifier Collision across candidates';
+      } else if (match.type === 'CONFLICT_NAME_DOB') {
+        crewData._matchReason = 'Conflict: Same Name + Different Date of Birth';
+      } else {
+        crewData._matchReason = 'Conflict: Manual Admin Verification Required';
+      }
       conflictCount++;
     } else {
+      crewData._importAction = 'APPEND';
       crewData._isDuplicate = false;
+      crewData._needsReview = false;
+      crewData._matchReason = 'No Existing Match -> New Crew';
       newCount++;
     }
 
@@ -579,15 +698,22 @@ async function handleExcelImport(event) {
     totalParsed++;
   }
 
-  document.getElementById("excelPreviewStats").innerHTML = `
-    <ul style="list-style: none; padding: 0;">
-      <li><strong>Total Baris Ditemukan:</strong> ${totalParsed}</li>
-      <li><strong style="color: var(--status-error);">Existing Crew (UPDATE/REJOIN):</strong> ${duplicateCount}</li>
-      <li><strong style="color: var(--status-success);">Crew Baru (APPEND):</strong> ${newCount}</li>
-      <li><strong style="color: var(--accent-amber);">Conflict (MANUAL REVIEW):</strong> ${conflictCount}</li>
-    </ul>
-    <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">Matching: Crew ID → NIK/KTP → Passport → Seaman Book → Nama + Tanggal Lahir. Format nomor dokumen dinormalisasi agar spasi/tanda hubung tidak membuat duplicate.</p>
-  `;
+  window.pendingExcelData = pendingExcelData;
+
+  const statsBox = document.getElementById("excelPreviewStats");
+  if (statsBox) {
+    statsBox.innerHTML = `
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <div><strong>Total Baris Parsed:</strong> ${totalParsed}</div>
+        <div><span class="badge-import-action badge-import-update">UPDATE</span> <strong>${updateCount}</strong></div>
+        <div><span class="badge-import-action badge-import-rejoin">REJOIN</span> <strong>${rejoinCount}</strong></div>
+        <div><span class="badge-import-action badge-import-append">APPEND</span> <strong>${newCount}</strong></div>
+        <div><span class="badge-import-action badge-import-hold">HOLD</span> <strong>${conflictCount}</strong></div>
+      </div>
+    `;
+  }
+
+  filterPreviewTab('ALL');
 
   document.getElementById("excelImportProgressContainer").style.display = "none";
   document.getElementById("excelPreviewButtons").style.display = "flex";
@@ -597,10 +723,18 @@ async function handleExcelImport(event) {
 
 function closeExcelPreview() {
   document.getElementById("excelPreviewModal").classList.remove("active");
-  pendingExcelData = [];
+  window.pendingExcelData = [];
 }
 
 async function confirmExcelImport() {
+  const safeRows = (window.pendingExcelData || []).filter(x => !x._needsReview);
+  const holdRows = (window.pendingExcelData || []).filter(x => x._needsReview);
+
+  if (safeRows.length === 0 && holdRows.length === 0) {
+    if (typeof showNotification === 'function') showNotification('Tidak ada data kru untuk diimport.', 'warning');
+    return;
+  }
+
   document.getElementById("excelPreviewButtons").style.display = "none";
   document.getElementById("excelImportProgressContainer").style.display = "block";
 
@@ -609,67 +743,177 @@ async function confirmExcelImport() {
   const progressPercentage = document.getElementById("excelProgressPercentage");
 
   let processedCount = 0;
-  let skippedConflict = 0;
-  const safeRows = pendingExcelData.filter(x => !x._needsReview);
-  const total = safeRows.length;
+  let successCount = 0;
+  let failedCount = 0;
+  let updatedCount = 0;
+  let rejoinedCount = 0;
+  let addedCount = 0;
+  const totalSafe = safeRows.length;
+  const resultRows = [];
 
-  if (pendingExcelData.some(x => x._needsReview)) {
-    skippedConflict = pendingExcelData.filter(x => x._needsReview).length;
-    alert(`${skippedConflict} crew berstatus CONFLICT dan TIDAK diinjeksikan. Silakan cek manual terlebih dahulu.`);
-  }
-
-  for (let i = 0; i < total; i++) {
+  for (let i = 0; i < totalSafe; i++) {
     const crewData = safeRows[i];
+    const importAction = (crewData._importAction || 'APPEND').toUpperCase();
     let action = "submit_crew";
+
     let payload = { ...crewData };
     delete payload._isDuplicate;
     delete payload._existingId;
     delete payload._matchType;
     delete payload._needsReview;
     delete payload._candidates;
+    delete payload._importAction;
+    delete payload._matchReason;
 
     if (crewData._isDuplicate) {
       const idx = window.crewDatabase.findIndex(c => c.submissionId === crewData._existingId);
       if (idx !== -1) {
-        window.crewDatabase[idx] = { ...window.crewDatabase[idx], ...payload };
+        // Preserve existing documents & photos so updates do not clear attached files
+        const existingDocs = window.crewDatabase[idx].documents || { passport:[], ktp:[], cdc:[], medical:[], photo:[] };
+        const existingPhoto = window.crewDatabase[idx].photoUrl || '';
+        window.crewDatabase[idx] = { 
+          ...window.crewDatabase[idx], 
+          ...payload,
+          documents: existingDocs,
+          photoUrl: payload.photoUrl || existingPhoto
+        };
         payload = { ...window.crewDatabase[idx] };
       }
       action = "update_crew";
     } else {
       payload.status = payload.operationalStatus || "WAITING";
-      payload.documents = { passport:[], ktp:[], cdc:[], medical:[], photo:[] };
+      payload.documents = payload.documents || { passport:[], ktp:[], cdc:[], medical:[], photo:[] };
       window.crewDatabase.unshift(payload);
     }
 
     processedCount++;
-    const pct = total ? Math.round((processedCount / total) * 100) : 100;
-    progressBar.style.width = pct + "%";
-    progressText.innerText = `Memproses Kru ${processedCount} dari ${total}`;
-    progressPercentage.innerText = pct + "%";
+    const pct = totalSafe ? Math.round((processedCount / totalSafe) * 100) : 100;
+    if (progressBar) progressBar.style.width = pct + "%";
+    if (progressText) progressText.innerText = `Memproses Kru ${processedCount} dari ${totalSafe} (${escapeHTML(crewData.fullName)})`;
+    if (progressPercentage) progressPercentage.innerText = pct + "%";
+
+    payload.action = action;
+    if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
+
+    let rowResult = {
+      fullName: crewData.fullName || '-',
+      action: importAction,
+      result: 'SUCCESS',
+      submissionId: payload.submissionId || crewData._existingId || '-',
+      message: importAction === 'REJOIN' ? 'Riwayat pekerjaan disinkronkan (REJOIN)' : (importAction === 'UPDATE' ? 'Data kru diperbarui (UPDATE)' : 'Kru baru dibuat (APPEND)')
+    };
 
     try {
-      payload.action = action;
-      if (typeof saveLocalDatabase === 'function') saveLocalDatabase();
-      await fetch(getGasUrl(), {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      await new Promise(resolve => setTimeout(resolve, 300));
-    } catch(e) {
-      console.error("GAS Sync Error:", e);
+      if (window.api && typeof window.api.postData === 'function') {
+        await window.api.postData(payload, 20000).catch(err => {
+          // If postData throws (e.g. CORS/timeout), fallback to direct fetch without breaking UI loop
+          return fetch(getGasUrl(), {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          }).then(() => ({ success: true, fallback: true }));
+        });
+      }
+
+      successCount++;
+      if (importAction === 'UPDATE') updatedCount++;
+      else if (importAction === 'REJOIN') rejoinedCount++;
+      else if (importAction === 'APPEND') addedCount++;
+
+    } catch (err) {
+      console.error(`Smart Import Error for ${crewData.fullName}:`, err);
+      rowResult.result = 'FAILED';
+      rowResult.message = err.message || 'Gagal menyimpan ke server cloud';
+      failedCount++;
     }
+
+    resultRows.push(rowResult);
+    await new Promise(resolve => setTimeout(resolve, 150));
   }
 
-  progressText.innerText = `Import selesai: ${processedCount} diproses, ${skippedConflict} conflict ditahan.`;
-  loadDirectoryTable();
-  if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+  // Record HOLD rows in the final result table as SKIPPED
+  holdRows.forEach(h => {
+    resultRows.push({
+      fullName: h.fullName || '-',
+      action: 'HOLD',
+      result: 'SKIPPED',
+      submissionId: '-',
+      message: h._matchReason || 'Conflict requires manual review'
+    });
+  });
 
-  setTimeout(() => {
-    closeExcelPreview();
-  }, 2500);
+  closeExcelPreview();
+  renderExcelResultModal(resultRows, {
+    total: (window.pendingExcelData || []).length,
+    updated: updatedCount,
+    rejoined: rejoinedCount,
+    added: addedCount,
+    held: holdRows.length,
+    failed: failedCount
+  });
+
+  if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
+  if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
 }
+
+function renderExcelResultModal(results, summary) {
+  const modal = document.getElementById('excelResultModal');
+  const statsBox = document.getElementById('excelResultStatsSummary');
+  const tbody = document.getElementById('excelResultTbody');
+  if (!modal || !tbody) return;
+
+  if (statsBox) {
+    statsBox.innerHTML = `
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <div><strong>Total Parsed:</strong> ${summary.total}</div>
+        <div><span class="badge-import-action badge-import-update">UPDATED</span> <strong>${summary.updated}</strong></div>
+        <div><span class="badge-import-action badge-import-rejoin">REJOINED</span> <strong>${summary.rejoined}</strong></div>
+        <div><span class="badge-import-action badge-import-append">ADDED</span> <strong>${summary.added}</strong></div>
+        <div><span class="badge-import-action badge-import-hold">HELD</span> <strong>${summary.held}</strong></div>
+        <div><strong style="color: var(--status-error);">FAILED:</strong> ${summary.failed}</div>
+      </div>
+    `;
+  }
+
+  let html = '';
+  results.forEach((res, i) => {
+    let actBadge = 'badge-import-append';
+    if (res.action === 'UPDATE') actBadge = 'badge-import-update';
+    else if (res.action === 'REJOIN') actBadge = 'badge-import-rejoin';
+    else if (res.action === 'HOLD') actBadge = 'badge-import-hold';
+
+    let resColor = 'var(--status-success)';
+    if (res.result === 'FAILED') resColor = 'var(--status-error)';
+    else if (res.result === 'SKIPPED') resColor = 'var(--accent-amber)';
+
+    html += `
+      <tr style="border-bottom: 1px solid var(--border-color);">
+        <td style="text-align: center; padding: 6px 8px; color: var(--text-muted);">${i + 1}</td>
+        <td style="font-weight: 600; padding: 6px 8px;">${escapeHTML(res.fullName)}</td>
+        <td style="text-align: center; padding: 6px 8px;"><span class="badge-import-action ${actBadge}">${res.action}</span></td>
+        <td style="text-align: center; font-weight: 700; color: ${resColor}; padding: 6px 8px;">${res.result}</td>
+        <td style="font-family: monospace; font-size: 0.78rem; padding: 6px 8px; color: var(--accent);">${escapeHTML(res.submissionId)}</td>
+        <td style="font-size: 0.8rem; padding: 6px 8px; color: var(--text-muted);">${escapeHTML(res.message)}</td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+  modal.classList.add('active');
+}
+
+function closeExcelResultModal() {
+  const modal = document.getElementById('excelResultModal');
+  if (modal) modal.classList.remove('active');
+  window.pendingExcelData = [];
+  if (typeof loadDirectoryTable === 'function') loadDirectoryTable();
+  if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+}
+
+window.filterPreviewTab = filterPreviewTab;
+window.renderExcelPreviewTable = renderExcelPreviewTable;
+window.closeExcelResultModal = closeExcelResultModal;
 
 function exportDirectoryExcel() {
   if (!window.crewDatabase || window.crewDatabase.length === 0) { 

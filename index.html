@@ -947,24 +947,94 @@
 
   <!-- 6. EXCEL IMPORT PREVIEW MODAL -->
   <div class="modal-overlay" id="excelPreviewModal">
-    <div class="modal-card" style="max-width: 500px;">
+    <div class="modal-card" style="max-width: 860px; width: 95%;">
       <button class="modal-close-btn" onclick="closeExcelPreview()">&times;</button>
-      <h3><i class="fa-solid fa-file-excel" style="color: green;"></i> Import Excel Preview</h3>
-      <div id="excelPreviewStats" style="margin: 20px 0; padding: 15px; background: var(--surface); border-radius: 8px;">
-        <!-- Filled by JS -->
+      <h3 style="display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-excel" style="color: var(--status-success);"></i> <span>Smart Import V2 Preview & Verification</span></h3>
+      
+      <div id="excelPreviewStats" style="margin: 15px 0 10px; padding: 12px 16px; background: var(--bg-surface-dim); border-radius: 8px; font-size: 0.88rem;">
+        <!-- Summary Stats filled by JS -->
       </div>
-      <div id="excelImportProgressContainer" style="display: none; margin-bottom: 20px;">
+
+      <!-- Filter Buttons Bar -->
+      <div id="excelPreviewFilterBar" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+        <button type="button" class="btn-secondary active" id="btnFilterAll" onclick="filterPreviewTab('ALL')" style="padding: 5px 12px; font-size: 0.8rem; border-radius: 16px;">Semua (<span id="cntAll">0</span>)</button>
+        <button type="button" class="btn-secondary" id="btnFilterUpdate" onclick="filterPreviewTab('UPDATE')" style="padding: 5px 12px; font-size: 0.8rem; border-radius: 16px; color: #38bdf8; border-color: #38bdf8;">UPDATE (<span id="cntUpdate">0</span>)</button>
+        <button type="button" class="btn-secondary" id="btnFilterRejoin" onclick="filterPreviewTab('REJOIN')" style="padding: 5px 12px; font-size: 0.8rem; border-radius: 16px; color: #a855f7; border-color: #a855f7;">REJOIN (<span id="cntRejoin">0</span>)</button>
+        <button type="button" class="btn-secondary" id="btnFilterAppend" onclick="filterPreviewTab('APPEND')" style="padding: 5px 12px; font-size: 0.8rem; border-radius: 16px; color: #10b981; border-color: #10b981;">APPEND (<span id="cntAppend">0</span>)</button>
+        <button type="button" class="btn-secondary" id="btnFilterHold" onclick="filterPreviewTab('HOLD')" style="padding: 5px 12px; font-size: 0.8rem; border-radius: 16px; color: #f59e0b; border-color: #f59e0b;">HOLD (<span id="cntHold">0</span>)</button>
+      </div>
+
+      <!-- HOLD Safety Notice Box -->
+      <div id="excelHoldNotice" style="font-size: 0.82rem; color: #fbbf24; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); padding: 9px 14px; border-radius: 6px; margin-bottom: 12px; display: none;">
+        <i class="fa-solid fa-triangle-exclamation"></i> <strong>Catatan Pengamanan:</strong> Conflict records are excluded from automatic import and require manual review.
+      </div>
+
+      <!-- Itemized Table View -->
+      <div id="excelPreviewTableContainer" style="max-height: 260px; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
+        <table class="data-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+          <thead>
+            <tr style="background: var(--bg-surface-dim); position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--border-color);">
+              <th style="padding: 8px; width: 35px; text-align: center;">No</th>
+              <th style="padding: 8px;">Nama Kru</th>
+              <th style="padding: 8px;">Crew ID</th>
+              <th style="padding: 8px;">Passport / CDC</th>
+              <th style="padding: 8px; text-align: center;">Action</th>
+              <th style="padding: 8px;">Alasan Matching</th>
+            </tr>
+          </thead>
+          <tbody id="excelPreviewTbody">
+            <!-- Populated dynamically by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="excelImportProgressContainer" style="display: none; margin-bottom: 15px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-          <span id="excelProgressText" style="font-weight: bold; font-size: 0.9rem;">Importing...</span>
-          <span id="excelProgressPercentage" style="font-weight: bold; font-size: 0.9rem;">0%</span>
+          <span id="excelProgressText" style="font-weight: bold; font-size: 0.88rem;">Memproses Smart Import...</span>
+          <span id="excelProgressPercentage" style="font-weight: bold; font-size: 0.88rem;">0%</span>
         </div>
-        <div style="width: 100%; background: #e2e8f0; border-radius: 8px; height: 10px; overflow: hidden;">
+        <div style="width: 100%; background: var(--bg-surface-dim); border-radius: 8px; height: 10px; overflow: hidden; border: 1px solid var(--border-color);">
           <div id="excelProgressBar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
         </div>
       </div>
+
       <div style="display: flex; gap: 10px; justify-content: flex-end;" id="excelPreviewButtons">
         <button class="btn-secondary" onclick="closeExcelPreview()">Batal</button>
-        <button class="btn-primary" onclick="confirmExcelImport()">Konfirmasi Import</button>
+        <button class="btn-primary" id="btnConfirmImportSubmit" onclick="confirmExcelImport()"><i class="fa-solid fa-cloud-arrow-up"></i> Konfirmasi Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6B. EXCEL IMPORT RESULT MODAL -->
+  <div class="modal-overlay" id="excelResultModal" style="z-index: 26000;">
+    <div class="modal-card" style="max-width: 860px; width: 95%;">
+      <button class="modal-close-btn" onclick="closeExcelResultModal()">&times;</button>
+      <h3 style="display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-circle-check" style="color: var(--status-success);"></i> <span>Smart Import V2 Complete</span></h3>
+      
+      <div id="excelResultStatsSummary" style="margin: 15px 0 12px; padding: 14px; background: var(--bg-surface-dim); border-radius: 8px; font-size: 0.88rem;">
+        <!-- Summary counts populated by JS -->
+      </div>
+
+      <div style="max-height: 280px; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
+        <table class="data-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+          <thead>
+            <tr style="background: var(--bg-surface-dim); position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--border-color);">
+              <th style="padding: 8px; width: 35px; text-align: center;">No</th>
+              <th style="padding: 8px;">Nama Kru</th>
+              <th style="padding: 8px; text-align: center;">Action</th>
+              <th style="padding: 8px; text-align: center;">Hasil</th>
+              <th style="padding: 8px;">Crew ID</th>
+              <th style="padding: 8px;">Pesan Status</th>
+            </tr>
+          </thead>
+          <tbody id="excelResultTbody">
+            <!-- Populated dynamically by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button class="btn-primary" onclick="closeExcelResultModal()"><i class="fa-solid fa-check"></i> Selesai & Tutup</button>
       </div>
     </div>
   </div>
@@ -1132,12 +1202,12 @@
 
   <div id="appNotificationRegion" class="app-notification-region" aria-live="polite" aria-atomic="false"></div>
 
-  <script src="js/api.js?v=20260823.10"></script>
-  <script src="js/ui-components.js?v=20260823.10"></script>
-  <script src="js/auth.js?v=20260823.10"></script>
-  <script src="js/candidate.js?v=20260823.10"></script>
-  <script src="js/owner.js?v=20260823.10"></script>
-  <script src="js/admin.js?v=20260823.10"></script>
-  <script src="js/app.js?v=20260823.10"></script>
+  <script src="js/api.js?v=20260823.11"></script>
+  <script src="js/ui-components.js?v=20260823.11"></script>
+  <script src="js/auth.js?v=20260823.11"></script>
+  <script src="js/candidate.js?v=20260823.11"></script>
+  <script src="js/owner.js?v=20260823.11"></script>
+  <script src="js/admin.js?v=20260823.11"></script>
+  <script src="js/app.js?v=20260823.11"></script>
 </body>
 </html>

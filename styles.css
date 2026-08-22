@@ -1327,6 +1327,21 @@ select.form-control {
 .badge-status-onboat { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
 .badge-status-blacklist { background: rgba(239, 68, 68, 0.15); color: var(--status-error); }
 
+/* Smart Import V2 Badges */
+.badge-import-action {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+.badge-import-update { background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.badge-import-rejoin { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.badge-import-append { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-import-hold { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
 /* Document Expiry Alerts */
 .expiry-alert-expired { color: var(--status-error); font-weight: 600; }
 .expiry-alert-warning { color: var(--status-warning); font-weight: 600; }
