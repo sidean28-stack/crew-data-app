@@ -74,10 +74,17 @@
           </button>
         </div>
 
-        <!-- Dark/Light Theme Toggle -->
-        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme">
-          <i class="fa-solid fa-moon"></i>
-        </button>
+        <!-- Theme Selector Dropdown -->
+        <div class="theme-selector-wrapper" style="display: flex; align-items: center; gap: 6px;">
+          <span style="color: var(--accent); font-size: 0.95rem; margin-right: 2px;"><i class="fa-solid fa-palette"></i></span>
+          <select id="appThemeSelect" class="form-control" onchange="changeTheme(this.value)" style="width: auto; padding: 4px 10px; font-size: 0.82rem; border-radius: 20px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: var(--text-main); cursor: pointer;">
+            <option value="dark-glass" data-i18n="themeDarkGlass">🌌 Dark Ocean Transparan</option>
+            <option value="light-crystal" data-i18n="themeLightCrystal">☀️ Light Crystal Transparan</option>
+            <option value="cyber-midnight" data-i18n="themeCyber">💜 Cyberpunk Transparan</option>
+            <option value="emerald-glass" data-i18n="themeEmerald">🌲 Emerald Glass Transparan</option>
+            <option value="midnight-slate" data-i18n="themeSlate">🔲 Slate Transparan</option>
+          </select>
+        </div>
       </div>
     </div>
   </header>
