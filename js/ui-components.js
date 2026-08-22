@@ -34,7 +34,7 @@ function initLanguage() {
 }
 
 function changeTheme(themeName) {
-  const allowedThemes = ['dark-glass', 'light-crystal', 'cyber-midnight', 'emerald-glass', 'midnight-slate'];
+  const allowedThemes = ['dark-glass', 'light-crystal', 'cyber-midnight', 'emerald-glass', 'midnight-slate', 'dark-vibrant'];
   const theme = allowedThemes.includes(themeName) ? themeName : 'dark-glass';
   
   const body = document.body;
