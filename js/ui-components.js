@@ -1,4 +1,12 @@
-// js/ui-components.js
+function forceDisableOverlay(element) {
+  if (!element) return;
+  element.classList.remove('active');
+  element.style.display = 'none';
+  element.style.visibility = 'hidden';
+  element.style.opacity = '0';
+  element.style.pointerEvents = 'none';
+}
+window.forceDisableOverlay = forceDisableOverlay;
 
 function escapeHTML(str) {
   if (str === null || str === undefined) return '';

@@ -3,18 +3,25 @@
 function hideGatekeeper() {
   const gatekeeper = document.getElementById('startupLoginGatekeeper');
   if (gatekeeper) {
-    gatekeeper.style.display = 'none';
-    gatekeeper.style.pointerEvents = 'none';
-    gatekeeper.style.visibility = 'hidden';
+    if (typeof forceDisableOverlay === 'function') {
+      forceDisableOverlay(gatekeeper);
+    } else {
+      gatekeeper.style.display = 'none';
+      gatekeeper.style.pointerEvents = 'none';
+      gatekeeper.style.visibility = 'hidden';
+      gatekeeper.style.opacity = '0';
+    }
   }
 }
 
 function showGatekeeper() {
   const gatekeeper = document.getElementById('startupLoginGatekeeper');
   if (gatekeeper) {
+    gatekeeper.classList.add('active');
     gatekeeper.style.display = 'flex';
     gatekeeper.style.pointerEvents = 'auto';
     gatekeeper.style.visibility = 'visible';
+    gatekeeper.style.opacity = '1';
     const input = document.getElementById('loginUsername');
     if (input) setTimeout(() => input.focus(), 150);
   }
