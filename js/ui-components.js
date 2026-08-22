@@ -1,5 +1,18 @@
 // js/ui-components.js
 
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+window.escapeHTML = escapeHTML;
+window.escapeHtml = escapeHTML;
+function escapeHtml(str) { return escapeHTML(str); }
+
 function switchLanguage(lang) {
   window.currentLang = lang;
   document.getElementById('btnLangID').classList.toggle('active', lang === 'id');

@@ -90,9 +90,10 @@ function updateRoleUI() {
 
   if (btnLogin && btnLogout) {
     if (authUser) {
+      const safeUser = typeof escapeHTML === 'function' ? escapeHTML(authUser) : (typeof escapeHtml === 'function' ? escapeHtml(authUser) : authUser);
       btnLogin.style.display = 'none';
       btnLogout.style.display = 'inline-flex';
-      btnLogout.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> <span>Keluar (${escapeHtml(authUser)})</span>`;
+      btnLogout.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> <span>Keluar (${safeUser})</span>`;
       if (floatBtn) floatBtn.style.display = 'none';
     } else {
       btnLogin.style.display = 'inline-flex';
