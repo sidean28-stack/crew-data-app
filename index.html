@@ -26,30 +26,25 @@
         <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 6px; color: #ffffff;">Sistem Data Crew Longline</h2>
         <p style="color: var(--text-muted); font-size: 0.88rem;">Wantaifeng International Co Ltd - PT ALINDA</p>
         <div style="margin-top: 12px; padding: 6px 14px; background: rgba(255,255,255,0.06); border-radius: 20px; display: inline-block;">
-          <span style="font-size: 0.82rem; color: var(--accent); font-weight: 600;"><i class="fa-solid fa-lock"></i> Login Keamanan Wajib</span>
+          <span style="font-size: 0.82rem; color: var(--accent); font-weight: 600;"><i class="fa-solid fa-lock"></i> Otentikasi Pengguna Wajib</span>
         </div>
       </div>
 
       <form onsubmit="executeLogin(event)">
         <div class="form-group" style="margin-bottom: 16px;">
           <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;"><i class="fa-solid fa-user" style="color: var(--accent);"></i> Username *</label>
-          <input type="text" id="loginUsername" class="form-control" placeholder="superadmin / admin" required style="padding: 10px 14px; border-radius: 8px;">
+          <input type="text" id="loginUsername" class="form-control" placeholder="Masukkan Username" required style="padding: 10px 14px; border-radius: 8px;">
         </div>
 
         <div class="form-group" style="margin-bottom: 24px;">
           <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; display: block;"><i class="fa-solid fa-key" style="color: var(--accent);"></i> Password *</label>
-          <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password" required style="padding: 10px 14px; border-radius: 8px;">
+          <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan Password" required style="padding: 10px 14px; border-radius: 8px;">
         </div>
 
         <button type="submit" id="btnLoginSubmit" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
           <i class="fa-solid fa-right-to-bracket"></i> <span>Masuk ke Aplikasi</span>
         </button>
       </form>
-
-      <div style="margin-top: 22px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
-        <p style="font-size: 0.78rem; color: var(--text-dim);">Super Admin: <code style="color: var(--accent);">superadmin</code> / <code style="color: var(--accent);">SuperAdmin123!</code></p>
-        <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">Admin Agency: <code style="color: var(--accent);">admin</code> / <code style="color: var(--accent);">Admin123!</code></p>
-      </div>
 
     </div>
   </div>
@@ -1088,32 +1083,6 @@
 
       </div>
     </div>
-  <!-- 3. USERNAME & PASSWORD LOGIN MODAL -->
-  <div class="modal-overlay" id="loginModal" style="z-index: 25000;">
-    <div class="modal-card" style="max-width: 420px;">
-      <button class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
-      <h2 style="margin-bottom: 6px; text-align: center;"><i class="fa-solid fa-user-lock" style="color: var(--accent);"></i> Login Keamanan Sistem</h2>
-      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px; text-align: center;">Masukkan username & password untuk mengakses modul ini.</p>
-
-      <form onsubmit="executeLogin(event)">
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label><i class="fa-solid fa-user"></i> Username *</label>
-          <input type="text" id="loginUsername" class="form-control" placeholder="superadmin / admin" required>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 20px;">
-          <label><i class="fa-solid fa-key"></i> Password *</label>
-          <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password" required>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-          <button type="button" class="btn-secondary" id="btnLoginCancel" onclick="closeLoginModal()">Batal</button>
-          <button type="submit" id="btnLoginSubmit" class="btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Masuk Sekarang</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- 4. SUPER ADMIN AUDIT TRAIL HISTORY MODAL -->
   <div class="modal-overlay" id="auditLogModal">
     <div class="modal-card" style="max-width: 920px; width: 95%;">
@@ -1163,12 +1132,12 @@
 
   <div id="appNotificationRegion" class="app-notification-region" aria-live="polite" aria-atomic="false"></div>
 
-  <script src="js/api.js?v=20260823.6"></script>
-  <script src="js/ui-components.js?v=20260823.6"></script>
-  <script src="js/auth.js?v=20260823.6"></script>
-  <script src="js/candidate.js?v=20260823.6"></script>
-  <script src="js/owner.js?v=20260823.6"></script>
-  <script src="js/admin.js?v=20260823.6"></script>
-  <script src="js/app.js?v=20260823.6"></script>
+  <script src="js/api.js?v=20260823.7"></script>
+  <script src="js/ui-components.js?v=20260823.7"></script>
+  <script src="js/auth.js?v=20260823.7"></script>
+  <script src="js/candidate.js?v=20260823.7"></script>
+  <script src="js/owner.js?v=20260823.7"></script>
+  <script src="js/admin.js?v=20260823.7"></script>
+  <script src="js/app.js?v=20260823.7"></script>
 </body>
 </html>

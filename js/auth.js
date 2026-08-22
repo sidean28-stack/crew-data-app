@@ -163,9 +163,10 @@ function closeLoginModal() {
 
 async function executeLogin(e) {
   if (e) e.preventDefault();
-  const uInput = document.getElementById('loginUsername');
-  const pInput = document.getElementById('loginPassword');
-  const btnSubmit = document.getElementById('btnLoginSubmit');
+  const form = e && e.target ? e.target : document;
+  const uInput = form.querySelector('#loginUsername') || document.getElementById('loginUsername');
+  const pInput = form.querySelector('#loginPassword') || document.getElementById('loginPassword');
+  const btnSubmit = form.querySelector('#btnLoginSubmit') || document.getElementById('btnLoginSubmit');
 
   const username = String(uInput ? uInput.value : '').trim();
   const password = String(pInput ? pInput.value : '').trim();
@@ -209,7 +210,6 @@ async function executeLogin(e) {
       const gatekeeper = document.getElementById('startupLoginGatekeeper');
       if (gatekeeper) gatekeeper.style.display = 'none';
 
-      closeLoginModal();
       if (typeof showNotification === 'function') {
         showNotification(`Selamat datang, ${res.username || username}! (Role: ${res.role || 'admin'})`, 'success');
       }
