@@ -1274,13 +1274,15 @@ select.form-control {
   justify-content: center;
   padding: 20px;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none !important;
+  visibility: hidden !important;
   transition: opacity 0.2s ease;
 }
 
 .modal-overlay.active {
   opacity: 1;
-  pointer-events: auto;
+  pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 .modal-card {
@@ -1298,13 +1300,111 @@ select.form-control {
 
 .modal-close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  background: transparent;
+  top: 15px; right: 15px;
+  background: none;
   border: none;
+  font-size: 1.5rem;
   color: var(--text-muted);
-  font-size: 1.4rem;
   cursor: pointer;
+  line-height: 1;
+}
+.modal-close-btn:hover {
+  color: var(--text-main);
+}
+
+/* Status Badges */
+.badge-status {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.badge-status-terpilih { background: rgba(16, 185, 129, 0.15); color: var(--status-success); }
+.badge-status-standby { background: rgba(245, 158, 11, 0.15); color: var(--status-warning); }
+.badge-status-onboat { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+.badge-status-blacklist { background: rgba(239, 68, 68, 0.15); color: var(--status-error); }
+
+/* Document Expiry Alerts */
+.expiry-alert-expired { color: var(--status-error); font-weight: 600; }
+.expiry-alert-warning { color: var(--status-warning); font-weight: 600; }
+.expiry-alert-valid { color: var(--status-success); }
+
+/* Security Banner */
+.security-banner {
+  background: linear-gradient(90deg, rgba(234,179,8,0.2) 0%, rgba(245,158,11,0.2) 100%);
+  border: 1px solid var(--accent-amber);
+  color: var(--accent-amber);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+  .basket-drawer {
+    width: 100%;
+  }
+  .security-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .modal-card {
+    padding: 16px;
+  }
+  .app-header .header-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .role-selector-wrapper select {
+    width: 100%;
+  }
+  .tab-navigation {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-link {
+    flex: 0 0 auto;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .action-buttons-group {
+    flex-direction: column;
+  }
+  .action-buttons-group button {
+    width: 100%;
+  }
+  .filter-controls {
+    grid-template-columns: 1fr;
+  }
+  .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+  .stats-counter-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .floating-cart-bar {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+  }
 }
 
 .watermark-overlay-text {
@@ -1350,7 +1450,9 @@ select.form-control {
 }
 .loading-overlay.hidden {
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none !important;
+  display: none !important;
+  visibility: hidden !important;
 }
 .loading-content {
   text-align: center;

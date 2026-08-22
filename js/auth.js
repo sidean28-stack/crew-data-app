@@ -1,10 +1,29 @@
 // js/auth.js
 
+function hideGatekeeper() {
+  const gatekeeper = document.getElementById('startupLoginGatekeeper');
+  if (gatekeeper) {
+    gatekeeper.style.display = 'none';
+    gatekeeper.style.pointerEvents = 'none';
+    gatekeeper.style.visibility = 'hidden';
+  }
+}
+
+function showGatekeeper() {
+  const gatekeeper = document.getElementById('startupLoginGatekeeper');
+  if (gatekeeper) {
+    gatekeeper.style.display = 'flex';
+    gatekeeper.style.pointerEvents = 'auto';
+    gatekeeper.style.visibility = 'visible';
+    const input = document.getElementById('loginUsername');
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+}
+
 function checkMandatoryStartupLogin() {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
   const authUser = sessionStorage.getItem('auth_user');
-  const gatekeeper = document.getElementById('startupLoginGatekeeper');
 
   if (token) {
     window.activeToken = token;
@@ -13,14 +32,14 @@ function checkMandatoryStartupLogin() {
     const roleSel = document.getElementById('userRoleSelect');
     if (roleSel) roleSel.value = 'owner';
     showSecurityBanner(`船东专用一次性访问链接已验证：${window.tokenOwnerName}。资料已解锁并加水印。`);
-    if (gatekeeper) gatekeeper.style.display = 'none';
+    hideGatekeeper();
     return;
   }
 
   if (!authUser) {
-    if (gatekeeper) gatekeeper.style.display = 'flex';
+    showGatekeeper();
   } else {
-    if (gatekeeper) gatekeeper.style.display = 'none';
+    hideGatekeeper();
   }
 }
 
@@ -113,41 +132,7 @@ function updateRoleUI() {
 }
 
 function openLoginModal(isMandatory = false) {
-  const gatekeeper = document.getElementById('startupLoginGatekeeper');
-  if (gatekeeper) {
-    gatekeeper.style.display = 'flex';
-    const input = document.getElementById('loginUsername');
-    if (input) setTimeout(() => input.focus(), 150);
-    return;
-  }
-
-  const modal = document.getElementById('loginModal');
-  if (!modal) return;
-
-  const loader = document.getElementById('appLoadingOverlay');
-  if (loader) loader.classList.add('hidden');
-
-  modal.style.zIndex = '25000';
-  modal.classList.add('active');
-  const closeBtn = modal.querySelector('.modal-close-btn');
-  const cancelBtn = document.getElementById('btnLoginCancel');
-
-  if (isMandatory || !sessionStorage.getItem('auth_user')) {
-    modal.style.backdropFilter = 'blur(25px) saturate(180%)';
-    modal.style.webkitBackdropFilter = 'blur(25px) saturate(180%)';
-    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.88)';
-    if (closeBtn) closeBtn.style.display = 'none';
-    if (cancelBtn) cancelBtn.style.display = 'none';
-  } else {
-    modal.style.backdropFilter = '';
-    modal.style.webkitBackdropFilter = '';
-    modal.style.backgroundColor = '';
-    if (closeBtn) closeBtn.style.display = 'block';
-    if (cancelBtn) cancelBtn.style.display = 'inline-block';
-  }
-
-  const input = document.getElementById('loginUsername');
-  if (input) setTimeout(() => input.focus(), 150);
+  showGatekeeper();
 }
 
 function closeLoginModal() {
@@ -158,8 +143,7 @@ function closeLoginModal() {
   }
   const modal = document.getElementById('loginModal');
   if (modal) modal.classList.remove('active');
-  const gatekeeper = document.getElementById('startupLoginGatekeeper');
-  if (gatekeeper && authUser) gatekeeper.style.display = 'none';
+  if (authUser) hideGatekeeper();
 }
 
 async function executeLogin(e) {
@@ -195,8 +179,7 @@ async function executeLogin(e) {
     const roleSel = document.getElementById('userRoleSelect');
     if (roleSel) roleSel.value = 'admin';
 
-    const gatekeeper = document.getElementById('startupLoginGatekeeper');
-    if (gatekeeper) gatekeeper.style.display = 'none';
+    hideGatekeeper();
 
     if (typeof showNotification === 'function') {
       showNotification(`Selamat datang, ${username}! (Role: ${role})`, 'success');
@@ -225,8 +208,7 @@ async function executeLogin(e) {
       const roleSel = document.getElementById('userRoleSelect');
       if (roleSel) roleSel.value = 'admin';
 
-      const gatekeeper = document.getElementById('startupLoginGatekeeper');
-      if (gatekeeper) gatekeeper.style.display = 'none';
+      hideGatekeeper();
 
       if (typeof showNotification === 'function') {
         showNotification(`Selamat datang, ${res.username || username}! (Role: ${res.role || 'admin'})`, 'success');
@@ -255,8 +237,7 @@ function executeLogout() {
   if (roleSel) roleSel.value = 'candidate';
   updateRoleUI();
 
-  const gatekeeper = document.getElementById('startupLoginGatekeeper');
-  if (gatekeeper) gatekeeper.style.display = 'flex';
+  showGatekeeper();
 
   if (typeof showNotification === 'function') showNotification('Anda telah keluar dari sistem.', 'info');
 }
