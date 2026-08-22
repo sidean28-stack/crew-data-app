@@ -125,6 +125,7 @@ function initializeUI() {
   renderDynamicRadioAndCheckboxes();
   if (typeof loadSavedDraft === 'function') loadSavedDraft();
   if (typeof updateRoleUI === 'function') updateRoleUI();
+  if (typeof checkMandatoryStartupLogin === 'function') checkMandatoryStartupLogin();
   if (typeof updateGasStatusUI === 'function') updateGasStatusUI();
   if (typeof setupDragAndDrop === 'function') setupDragAndDrop();
 }

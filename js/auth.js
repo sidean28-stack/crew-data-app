@@ -1,5 +1,25 @@
 // js/auth.js
 
+function checkMandatoryStartupLogin() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  const authUser = sessionStorage.getItem('auth_user');
+
+  if (token) {
+    window.activeToken = token;
+    window.tokenOwnerName = urlParams.get('owner') || "Ship Owner";
+    window.currentRole = 'owner';
+    const roleSel = document.getElementById('userRoleSelect');
+    if (roleSel) roleSel.value = 'owner';
+    showSecurityBanner(`船东专用一次性访问链接已验证：${window.tokenOwnerName}。资料已解锁并加水印。`);
+    return;
+  }
+
+  if (!authUser) {
+    setTimeout(() => { openLoginModal(true); }, 200);
+  }
+}
+
 function parseUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
@@ -18,9 +38,7 @@ function parseUrlParams() {
     if (roleSel) roleSel.value = roleParam;
   }
 
-  if (urlParams.get('login') === '1' || urlParams.has('login')) {
-    setTimeout(() => { openLoginModal(); }, 400);
-  }
+  checkMandatoryStartupLogin();
 }
 
 function showSecurityBanner(msg) {
@@ -37,7 +55,7 @@ function switchRole(role) {
     const savedRole = sessionStorage.getItem('auth_role');
     if (!savedRole) {
       window.pendingTargetRole = role;
-      openLoginModal();
+      openLoginModal(true);
       return;
     }
     window.currentRole = savedRole;
@@ -89,16 +107,38 @@ function updateRoleUI() {
   if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
 }
 
-function openLoginModal() {
+function openLoginModal(isMandatory = false) {
   const modal = document.getElementById('loginModal');
-  if (modal) {
-    modal.classList.add('active');
-    const input = document.getElementById('loginUsername');
-    if (input) input.focus();
+  if (!modal) return;
+
+  modal.classList.add('active');
+  const closeBtn = modal.querySelector('.modal-close-btn');
+  const cancelBtn = document.getElementById('btnLoginCancel');
+
+  if (isMandatory || !sessionStorage.getItem('auth_user')) {
+    modal.style.backdropFilter = 'blur(25px) saturate(180%)';
+    modal.style.webkitBackdropFilter = 'blur(25px) saturate(180%)';
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.88)';
+    if (closeBtn) closeBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+  } else {
+    modal.style.backdropFilter = '';
+    modal.style.webkitBackdropFilter = '';
+    modal.style.backgroundColor = '';
+    if (closeBtn) closeBtn.style.display = 'block';
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
   }
+
+  const input = document.getElementById('loginUsername');
+  if (input) setTimeout(() => input.focus(), 200);
 }
 
 function closeLoginModal() {
+  const authUser = sessionStorage.getItem('auth_user');
+  if (!authUser && !window.activeToken) {
+    if (typeof showNotification === 'function') showNotification('Silakan login terlebih dahulu untuk mengakses sistem.', 'warning');
+    return;
+  }
   const modal = document.getElementById('loginModal');
   if (modal) modal.classList.remove('active');
 }
@@ -148,7 +188,16 @@ async function executeLogin(e) {
       const roleSel = document.getElementById('userRoleSelect');
       if (roleSel) roleSel.value = 'admin';
 
-      closeLoginModal();
+      // Unlock modal completely
+      const modal = document.getElementById('loginModal');
+      if (modal) {
+        const closeBtn = modal.querySelector('.modal-close-btn');
+        const cancelBtn = document.getElementById('btnLoginCancel');
+        if (closeBtn) closeBtn.style.display = 'block';
+        if (cancelBtn) cancelBtn.style.display = 'inline-block';
+        modal.classList.remove('active');
+      }
+
       if (typeof showNotification === 'function') {
         showNotification(`Selamat datang, ${res.username || username}! (Role: ${res.role || 'admin'})`, 'success');
       }
@@ -174,8 +223,10 @@ function executeLogout() {
   if (roleSel) roleSel.value = 'candidate';
   updateRoleUI();
   if (typeof showNotification === 'function') showNotification('Anda telah keluar dari sistem.', 'info');
+  openLoginModal(true);
 }
 
+window.checkMandatoryStartupLogin = checkMandatoryStartupLogin;
 window.openLoginModal = openLoginModal;
 window.closeLoginModal = closeLoginModal;
 window.executeLogin = executeLogin;
