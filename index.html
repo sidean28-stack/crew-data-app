@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Sistem Data & Katalog Crew | Maritime Authority - PT ALINDA PRIMA SENTOSA</title>
   <!-- Maritime Authority Typography Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +15,16 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Excel Parser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Version enforcement: force reload if old cached version detected -->
+  <script>
+    (function() {
+      var expected = '20260823.16';
+      var tag = document.querySelector('link[href*="styles.css"]');
+      if (tag && tag.href.indexOf(expected) === -1) {
+        window.location.reload(true);
+      }
+    })();
+  </script>
 </head>
 <body>
 
