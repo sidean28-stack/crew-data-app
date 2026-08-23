@@ -1706,36 +1706,43 @@ const DEFAULT_USERS_DB = [
   { id: 'usr_admin', username: 'admin', password: 'Admin123!', role: 'admin', createdAt: '2026-08-23' }
 ];
 
-function getStoredUsers() {
+window.cloudUsersCache = [];
+
+async function loadUsersFromCloud() {
   try {
-    const raw = localStorage.getItem('app_users_db');
-    if (!raw) {
-      localStorage.setItem('app_users_db', JSON.stringify(DEFAULT_USERS_DB));
-      return DEFAULT_USERS_DB;
+    const authUser = sessionStorage.getItem('auth_user') || localStorage.getItem('auth_user') || 'superadmin';
+    const authRole = sessionStorage.getItem('auth_role') || localStorage.getItem('auth_role') || 'superadmin';
+
+    const res = await window.api.getUsers(authUser, authRole);
+    if (res && res.success && Array.isArray(res.users)) {
+      window.cloudUsersCache = res.users;
+      return true;
     }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem('app_users_db', JSON.stringify(DEFAULT_USERS_DB));
-      return DEFAULT_USERS_DB;
-    }
-    return parsed;
   } catch (e) {
-    console.error("Error reading app_users_db:", e);
-    return DEFAULT_USERS_DB;
+    console.error("Gagal load users dari cloud:", e);
   }
+  return false;
+}
+
+function getStoredUsers() {
+  return window.cloudUsersCache.length > 0 ? window.cloudUsersCache : DEFAULT_USERS_DB;
 }
 
 function saveStoredUsers(users) {
+  window.cloudUsersCache = users;
   try {
-    localStorage.setItem('app_users_db', JSON.stringify(users));
+    localStorage.setItem('app_users_db_local_backup', JSON.stringify(users));
   } catch (e) {
-    console.error("Error saving app_users_db:", e);
+    console.error("Error saving local backup:", e);
   }
 }
 
-function openUserManagementModal() {
+async function openUserManagementModal() {
   const modal = document.getElementById('userManagementModal');
   if (!modal) return;
+
+  await loadUsersFromCloud();
+
   resetUserForm();
   renderUserManagementTable();
   modal.classList.add('active');
@@ -1808,7 +1815,7 @@ function renderUserManagementTable() {
   tbody.innerHTML = html;
 }
 
-function saveUserFromModal(e) {
+async function saveUserFromModal(e) {
   if (e) e.preventDefault();
 
   const inputId = document.getElementById('userMgmtId');
@@ -1826,39 +1833,31 @@ function saveUserFromModal(e) {
     return;
   }
 
-  let users = getStoredUsers();
+  const authUser = sessionStorage.getItem('auth_user') || localStorage.getItem('auth_user') || 'superadmin';
+  const authRole = sessionStorage.getItem('auth_role') || localStorage.getItem('auth_role') || 'superadmin';
 
-  if (userId) {
-    // Editing existing user
-    const idx = users.findIndex(u => u.id === userId);
-    if (idx !== -1) {
-      users[idx].password = password;
-      users[idx].role = role;
-      users[idx].updatedAt = new Date().toISOString().split('T')[0];
-      if (typeof showNotification === 'function') showNotification(`User '${username}' berhasil diperbarui.`, 'success');
+  const userObj = {
+    id: userId || ('usr_' + Date.now()),
+    username: username,
+    password: password,
+    role: role,
+    createdAt: new Date().toISOString().split('T')[0]
+  };
+
+  try {
+    const res = await window.api.saveUser(authUser, authRole, userObj);
+    if (res && res.success) {
+      if (typeof showNotification === 'function') showNotification(`User '${username}' berhasil disimpan.`, 'success');
+      await loadUsersFromCloud();
+      resetUserForm();
+      renderUserManagementTable();
+    } else {
+      if (typeof showNotification === 'function') showNotification(res?.message || 'Gagal menyimpan user.', 'error');
     }
-  } else {
-    // Creating new user
-    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-      if (typeof showNotification === 'function') showNotification(`Username '${username}' sudah terdaftar. Gunakan username lain.`, 'error');
-      return;
-    }
-
-    const newUser = {
-      id: 'usr_' + Date.now(),
-      username: username,
-      password: password,
-      role: role,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    users.push(newUser);
-    if (typeof showNotification === 'function') showNotification(`User baru '${username}' berhasil ditambahkan!`, 'success');
+  } catch (err) {
+    console.error('Save user error:', err);
+    if (typeof showNotification === 'function') showNotification('Gagal menyimpan user ke cloud.', 'error');
   }
-
-  saveStoredUsers(users);
-  resetUserForm();
-  renderUserManagementTable();
 }
 
 function editUserInModal(userId) {
@@ -1882,7 +1881,7 @@ function editUserInModal(userId) {
   if (inputRole) inputRole.value = target.role || 'admin';
 }
 
-function deleteUserInModal(userId) {
+async function deleteUserInModal(userId) {
   const users = getStoredUsers();
   const target = users.find(u => u.id === userId);
   if (!target) return;
@@ -1894,12 +1893,25 @@ function deleteUserInModal(userId) {
 
   if (!confirm(`Apakah Anda yakin ingin menghapus user '${target.username}'?`)) return;
 
-  const updatedUsers = users.filter(u => u.id !== userId);
-  saveStoredUsers(updatedUsers);
-  renderUserManagementTable();
-  if (typeof showNotification === 'function') showNotification(`User '${target.username}' berhasil dihapus.`, 'info');
+  const authUser = sessionStorage.getItem('auth_user') || localStorage.getItem('auth_user') || 'superadmin';
+  const authRole = sessionStorage.getItem('auth_role') || localStorage.getItem('auth_role') || 'superadmin';
+
+  try {
+    const res = await window.api.deleteUser(authUser, authRole, userId);
+    if (res && res.success) {
+      if (typeof showNotification === 'function') showNotification(`User '${target.username}' berhasil dihapus.`, 'info');
+      await loadUsersFromCloud();
+      renderUserManagementTable();
+    } else {
+      if (typeof showNotification === 'function') showNotification(res?.message || 'Gagal menghapus user.', 'error');
+    }
+  } catch (err) {
+    console.error('Delete user error:', err);
+    if (typeof showNotification === 'function') showNotification('Gagal menghapus user dari cloud.', 'error');
+  }
 }
 
+window.loadUsersFromCloud = loadUsersFromCloud;
 window.getStoredUsers = getStoredUsers;
 window.saveStoredUsers = saveStoredUsers;
 window.openUserManagementModal = openUserManagementModal;

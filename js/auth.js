@@ -223,55 +223,17 @@ async function executeLogin(e) {
 
   if (btnSubmit) btnSubmit.disabled = true;
 
-  // Check stored user database created by Super Admin
-  const users = (typeof getStoredUsers === 'function') ? getStoredUsers() : [];
-  const foundUser = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-
-  const isSuperDefault = (username.toLowerCase() === 'superadmin' && password === 'SuperAdmin123!');
-  const isAdminDefault = (username.toLowerCase() === 'admin' && password === 'Admin123!');
-
-  if (foundUser || isSuperDefault || isAdminDefault) {
-    const role = foundUser ? foundUser.role : (isSuperDefault ? 'superadmin' : 'admin');
-    const token = 'token_' + Date.now();
-
-    sessionStorage.setItem('auth_user', username);
-    sessionStorage.setItem('auth_role', role);
-    sessionStorage.setItem('auth_token', token);
-    localStorage.setItem('auth_user', username);
-    localStorage.setItem('auth_role', role);
-    localStorage.setItem('auth_token', token);
-
-    window.currentRole = role;
-    const roleSel = document.getElementById('userRoleSelect');
-    if (roleSel) roleSel.value = role;
-
-    hideGatekeeper();
-
-    if (typeof showNotification === 'function') {
-      showNotification(`Selamat datang, ${username}! (Role: ${role})`, 'success');
-    }
-    updateRoleUI();
-
-    // Notify backend in background without blocking UI
-    if (window.api && typeof window.api.login === 'function') {
-      window.api.login({ username, password }).catch(() => {});
-    }
-
-    if (btnSubmit) btnSubmit.disabled = false;
-    return;
-  }
-
-  // Fallback cloud validation if non-standard credentials
   try {
-    let res = await window.api.login({ username, password }).catch(() => null);
+    // Try cloud authentication first
+    const res = await window.api.loginUser(username, password);
 
     if (res && res.success) {
       sessionStorage.setItem('auth_user', res.username || username);
       sessionStorage.setItem('auth_role', res.role || 'admin');
-      sessionStorage.setItem('auth_token', res.token || '');
+      sessionStorage.setItem('auth_token', 'token_' + Date.now());
       localStorage.setItem('auth_user', res.username || username);
       localStorage.setItem('auth_role', res.role || 'admin');
-      localStorage.setItem('auth_token', res.token || '');
+      localStorage.setItem('auth_token', 'token_' + Date.now());
 
       window.currentRole = res.role || 'admin';
       const roleSel = document.getElementById('userRoleSelect');
@@ -285,12 +247,13 @@ async function executeLogin(e) {
       updateRoleUI();
     } else {
       if (typeof showNotification === 'function') {
-        showNotification('Username atau Password salah!', 'error');
+        showNotification(res?.message || 'Username atau Password salah!', 'error');
       }
     }
   } catch (err) {
+    console.error('Login error:', err);
     if (typeof showNotification === 'function') {
-      showNotification('Username atau Password salah!', 'error');
+      showNotification('Gagal terhubung dengan server autentikasi.', 'error');
     }
   } finally {
     if (btnSubmit) btnSubmit.disabled = false;
