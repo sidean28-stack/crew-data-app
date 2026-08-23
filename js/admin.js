@@ -1267,7 +1267,7 @@ function printCrewCV(submissionId) {
         </tr>
         <tr>
           <th>${cvLabel('Riwayat Kapal', 'Vessel History', '\u8239\u8236\u7d93\u6b77')}</th>
-          <td>${escapeHTML(crew.vesselName || '-')}</td>
+          <td>${escapeHTML(typeof makeVesselHistoryBilingual === 'function' ? makeVesselHistoryBilingual(crew.vesselName) : (crew.vesselName || '-'))}</td>
         </tr>
         <tr>
           <th>
@@ -1432,7 +1432,7 @@ function openCrewDetailModal(submissionId) {
       <h5 style="margin: 0 0 6px 0; font-size: 0.85rem; color: var(--primary);">${detailText.qualification}</h5>
       <div class="crew-detail-data-grid" style="display: grid; grid-template-columns: minmax(118px, 150px) minmax(0, 1fr); gap: 4px 10px;">
         <strong>${detailText.experience}</strong> <span>${escapeHTML(crew.expLongline || '-')}</span>
-        <strong>${detailText.vesselHistory}</strong> <span>${escapeHTML(crew.vesselName || '-')}</span>
+        <strong>${detailText.vesselHistory}</strong> <span>${escapeHTML(typeof makeVesselHistoryBilingual === 'function' ? makeVesselHistoryBilingual(crew.vesselName) : (crew.vesselName || '-'))}</span>
         <strong>${detailText.signOnOff}</strong> <span>${escapeHTML(crew.signOnOff || '-')}</span>
         <strong>${detailText.vesselTypeOrigin}</strong> <span>${escapeHTML(crew.vesselTypeLongline || '-')} (${escapeHTML(crew.vesselOrigin || '-')})</span>
         <strong>${detailText.placement}</strong> <span>${escapeHTML(crew.placementCountry || '-')}</span>

@@ -85,6 +85,69 @@ window.changeTheme = changeTheme;
 window.initTheme = initTheme;
 window.toggleTheme = toggleTheme;
 
+const VESSEL_TRANSLATIONS = {
+  "maan yih feng": "滿億豐",
+  "man fu tsai": "滿福財",
+  "shun ze": "順澤",
+  "yuan ying": "遠洋",
+  "jin yu": "金漁",
+  "hung shheng": "宏昇",
+  "hung sheng": "宏昇",
+  "sheng chi": "盛吉",
+  "sheng hang": "盛航",
+  "feng kuo": "豐國",
+  "da wang": "大旺",
+  "zin shun": "新順",
+  "xin shi dai": "新時代",
+  "fu sheng": "福昇",
+  "sheng feng": "盛豐",
+  "hung li": "宏利",
+  "fa sheng": "发晟",
+  "feng huang": "凤凰"
+};
+
+function getBilingualVesselName(vesselName) {
+  if (!vesselName) return '';
+  const cleanName = String(vesselName).trim();
+  const key = cleanName.toLowerCase();
+  
+  if (/[\u4e00-\u9fa5]/.test(cleanName)) {
+    return cleanName;
+  }
+  
+  if (VESSEL_TRANSLATIONS[key]) {
+    return `${cleanName.toUpperCase()} (${VESSEL_TRANSLATIONS[key]})`;
+  }
+  
+  return cleanName.toUpperCase();
+}
+
+function makeVesselHistoryBilingual(vesselText) {
+  if (!vesselText) return '-';
+  const parts = String(vesselText).split('|');
+  const mapped = parts.map(part => {
+    const trimmed = part.trim();
+    const numberMatch = trimmed.match(/^(\d+\.\s*)(.*)$/);
+    let prefix = '';
+    let rest = trimmed;
+    if (numberMatch) {
+      prefix = numberMatch[1];
+      rest = numberMatch[2];
+    }
+    const periodMatch = rest.match(/^(.*?)\s*(\([^()]*\))\s*$/);
+    let suffix = '';
+    let cleanName = rest;
+    if (periodMatch) {
+      cleanName = periodMatch[1].trim();
+      suffix = ' ' + periodMatch[2];
+    }
+    
+    const bilingual = getBilingualVesselName(cleanName);
+    return prefix + bilingual + suffix;
+  });
+  return mapped.join(' | ');
+}
+
 function matchFilterValue(dataVal, filterVal) {
   if (!filterVal) return true;
   if (!dataVal) return false;
@@ -92,22 +155,11 @@ function matchFilterValue(dataVal, filterVal) {
   const d = String(dataVal).trim().toLowerCase();
   const f = String(filterVal).trim().toLowerCase();
 
-  if (d === f || d.includes(f) || f.includes(d)) return true;
-
-  const clean = str => str.replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(t => t.length > 2);
-  const dTokens = clean(d);
-  const fTokens = clean(f);
-
-  if (!dTokens.length || !fTokens.length) return false;
-
-  const isSimilarToken = (t1, t2) => {
-    if (t1 === t2 || t1.includes(t2) || t2.includes(t1)) return true;
-    const norm = s => s.replace(/ck/g, 'k').replace(/ll/g, 'l');
-    return norm(t1) === norm(t2);
-  };
-
-  return fTokens.some(ft => dTokens.some(dt => isSimilarToken(dt, ft)));
+  return d.includes(f);
 }
+
+window.getBilingualVesselName = getBilingualVesselName;
+window.makeVesselHistoryBilingual = makeVesselHistoryBilingual;
 window.matchFilterValue = matchFilterValue;
 
 function populateFilterRankOptions() {
@@ -187,7 +239,8 @@ function populateFilterVesselOptions() {
   const sortedVessels = Array.from(vesselSet).sort((a, b) => a.localeCompare(b));
   let html = defaultHtml;
   sortedVessels.forEach(vName => {
-    html += `<option value="${escapeHTML(vName)}">${escapeHTML(vName)}</option>`;
+    const bilingualLabel = getBilingualVesselName(vName);
+    html += `<option value="${escapeHTML(vName)}">${escapeHTML(bilingualLabel)}</option>`;
   });
 
   if (dirFilterVesselName) {
@@ -457,9 +510,28 @@ function openImagePreview(source) {
   const src = resolveImgSrc(source);
   if (!src) return;
 
+  const isPdf = src.toLowerCase().includes('.pdf') || src.includes('application/pdf');
   const image = document.getElementById('enlargedImage');
-  image.src = src;
-  image.alt = typeof source === 'object' && source.name ? source.name : 'Preview dokumen kru';
+  const pdfFrame = document.getElementById('enlargedPdf');
+
+  if (isPdf) {
+    if (image) image.style.display = 'none';
+    if (pdfFrame) {
+      pdfFrame.src = src;
+      pdfFrame.style.display = 'block';
+    }
+  } else {
+    if (image) {
+      image.src = src;
+      image.alt = typeof source === 'object' && source.name ? source.name : 'Preview dokumen kru';
+      image.style.display = 'block';
+    }
+    if (pdfFrame) {
+      pdfFrame.src = '';
+      pdfFrame.style.display = 'none';
+    }
+  }
+
   const watermark = document.getElementById('watermarkOverlay');
   if (window.activeToken || window.currentRole === 'owner') {
     watermark.textContent = `CONFIDENTIAL FOR ${window.tokenOwnerName || 'SHIP OWNER'} - ${new Date().toLocaleDateString()}`;
@@ -489,16 +561,39 @@ function navigateImagePreview(direction) {
   if (items.length < 2) return;
   window.currentDocumentPreviewIndex = (window.currentDocumentPreviewIndex + direction + items.length) % items.length;
   const current = items[window.currentDocumentPreviewIndex];
+  
+  const src = resolveImgSrc(current);
+  if (!src) return;
+
+  const isPdf = src.toLowerCase().includes('.pdf') || src.includes('application/pdf');
   const image = document.getElementById('enlargedImage');
-  image.src = current.src;
-  image.alt = current.name || current.label || 'Preview dokumen kru';
+  const pdfFrame = document.getElementById('enlargedPdf');
+
+  if (isPdf) {
+    if (image) image.style.display = 'none';
+    if (pdfFrame) {
+      pdfFrame.src = src;
+      pdfFrame.style.display = 'block';
+    }
+  } else {
+    if (image) {
+      image.src = src;
+      image.alt = current.name || current.label || 'Preview dokumen kru';
+      image.style.display = 'block';
+    }
+    if (pdfFrame) {
+      pdfFrame.src = '';
+      pdfFrame.style.display = 'none';
+    }
+  }
   updateImagePreviewControls();
 }
 
 function downloadCurrentPreview() {
   const current = getDocumentPreviewItems()[window.currentDocumentPreviewIndex];
   const image = document.getElementById('enlargedImage');
-  const src = current?.src || image.src;
+  const pdfFrame = document.getElementById('enlargedPdf');
+  const src = current?.src || image.src || pdfFrame.src;
   if (!src) return;
   const link = document.createElement('a');
   link.href = src;
@@ -520,9 +615,11 @@ window.downloadCurrentPreview = downloadCurrentPreview;
 function closeImagePreview() {
   const modal = document.getElementById('imagePreviewModal');
   const image = document.getElementById('enlargedImage');
+  const pdfFrame = document.getElementById('enlargedPdf');
   modal.classList.remove('active');
   document.body.classList.remove('image-preview-open');
-  image.removeAttribute('src');
+  if (image) image.removeAttribute('src');
+  if (pdfFrame) pdfFrame.removeAttribute('src');
   window.currentDocumentPreviewIndex = 0;
 }
 

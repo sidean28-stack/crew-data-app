@@ -308,11 +308,66 @@ function setupDragAndDrop() {
 function triggerFileInput(id) { document.getElementById(id).click(); }
 function handleFileSelect(e, docType) { handleFiles(e.target.files, docType); }
 
+function compressImage(file, callback) {
+  if (!file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e) => callback(e.target.result, file.type);
+    reader.readAsDataURL(file);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      const MAX_WIDTH = 1200;
+      const MAX_HEIGHT = 1200;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      callback(dataUrl, 'image/jpeg');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleFiles(files, docType) {
   if (!Array.isArray(window.uploadedDocuments[docType])) {
     window.uploadedDocuments[docType] = [];
   }
   Array.from(files).forEach(file => {
+    const isValidType = file.type.startsWith('image/') || file.type === 'application/pdf';
+    if (!isValidType) {
+      if (typeof showNotification === 'function') {
+        showNotification(`Format file '${file.name}' tidak didukung! Gunakan gambar atau PDF.`, 'error');
+      } else {
+        alert(`Format file '${file.name}' tidak didukung! Gunakan gambar atau PDF.`);
+      }
+      return;
+    }
+
     const isDuplicate = window.uploadedDocuments[docType].some(doc => {
       if (doc && typeof doc === 'object') {
         return doc.name === file.name;
@@ -329,12 +384,14 @@ function handleFiles(files, docType) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      window.uploadedDocuments[docType].push({ name: file.name, base64: event.target.result });
+    compressImage(file, (dataUrl, mimeType) => {
+      window.uploadedDocuments[docType].push({ 
+        name: file.name, 
+        type: mimeType, 
+        base64: dataUrl 
+      });
       renderGallery(docType);
-    };
-    reader.readAsDataURL(file);
+    });
   });
 }
 
@@ -349,21 +406,32 @@ function renderGallery(docType) {
   container.innerHTML = window.uploadedDocuments[docType].map((doc, idx) => {
     let imgSrc = '';
     let name = docType.toUpperCase() + ' File';
+    let isPdf = false;
 
     if (typeof doc === 'string') {
       imgSrc = typeof resolveImgSrc === 'function' ? resolveImgSrc(doc) : doc;
       name = docType.toUpperCase() + ' Uploaded';
+      if (doc.toLowerCase().includes('.pdf') || doc.includes('application/pdf')) {
+        isPdf = true;
+      }
     } else if (doc && typeof doc === 'object') {
       const rawSrc = doc.base64 || doc.url || doc.link || '';
       imgSrc = typeof resolveImgSrc === 'function' ? resolveImgSrc(rawSrc) : rawSrc;
       name = doc.name || (docType.toUpperCase() + ' File');
+      if (name.toLowerCase().endsWith('.pdf') || (doc.type && doc.type === 'application/pdf') || rawSrc.includes('application/pdf') || rawSrc.toLowerCase().includes('.pdf')) {
+        isPdf = true;
+      }
     }
 
     if (!imgSrc) return '';
 
+    const previewSrc = isPdf 
+      ? 'https://cdn-icons-png.flaticon.com/512/337/337946.png'
+      : imgSrc;
+
     return `
       <div class="thumb-item">
-        <img src="${escapeHTML(imgSrc)}" onclick="openImagePreview(this.currentSrc || this.src)" alt="${escapeHTML(name)}">
+        <img src="${escapeHTML(previewSrc)}" onclick="openDocPreviewClick('${escapeHTML(imgSrc)}', ${isPdf})" alt="${escapeHTML(name)}" style="object-fit: ${isPdf ? 'contain' : 'cover'}; padding: ${isPdf ? '8px' : '0'}; cursor: pointer;">
         <button class="thumb-remove-btn" onclick="removeDoc('${docType}', ${idx})">&times;</button>
         <div class="thumb-label">${escapeHTML(name)}</div>
       </div>
@@ -381,8 +449,6 @@ function removeDoc(docType, idx) {
   window.uploadedDocuments[docType].splice(idx, 1);
   renderGallery(docType);
 }
-
-
 
 function openCameraModal(docType) {
   window.activeCameraDocType = docType;
@@ -407,7 +473,65 @@ function takeCameraSnap() {
   const canvas = document.getElementById('cameraCanvas');
   canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0);
-  window.uploadedDocuments[window.activeCameraDocType].push({ name: `camera_${Date.now()}.jpg`, base64: canvas.toDataURL('image/jpeg') });
+  window.uploadedDocuments[window.activeCameraDocType].push({ name: `camera_${Date.now()}.jpg`, type: 'image/jpeg', base64: canvas.toDataURL('image/jpeg') });
   renderGallery(window.activeCameraDocType);
   closeCameraModal();
 }
+
+function openDocPreviewClick(url, isPdf) {
+  if (isPdf) {
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(`<iframe src="${url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+    } else {
+      window.open(url, '_blank');
+    }
+  } else {
+    if (typeof openImagePreview === 'function') {
+      openImagePreview(url);
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+}
+
+function addLinkDocFromInput(inputId, docType) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const url = input.value.trim();
+  if (!url) return;
+
+  if (!/^https?:\/\//i.test(url)) {
+    alert("Format link tidak valid! Pastikan link diawali dengan http:// atau https://");
+    return;
+  }
+
+  if (!Array.isArray(window.uploadedDocuments[docType])) {
+    window.uploadedDocuments[docType] = [];
+  }
+
+  const exists = window.uploadedDocuments[docType].some(doc => {
+    const docUrl = typeof doc === 'string' ? doc : (doc.url || doc.link || '');
+    return docUrl.trim() === url;
+  });
+
+  if (exists) {
+    alert("Link tersebut sudah terdaftar.");
+    return;
+  }
+
+  window.uploadedDocuments[docType].push({
+    name: 'CLOUD Link',
+    url: url,
+    base64: ''
+  });
+
+  renderGallery(docType);
+  input.value = '';
+  if (typeof showNotification === 'function') {
+    showNotification("Link berhasil ditambahkan!", "success");
+  }
+}
+
+window.openDocPreviewClick = openDocPreviewClick;
+window.addLinkDocFromInput = addLinkDocFromInput;

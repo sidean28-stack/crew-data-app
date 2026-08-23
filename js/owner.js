@@ -194,7 +194,7 @@ function openOwnerCrewDetailModal(submissionId) {
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.dob}</td><td>${escapeHTML(crew.dob)}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.physique}</td><td>${escapeHTML(crew.heightCm || '-')} ${zh ? '厘米' : 'cm'} / ${escapeHTML(crew.weightKg || '-')} ${zh ? '公斤' : 'kg'}</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.experience}</td><td>${escapeHTML(crew.expLongline)}</td></tr>
-            <tr><td style="padding: 4px 0; font-weight: bold;">${t.vessel}</td><td>${escapeHTML(crew.vesselName)} (${escapeHTML(crew.vesselTypeLongline)})</td></tr>
+            <tr><td style="padding: 4px 0; font-weight: bold;">${t.vessel}</td><td>${escapeHTML(typeof makeVesselHistoryBilingual === 'function' ? makeVesselHistoryBilingual(crew.vesselName) : crew.vesselName)} (${escapeHTML(crew.vesselTypeLongline)})</td></tr>
             <tr><td style="padding: 4px 0; font-weight: bold;">${t.contact}</td><td>${escapeHTML(displayPhone)}</td></tr>
           </table>
 
