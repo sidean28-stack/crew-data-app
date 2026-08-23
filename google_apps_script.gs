@@ -6,7 +6,7 @@
  * ==============================================================================
  */
 
-var PRODUCTION_SPREADSHEET_ID = "1VY0gIxIyA4mf7yKNwXprgUaDvLIZuBeABlF8MVNMJlA";
+var PRODUCTION_SPREADSHEET_ID = "18z_NRHfbZDaUrfWmF7hCZiSdzLNNlTcEwYmNvL-i4nY";
 
 function getCrewSpreadsheet_() {
   // 1. Check Script Properties for environment-specific override (e.g. SPREADSHEET_ID in Staging)
@@ -247,7 +247,7 @@ function doPost(e) {
   if (!lock.tryLock(30000)) {
     return jsonResponse_({ success: false, message: "Server sedang sibuk. Silakan coba lagi." });
   }
-  
+
   try {
     var rawData = e.postData.contents;
     var data = JSON.parse(rawData);
@@ -259,6 +259,17 @@ function doPost(e) {
   }
 
     var ss = getCrewSpreadsheet_();
+
+    // CLOUD USER MANAGEMENT ACTIONS
+    if (action === 'login_user') {
+      return loginUser_(data);
+    } else if (action === 'get_users') {
+      return getUsers_(data);
+    } else if (action === 'save_user') {
+      return saveUser_(data);
+    } else if (action === 'delete_user') {
+      return deleteUser_(data);
+    }
 
     // ACTION: LOGIN (Username & Password Validation)
     if (action === "login") {
@@ -428,6 +439,17 @@ function doPost(e) {
               if (fileUrl && docUrls[docType]) {
                 docUrls[docType].push(fileUrl);
               }
+            } else {
+              var existingUrl = "";
+              if (typeof fileObj === "string") {
+                existingUrl = fileObj;
+              } else if (fileObj && typeof fileObj === "object") {
+                existingUrl = fileObj.url || fileObj.link || fileObj.base64 || "";
+              }
+              existingUrl = existingUrl.trim();
+              if (existingUrl && /^https?:\/\//i.test(existingUrl) && docUrls[docType]) {
+                docUrls[docType].push(existingUrl);
+              }
             }
           });
         }
@@ -512,11 +534,13 @@ function doPost(e) {
       }
       
       var oldValues = sheet.getRange(updateRowIndex, 1, 1, 64).getValues()[0];
-      for (var c = 32; c <= 37; c++) {
-        if (rowValues[c] === "" && oldValues[c] !== "") {
-          rowValues[c] = oldValues[c];
-        } else if (rowValues[c] !== "" && oldValues[c] !== "") {
-          rowValues[c] = oldValues[c] + " \n" + rowValues[c];
+      if (!data.documents) {
+        for (var c = 32; c <= 37; c++) {
+          if (rowValues[c] === "" && oldValues[c] !== "") {
+            rowValues[c] = oldValues[c];
+          } else if (rowValues[c] !== "" && oldValues[c] !== "") {
+            rowValues[c] = oldValues[c] + " \n" + rowValues[c];
+          }
         }
       }
       var preservedFields = [
@@ -1030,4 +1054,221 @@ function getAuditLogs_(ss) {
     if (logs.length >= 200) break;
   }
   return logs;
+}
+
+// --- DATABASE KREDENSIAL CLOUD (USER MANAGEMENT - SECURE HASHED) ---
+
+function hashPassword_(password) {
+  var salt = Utilities.getUuid().substring(0, 16);
+  var hash = Utilities.computeHmacSha256Signature(password, salt);
+  var hashHex = hash.map(function(val) {
+    return ('0' + (val & 0xFF).toString(16)).slice(-2);
+  }).join('');
+  return salt + "." + hashHex;
+}
+
+function verifyPassword_(password, storedValue) {
+  if (!storedValue || storedValue.indexOf('.') === -1) {
+    return password === storedValue; // Fallback for old plaintext passwords
+  }
+  var parts = storedValue.split('.');
+  var salt = parts[0];
+  var originalHash = parts[1];
+  var hash = Utilities.computeHmacSha256Signature(password, salt);
+  var hashHex = hash.map(function(val) {
+    return ('0' + (val & 0xFF).toString(16)).slice(-2);
+  }).join('');
+  return hashHex === originalHash;
+}
+
+function getUsersSheet_() {
+  var ss = getCrewSpreadsheet_();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) {
+    sheet = ss.insertSheet("Users");
+    sheet.appendRow([
+      "user_id",
+      "username",
+      "password_hash",
+      "full_name",
+      "role",
+      "status",
+      "created_at",
+      "updated_at",
+      "last_login",
+      "password_changed_at"
+    ]);
+    sheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#0f172a").setFontColor("#ffffff");
+    
+    var now = new Date().toISOString().split('T')[0];
+    sheet.appendRow([
+      "USR-SUPERADMIN",
+      "superadmin",
+      hashPassword_("SuperAdmin123!"),
+      "Super Administrator",
+      "SUPERADMIN",
+      "ACTIVE",
+      now,
+      now,
+      "",
+      ""
+    ]);
+    sheet.appendRow([
+      "USR-ADMIN",
+      "admin",
+      hashPassword_("Admin123!"),
+      "Administrator",
+      "ADMIN",
+      "ACTIVE",
+      now,
+      now,
+      "",
+      ""
+    ]);
+  }
+  return sheet;
+}
+
+function verifySuperadmin_(payload) {
+  var authUser = (payload.auth_user || "").toLowerCase().trim();
+  var authRole = (payload.auth_role || "").toLowerCase().trim();
+  if (authRole !== 'superadmin') return false;
+
+  var sheet = getUsersSheet_();
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]).toLowerCase().trim() === authUser && String(data[i][4]).toLowerCase().trim() === 'superadmin') {
+      return String(data[i][5]).trim() === "ACTIVE";
+    }
+  }
+  return false;
+}
+
+function loginUser_(payload) {
+  var username = (payload.username || "").toLowerCase().trim();
+  var password = (payload.password || "").trim();
+  var sheet = getUsersSheet_();
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var dbUsername = String(data[i][1]).toLowerCase().trim();
+    var dbPasswordHash = String(data[i][2]).trim();
+    var dbFullName = String(data[i][3]).trim();
+    var dbRole = String(data[i][4]).toLowerCase().trim();
+    var dbStatus = String(data[i][5]).trim();
+
+    if (dbUsername === username) {
+      if (dbStatus !== "ACTIVE") {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          message: "Akun Anda sedang tidak aktif"
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      if (verifyPassword_(password, dbPasswordHash)) {
+        var lastLogin = new Date().toISOString();
+        sheet.getRange(i + 1, 9).setValue(lastLogin);
+        
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          userId: data[i][0],
+          username: data[i][1],
+          fullName: dbFullName,
+          role: dbRole,
+          token: "token_" + Utilities.getUuid()
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          message: "Password salah"
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    success: false,
+    message: "Username tidak ditemukan"
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getUsers_(payload) {
+  if (!verifySuperadmin_(payload)) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Akses Ditolak" })).setMimeType(ContentService.MimeType.JSON);
+  }
+  var sheet = getUsersSheet_();
+  var data = sheet.getDataRange().getValues();
+  var users = [];
+  for (var i = 1; i < data.length; i++) {
+    users.push({
+      id: data[i][0],
+      username: data[i][1],
+      password: "",
+      role: String(data[i][4]).toLowerCase(),
+      createdAt: data[i][6] ? String(data[i][6]).split('T')[0] : ""
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: true, users: users })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function saveUser_(payload) {
+  if (!verifySuperadmin_(payload)) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Akses Ditolak" })).setMimeType(ContentService.MimeType.JSON);
+  }
+  var userObj = payload.user;
+  var sheet = getUsersSheet_();
+  var data = sheet.getDataRange().getValues();
+  var foundRow = -1;
+
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === userObj.id || String(data[i][1]).toLowerCase() === userObj.username.toLowerCase()) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+
+  var now = new Date().toISOString().split('T')[0];
+  var hashedPassword = hashPassword_(userObj.password);
+
+  if (foundRow !== -1) {
+    if (userObj.password) {
+      sheet.getRange(foundRow, 3).setValue(hashedPassword);
+      sheet.getRange(foundRow, 10).setValue(now);
+    }
+    sheet.getRange(foundRow, 5).setValue(userObj.role.toUpperCase());
+    sheet.getRange(foundRow, 8).setValue(now);
+  } else {
+    sheet.appendRow([
+      userObj.id || ("USR-" + Utilities.getUuid().substring(0, 8).toUpperCase()),
+      userObj.username,
+      hashedPassword,
+      userObj.username,
+      userObj.role.toUpperCase(),
+      "ACTIVE",
+      now,
+      now,
+      "",
+      ""
+    ]);
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function deleteUser_(payload) {
+  if (!verifySuperadmin_(payload)) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Akses Ditolak" })).setMimeType(ContentService.MimeType.JSON);
+  }
+  var userId = payload.userId;
+  var sheet = getUsersSheet_();
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === userId) {
+      if (String(data[i][1]).toLowerCase() === 'superadmin') {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Superadmin utama tidak dapat dihapus" })).setMimeType(ContentService.MimeType.JSON);
+      }
+      sheet.deleteRow(i + 1);
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: false, message: "User tidak ditemukan" })).setMimeType(ContentService.MimeType.JSON);
 }
