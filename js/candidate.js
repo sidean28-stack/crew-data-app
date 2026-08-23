@@ -195,10 +195,13 @@ function getFormData() {
 }
 
 async function submitCrewForm() {
+  if (window.isSubmittingCrewForm) return;
+
   if (!document.getElementById('agreeTermsCheck').checked) {
     alert("Harap centang persetujuan keabsahan data.");
     return;
   }
+  window.isSubmittingCrewForm = true;
   const formData = getFormData();
   const isEditing = Boolean(window.editingSubmissionId);
   let cloudPayload = formData;
@@ -245,6 +248,7 @@ async function submitCrewForm() {
     alert(`Data belum tersimpan di cloud. ${error.message || 'Periksa koneksi lalu coba kembali.'}`);
     return;
   } finally {
+    window.isSubmittingCrewForm = false;
     if (submitButton) {
       submitButton.disabled = false;
       submitButton.classList.remove('is-processing');
@@ -305,7 +309,26 @@ function triggerFileInput(id) { document.getElementById(id).click(); }
 function handleFileSelect(e, docType) { handleFiles(e.target.files, docType); }
 
 function handleFiles(files, docType) {
+  if (!Array.isArray(window.uploadedDocuments[docType])) {
+    window.uploadedDocuments[docType] = [];
+  }
   Array.from(files).forEach(file => {
+    const isDuplicate = window.uploadedDocuments[docType].some(doc => {
+      if (doc && typeof doc === 'object') {
+        return doc.name === file.name;
+      }
+      return false;
+    });
+
+    if (isDuplicate) {
+      if (typeof showNotification === 'function') {
+        showNotification(`Berkas '${file.name}' sudah ada di daftar unggahan!`, 'warning');
+      } else {
+        alert(`Berkas '${file.name}' sudah ada di daftar unggahan!`);
+      }
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       window.uploadedDocuments[docType].push({ name: file.name, base64: event.target.result });
