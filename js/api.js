@@ -1,4 +1,4 @@
-const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbw7s1nryPGWXKwOopf4zXU-PIN73sVsDXi87ie9UL40VICaBDxcxOirQrQvzfEH-LmT/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbz72fFjhzZm_JJoue9ej7zvH4Ww2OpwKPHY4fS291tknr98Hoh0wRv8yr_lz0VdyxyM/exec";
 const LEGACY_GAS_DEPLOYMENT_IDS = [
   'AKfycbwgSE70ic5Fuwe6j_e2gaK1Z5227MVmHJIqORI7BEhWTQm5nY8udw689d9uYWKwiVlG',
   'AKfycbwf8iObaafOe69BE0h4rD59ujKMLV8Yr4HH9osx-L7SnMhKNEWvApJd50Asc9DdXDfu'
@@ -211,5 +211,21 @@ window.api = {
 
   startLiveSync: function () {
     setInterval(() => this.syncNow(), 30000);
+  },
+
+  loginUser: function(username, password) {
+    return this.postData({ action: 'login_user', username: username, password: password });
+  },
+
+  getUsers: function(authUser, authRole) {
+    return this.postData({ action: 'get_users', auth_user: authUser, auth_role: authRole });
+  },
+
+  saveUser: function(authUser, authRole, userObj) {
+    return this.postData({ action: 'save_user', auth_user: authUser, auth_role: authRole, user: userObj });
+  },
+
+  deleteUser: function(authUser, authRole, userId) {
+    return this.postData({ action: 'delete_user', auth_user: authUser, auth_role: authRole, userId: userId });
   }
 };
