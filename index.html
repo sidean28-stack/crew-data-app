@@ -587,6 +587,10 @@
                 <i class="fa-solid fa-camera"></i> <span data-i18n="cameraBtn">Ambil Foto Kamera</span>
               </button>
               <div class="thumb-gallery" id="galleryPassport"></div>
+              <div style="margin-top: 8px; display: flex; gap: 6px;">
+                <input type="text" id="linkInputPassport" class="form-control" placeholder="Atau tempel Link Google Drive..." style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; flex: 1; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                <button type="button" class="btn-secondary" onclick="addLinkDocFromInput('linkInputPassport', 'passport')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; white-space: nowrap; cursor: pointer;"><i class="fa-solid fa-plus"></i> Link</button>
+              </div>
             </div>
 
             <!-- 2. KTP -->
@@ -604,6 +608,10 @@
                 <i class="fa-solid fa-camera"></i> <span data-i18n="cameraBtn">Ambil Foto Kamera</span>
               </button>
               <div class="thumb-gallery" id="galleryKtp"></div>
+              <div style="margin-top: 8px; display: flex; gap: 6px;">
+                <input type="text" id="linkInputKtp" class="form-control" placeholder="Atau tempel Link Google Drive..." style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; flex: 1; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                <button type="button" class="btn-secondary" onclick="addLinkDocFromInput('linkInputKtp', 'ktp')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; white-space: nowrap; cursor: pointer;"><i class="fa-solid fa-plus"></i> Link</button>
+              </div>
             </div>
 
             <!-- 3. BUKU PELAUT / SEAMAN BOOK -->
@@ -621,6 +629,10 @@
                 <i class="fa-solid fa-camera"></i> <span data-i18n="cameraBtn">Ambil Foto Kamera</span>
               </button>
               <div class="thumb-gallery" id="galleryCdc"></div>
+              <div style="margin-top: 8px; display: flex; gap: 6px;">
+                <input type="text" id="linkInputCdc" class="form-control" placeholder="Atau tempel Link Google Drive..." style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; flex: 1; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                <button type="button" class="btn-secondary" onclick="addLinkDocFromInput('linkInputCdc', 'cdc')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; white-space: nowrap; cursor: pointer;"><i class="fa-solid fa-plus"></i> Link</button>
+              </div>
             </div>
 
             <!-- 4. MEDICAL CHECK UP -->
@@ -638,6 +650,10 @@
                 <i class="fa-solid fa-camera"></i> <span data-i18n="cameraBtn">Ambil Foto Kamera</span>
               </button>
               <div class="thumb-gallery" id="galleryMedical"></div>
+              <div style="margin-top: 8px; display: flex; gap: 6px;">
+                <input type="text" id="linkInputMedical" class="form-control" placeholder="Atau tempel Link Google Drive..." style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; flex: 1; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                <button type="button" class="btn-secondary" onclick="addLinkDocFromInput('linkInputMedical', 'medical')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; white-space: nowrap; cursor: pointer;"><i class="fa-solid fa-plus"></i> Link</button>
+              </div>
             </div>
 
             <!-- 5. SERTIFIKAT BST -->
@@ -655,6 +671,10 @@
                 <i class="fa-solid fa-camera"></i> <span data-i18n="cameraBtn">Ambil Foto Kamera</span>
               </button>
               <div class="thumb-gallery" id="galleryCert"></div>
+              <div style="margin-top: 8px; display: flex; gap: 6px;">
+                <input type="text" id="linkInputCert" class="form-control" placeholder="Atau tempel Link Google Drive..." style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; flex: 1; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                <button type="button" class="btn-secondary" onclick="addLinkDocFromInput('linkInputCert', 'cert')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; white-space: nowrap; cursor: pointer;"><i class="fa-solid fa-plus"></i> Link</button>
+              </div>
             </div>
 
             <!-- 6. FOTO PAS / FULL BODY -->
@@ -666,12 +686,16 @@
               <div class="dropzone" id="dropzonePhoto" onclick="triggerFileInput('filePhoto')">
                 <i class="fa-solid fa-image dropzone-icon"></i>
                 <p data-i18n="dropzoneHint">Tarik & Lepas gambar di sini, atau klik untuk memilih file</p>
-                <input type="file" id="filePhoto" accept="image/*" multiple hidden onchange="handleFileSelect(event, 'photo')">
+                <input type="file" id="filePhoto" accept="image/*,.pdf" multiple hidden onchange="handleFileSelect(event, 'photo')">
               </div>
               <button class="btn-camera" onclick="openCameraModal('photo')">
                 <i class="fa-solid fa-camera"></i> <span data-i18n="cameraBtn">Ambil Foto Kamera</span>
               </button>
               <div class="thumb-gallery" id="galleryPhoto"></div>
+              <div style="margin-top: 8px; display: flex; gap: 6px;">
+                <input type="text" id="linkInputPhoto" class="form-control" placeholder="Atau tempel Link Google Drive..." style="padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; flex: 1; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main);">
+                <button type="button" class="btn-secondary" onclick="addLinkDocFromInput('linkInputPhoto', 'photo')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; white-space: nowrap; cursor: pointer;"><i class="fa-solid fa-plus"></i> Link</button>
+              </div>
             </div>
 
           </div>
@@ -951,6 +975,7 @@
       <div class="image-preview-stage">
         <button id="imagePreviewPrev" class="image-preview-nav image-preview-prev" type="button" onclick="navigateImagePreview(-1)" aria-label="Dokumen sebelumnya" title="Dokumen sebelumnya"><i class="fa-solid fa-chevron-left"></i></button>
         <img id="enlargedImage" src="" alt="Preview dokumen kru">
+        <iframe id="enlargedPdf" src="" style="width: 100%; height: 70vh; display: none; border-radius: 8px;" frameborder="0"></iframe>
         <div class="watermark-overlay-text" id="watermarkOverlay">CONFIDENTIAL FOR MARITIME AUTHORITY</div>
         <button id="imagePreviewNext" class="image-preview-nav image-preview-next" type="button" onclick="navigateImagePreview(1)" aria-label="Dokumen berikutnya" title="Dokumen berikutnya"><i class="fa-solid fa-chevron-right"></i></button>
       </div>
