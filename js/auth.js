@@ -138,12 +138,41 @@ function updateRoleUI() {
     roleSel.value = currentRole;
   }
 
+  // Hide role selector wrapper if logged in as owner or accessing via token
+  const roleWrapper = document.querySelector('.role-selector-wrapper');
+  if (roleWrapper) {
+    if (savedRole === 'owner' || window.activeToken) {
+      roleWrapper.style.display = 'none';
+    } else {
+      roleWrapper.style.display = 'flex';
+    }
+  }
+
+  // Hide the entire navigation tab bar for owner and candidate roles
+  const mainNavTabs = document.getElementById('mainNavTabs');
+  if (mainNavTabs) {
+    if (currentRole === 'owner' || currentRole === 'candidate') {
+      mainNavTabs.style.display = 'none';
+    } else {
+      mainNavTabs.style.display = 'flex';
+    }
+  }
+
   if (currentRole === 'candidate') {
     switchTab('form');
   } else if (currentRole === 'owner') {
     if (window.currentLang !== 'zh' && typeof switchLanguage === 'function') switchLanguage('zh');
+    const catFilterStatus = document.getElementById('catFilterStatus');
+    if (catFilterStatus) {
+      catFilterStatus.style.display = 'none';
+      catFilterStatus.value = '';
+    }
     switchTab('catalog');
   } else if (currentRole === 'admin' || currentRole === 'superadmin') {
+    const catFilterStatus = document.getElementById('catFilterStatus');
+    if (catFilterStatus) {
+      catFilterStatus.style.display = 'inline-block';
+    }
     switchTab('directory');
   }
 

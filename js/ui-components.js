@@ -327,6 +327,13 @@ function renderDynamicRadioAndCheckboxes() {
 }
 
 function switchTab(tab) {
+  const currentRole = window.currentRole || 'admin';
+  if (currentRole === 'owner' && tab !== 'catalog') {
+    tab = 'catalog';
+  } else if (currentRole === 'candidate' && tab !== 'form') {
+    tab = 'form';
+  }
+
   document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
   document.getElementById('formTabSection').style.display = 'none';
   document.getElementById('catalogTabSection').style.display = 'none';

@@ -38,8 +38,23 @@ function renderCatalogGrid() {
   const filtered = window.crewDatabase.filter(crew => {
     const operationalStatus = String(crew.operationalStatus || crew.status || 'STAND_BY').toUpperCase();
     const selectionStatus = String(crew.ownerReview?.status || '').toUpperCase();
-    const isRestricted = operationalStatus === 'ON_BOAT' || operationalStatus === 'SELECTED' || selectionStatus === 'SELECTED';
-    if (isRestricted && !canCurrentOwnerViewRestrictedCrew(crew)) return false;
+
+    if (window.currentRole === 'owner') {
+      // Owner can ONLY see available (unselected/standby) crew.
+      // Exclude ON_BOAT, SELECTED, and BLACKLIST crew absolutely.
+      if (operationalStatus === 'ON_BOAT' || operationalStatus === 'SELECTED' || operationalStatus === 'BLACKLIST') {
+        return false;
+      }
+      // Exclude crew members already selected by any owner.
+      if (selectionStatus === 'SELECTED') {
+        return false;
+      }
+    } else {
+      // Admin/Superadmin logic: allow viewing restricted crew under standard visibility rules
+      const isRestricted = operationalStatus === 'ON_BOAT' || operationalStatus === 'SELECTED' || selectionStatus === 'SELECTED';
+      if (isRestricted && !canCurrentOwnerViewRestrictedCrew(crew)) return false;
+    }
+
     const matchesSearch = !searchQuery || 
       crew.fullName.toLowerCase().includes(searchQuery) ||
       (crew.chineseName && crew.chineseName.toLowerCase().includes(searchQuery)) ||
