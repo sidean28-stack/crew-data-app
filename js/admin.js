@@ -1008,11 +1008,11 @@ function printCrewCV(submissionId) {
 
   const printWindow = window.open('', '_blank');
   
-  // Ambil foto profil (index 0) jika ada, format 4x6
-  let photoHtml = '<div class="photo-placeholder">3 x 4 cm</div>';
+  // Ambil foto profil (index 0) jika ada, format 3x4
+  let photoHtml = '<div class="photo-placeholder font-label-bilingual text-label-bilingual text-on-surface-variant text-center">3 x 4 cm</div>';
   if (crew.documents && crew.documents.photo && crew.documents.photo.length > 0) {
     const photoSrc = resolveImgSrc(crew.documents.photo[0]);
-    if (photoSrc) photoHtml = `<img src="${escapeHTML(photoSrc)}">`;
+    if (photoSrc) photoHtml = `<img src="${escapeHTML(photoSrc)}" class="w-full h-full object-cover">`;
   }
 
   // Hitung Umur
@@ -1041,7 +1041,7 @@ function printCrewCV(submissionId) {
 
   // Generate QR Code URL
   const qrUrl = encodeURIComponent(`https://sidean28-stack.github.io/crew-data-app/?view=${crew.submissionId}`);
-  const qrImage = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${qrUrl}" alt="QR Code">`;
+  const qrImage = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${qrUrl}" alt="QR Code" class="w-12 h-12">`;
 
   // Attachments HTML (Halaman 2)
   let attachmentsHtml = '';
@@ -1065,8 +1065,8 @@ function printCrewCV(submissionId) {
           if (!attachmentSrc) return;
           attachmentsHtml += `
             <article class="attachment-sheet">
-              <h4>${label}</h4>
-              <img src="${escapeHTML(attachmentSrc)}" class="attachment-image">
+              <h4 class="font-headline-sm text-headline-sm text-primary mb-2 pb-1 border-b border-outline-variant">${label}</h4>
+              <img src="${escapeHTML(attachmentSrc)}" class="attachment-image mx-auto rounded border border-outline-variant p-1 bg-white">
             </article>
           `;
         });
@@ -1078,9 +1078,9 @@ function printCrewCV(submissionId) {
   if (attachmentsHtml) {
     page2Html = `
       <section class="documents-section">
-      <div class="attachment-header">
-        <h1>${isZh ? '附件文件' : 'DOCUMENT ATTACHMENTS'}</h1>
-        <p>${isZh ? '船員證件' : 'Lampiran Berkas'} - ${escapeHTML(crew.fullName)} (${escapeHTML(crew.submissionId)})</p>
+      <div class="attachment-header no-print text-center my-6">
+        <h1 class="font-display text-display text-primary">${isZh ? '附件文件' : 'DOCUMENT ATTACHMENTS'}</h1>
+        <p class="text-on-surface-variant font-bold">${isZh ? '船員證件' : 'Lampiran Berkas'} - ${escapeHTML(crew.fullName)} (${escapeHTML(crew.submissionId)})</p>
       </div>
       <div class="attachments-container">
         ${attachmentsHtml}
@@ -1089,263 +1089,391 @@ function printCrewCV(submissionId) {
     `;
   }
 
+  // Generate Document Gallery HTML dynamically
+  let galleryHtml = '';
+  if (crew.documents) {
+    for (const [key, docsList] of Object.entries(crew.documents)) {
+      if (Array.isArray(docsList)) {
+        docsList.forEach((doc, idx) => {
+          const docUrl = resolveImgSrc(doc);
+          if (!docUrl) return;
+          const docName = doc.name || `${key.toUpperCase()}_${idx + 1}`;
+          const isPdf = docName.toLowerCase().endsWith('.pdf') || docUrl.includes('application/pdf') || docUrl.toLowerCase().includes('.pdf');
+          
+          if (isPdf) {
+            galleryHtml += `
+              <div class="border border-outline-variant rounded flex flex-col items-center justify-center bg-surface-bright w-[30mm] h-[40mm] max-w-[120px] max-h-[160px] p-2">
+                <img alt="PDF Icon" class="w-10 h-10 mb-1 opacity-80" src="https://cdn-icons-png.flaticon.com/512/337/337946.png"/>
+                <span class="font-label-bilingual text-label-bilingual text-on-surface-variant truncate w-full text-center">${escapeHTML(docName)}</span>
+              </div>
+            `;
+          } else {
+            galleryHtml += `
+              <div class="border border-outline-variant rounded overflow-hidden w-[30mm] h-[40mm] max-w-[120px] max-h-[160px] bg-surface-container relative">
+                <img src="${escapeHTML(docUrl)}" class="w-full h-full object-cover">
+                <div class="absolute bottom-0 w-full bg-surface-dim bg-opacity-90 py-0.5 text-center font-label-bilingual text-label-bilingual border-t border-outline-variant truncate">${escapeHTML(docName)}</div>
+              </div>
+            `;
+          }
+        });
+      }
+    }
+  }
+
+  // Generate Vessel History Rows HTML dynamically
+  let vesselRowsHtml = '';
+  const vesselText = crew.vesselName || '';
+  if (vesselText) {
+    const parts = vesselText.split('|');
+    parts.forEach(part => {
+      const trimmed = part.trim();
+      const numberMatch = trimmed.match(/^(\d+\.\s*)(.*)$/);
+      let rest = trimmed;
+      if (numberMatch) {
+        rest = numberMatch[2];
+      }
+      const periodMatch = rest.match(/^(.*?)\s*(\([^()]*\))\s*$/);
+      let duration = '-';
+      let cleanName = rest;
+      if (periodMatch) {
+        cleanName = periodMatch[1].trim();
+        duration = periodMatch[2].replace(/[()]/g, '');
+      }
+      
+      const bilingualName = typeof getBilingualVesselName === 'function' ? getBilingualVesselName(cleanName) : cleanName;
+      const chineseLabel = bilingualName.includes('(') ? bilingualName.match(/\(([^()]*)\)/)?.[1] : '';
+      
+      vesselRowsHtml += `
+        <tr class="hover:bg-surface-bright">
+          <td class="py-2 px-3 border-b border-outline-variant">
+            <div class="font-bold">${escapeHTML(cleanName.toUpperCase())}</div>
+            <div class="font-label-bilingual text-label-bilingual text-on-surface-variant">${escapeHTML(chineseLabel || '')}</div>
+          </td>
+          <td class="py-2 px-3 border-b border-outline-variant">${escapeHTML(crew.vesselTypeLongline || 'Longline')}</td>
+          <td class="py-2 px-3 border-b border-outline-variant">${escapeHTML(crew.rankPosition || 'Crew')}</td>
+          <td class="py-2 px-3 border-b border-outline-variant font-bold">${escapeHTML(duration)}</td>
+        </tr>
+      `;
+    });
+  } else {
+    vesselRowsHtml = `
+      <tr>
+        <td colspan="4" class="py-4 text-center text-on-surface-variant">${isZh ? '無航海經歷' : 'Tidak ada riwayat kapal'}</td>
+      </tr>
+    `;
+  }
+
   printWindow.document.write(`
     <!DOCTYPE html>
-    <html>
+    <html class="light" lang="en">
     <head>
+      <meta charset="utf-8"/>
+      <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
       <title>${isZh ? '船員履歷表' : 'CV'} - ${escapeHTML(crew.fullName)}</title>
+      <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+      <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#d5e3ff",
+                        "primary": "#001e40",
+                        "surface-bright": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "tertiary-container": "#592300",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "tertiary": "#381300",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container": "#eceef0",
+                        "on-tertiary-fixed": "#341100",
+                        "surface-tint": "#3a5f94",
+                        "on-tertiary-fixed-variant": "#723610",
+                        "primary-container": "#003366",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed": "#d5e3fd",
+                        "tertiary-fixed": "#ffdbca",
+                        "on-background": "#191c1e",
+                        "primary-fixed-dim": "#a7c8ff",
+                        "tertiary-fixed-dim": "#ffb690",
+                        "on-primary-fixed-variant": "#1f477b",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#001b3c",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-low": "#f2f4f6",
+                        "outline-variant": "#c3c6d1",
+                        "surface-container-highest": "#e0e3e5",
+                        "inverse-primary": "#a7c8ff",
+                        "secondary": "#515f74",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#43474f",
+                        "on-primary-container": "#799dd6",
+                        "on-tertiary-container": "#d8885c",
+                        "surface-dim": "#d8dadc",
+                        "outline": "#737780",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "secondary-container": "#d5e3fd",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#57657b",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "surface": "#f7f9fb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-page": "24px",
+                        "stack-sm": "4px",
+                        "gutter-grid": "16px",
+                        "stack-md": "12px",
+                        "stack-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Inter"],
+                        "label-bilingual": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "display": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-bold": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "label-bilingual": ["10px", { "lineHeight": "14px", "fontWeight": "400" }],
+                        "body-sm": ["12px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "display": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-bold": ["11px", { "lineHeight": "16px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+      </script>
+      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
       <style>
-        body { font-family: "Microsoft YaHei", "Noto Sans SC", Arial, sans-serif; padding: 30px; color: #000; line-height: 1.4; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 22pt; font-weight: bold; letter-spacing: 0; }
-        .header h2 { margin: 5px 0 0 0; font-size: 14pt; color: #333; }
-        .header p { margin: 5px 0 0 0; font-size: 14pt; font-weight: bold; }
-        
-        .grid { display: grid; grid-template-columns: 1fr auto; gap: 30px; margin-bottom: 20px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #000; padding: 8px 10px; font-size: 10pt; text-align: left; vertical-align: top; }
-        th { background: #f4f4f4; width: 35%; }
-        
-        /* Photo 4x6 cm approx 151x226px at 96 DPI */
-        .photo-box { width: 151px; height: 226px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; padding: 2px; }
-        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .lbl-id { font-size: 10pt; display: block; font-weight: bold; }
-        .lbl-en { font-size: 8.5pt; color: #444; display: block; margin-top: 2px; font-weight: normal; }
-        .lbl-tw { font-size: 9pt; font-weight: bold; color: #000; display: block; margin-top: 1px; }
-        
-        .signature-section { display: flex; justify-content: space-between; margin-top: 40px; }
-        .signature-box { text-align: center; width: 250px; }
-        .signature-title { font-size: 10pt; font-weight: bold; margin-bottom: 2px; }
-        .signature-tw { font-size: 9pt; color: #333; margin-bottom: 60px; }
-        .signature-line { border-bottom: 1px solid #000; width: 100%; margin: 0 auto; }
-        
-        .footer { margin-top: 30px; text-align: left; font-size: 8pt; color: #555; border-top: 2px solid #000; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; }
-        
-        .qr-container { text-align: center; }
-        .qr-container img { width: 80px; height: 80px; border: 1px solid #ccc; padding: 2px; }
-        .qr-container p { font-size: 7.5pt; margin: 4px 0 0 0; color: #333; font-weight: bold; }
-        .qr-container p.qr-tw { font-weight: normal; margin-top: 2px; }
-
-        @page { size: A4 portrait; margin: 7mm; }
-        html, body { margin: 0; padding: 0; background: #fff; }
-        body { font-size: 7.4pt; line-height: 1.15; }
-        .cv-page { width: 100%; page-break-after: avoid; break-after: avoid-page; }
-        .cv-page .header { padding-bottom: 3px; margin-bottom: 4px; border-bottom-width: 1.5px; }
-        .cv-page .header h1 { font-size: 15pt; line-height: 1; }
-        .cv-page .header h2 { margin-top: 2px; font-size: 9pt; line-height: 1.05; }
-        .cv-page .header p { margin-top: 1px; font-size: 8pt; line-height: 1.05; }
-        .grid { grid-template-columns: 1fr 30mm; gap: 5px; margin-bottom: 3px; align-items: start; }
-        table { table-layout: fixed; margin-bottom: 4px; }
-        th, td { padding: 2px 4px; font-size: 7.3pt; line-height: 1.12; overflow-wrap: anywhere; }
-        th { width: 31%; }
-        .photo-box { box-sizing: border-box; width: 30mm; height: 40mm; padding: 1px; }
-        .photo-placeholder { font-size: 7pt; color: #555; }
-        .lbl-id, .lbl-en, .lbl-tw { display: inline; margin: 0; font-size: 7.1pt; line-height: 1.1; }
-        .lbl-en, .lbl-tw { color: #222; }
-        .lbl-en::before, .lbl-tw::before { content: " / "; font-weight: normal; }
-        .cv-page h3 { margin: 3px 0 2px !important; padding: 2px 3px !important; border: 1px solid #000 !important; background: #f0f0f0; font-size: 8pt; line-height: 1.05; }
-        .skills-cell { line-height: 1.2 !important; }
-        .signature-section { margin-top: 5px; }
-        .signature-box { width: 42%; }
-        .signature-title { font-size: 7pt; }
-        .signature-tw { margin-bottom: 15px; font-size: 6.5pt; }
-        .footer { margin-top: 4px; padding-top: 3px; border-top-width: 1px; font-size: 5.8pt; line-height: 1.1; }
-        .qr-container img { width: 34px; height: 34px; padding: 1px; }
-        .qr-container p { margin-top: 1px; font-size: 5.5pt; }
-        .documents-section { page-break-before: always; break-before: page; }
-        .attachment-header { text-align: center; border-bottom: 1px solid #000; margin-bottom: 4mm; }
-        .attachment-header h1 { margin: 0; font-size: 15pt; }
-        .attachment-header p { margin: 2mm 0; font-size: 9pt; font-weight: bold; }
-        .attachment-sheet { min-height: 268mm; text-align: center; break-inside: avoid; page-break-inside: avoid; }
-        .attachment-sheet + .attachment-sheet { page-break-before: always; break-before: page; }
-        .attachment-sheet h4 { margin: 0 0 3mm; padding-bottom: 2mm; border-bottom: 1px solid #777; font-size: 10pt; }
-        .attachment-image { max-width: 100%; max-height: 250mm; object-fit: contain; border: 1px solid #999; padding: 1mm; box-sizing: border-box; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        @media print {
+            body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .a4-page { width: 100%; height: auto; min-height: 297mm; margin: 0; padding: 24px; box-shadow: none; overflow: visible; break-after: auto; position: relative;}
+            .watermark-overlay { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; opacity: 0.05; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; transform: rotate(-30deg); }
+            .watermark-text { font-size: 2rem; font-weight: bold; color: black; white-space: nowrap; margin: 50px; }
+            .attachment-sheet { page-break-before: always; break-before: page; min-height: 268mm; text-align: center; }
+            .attachment-image { max-width: 100%; max-height: 250mm; object-fit: contain; }
+        }
+        @media screen {
+            body { background-color: #f2f4f6; padding: 2rem 0; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+            .a4-page { width: 210mm; min-height: 297mm; background: white; margin: 0 auto; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
+            .watermark-overlay { position: absolute; inset: -50%; z-index: 0; pointer-events: none; opacity: 0.03; display: flex; flex-wrap: wrap; align-content: flex-start; transform: rotate(-30deg); }
+            .watermark-text { font-size: 1.5rem; font-weight: bold; color: black; padding: 2rem; white-space: nowrap; }
+            .attachment-sheet { margin-top: 2rem; background: white; width: 210mm; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+            .attachment-image { max-width: 100%; max-height: 250mm; object-fit: contain; }
+        }
       </style>
     </head>
-    <body>
-      <main class="cv-page">
-      <div class="header">
-        <h1>${isZh ? '船員履歷表' : 'CURRICULUM VITAE'}</h1>
-        <h2>${isZh ? '遠洋延繩釣船員' : 'LONGLINE FISHING CREW'}</h2>
-        <p>${isZh ? 'Longline Fishing Crew Curriculum Vitae' : '遠洋延繩釣船員履歷表'}</p>
-      </div>
+    <body class="font-body-md text-on-surface bg-surface-container-low min-h-screen">
+      <!-- Top Navigation (Screen Only) -->
+      <nav class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-page py-stack-md bg-surface-bright border-b border-outline-variant no-print shadow-sm">
+        <div class="font-headline-sm text-headline-sm font-bold text-primary">SEAFARER CV PORTAL</div>
+        <div class="flex gap-4">
+          <button class="px-4 py-2 bg-primary text-on-primary rounded font-label-bold flex items-center gap-2 hover:bg-primary-container transition-colors" onclick="window.print()">
+            <span class="material-symbols-outlined text-[18px]">print</span> Print CV / Cetak PDF
+          </button>
+        </div>
+      </nav>
 
-      <div class="grid">
-        <table>
-          <tr>
-            <th>
-              ${cvLabel('Nama Lengkap', 'Full Name', '姓名')}
-            </th>
-            <td style="font-size: 12pt;"><strong>${escapeHTML(crew.fullName)}</strong></td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Nama Mandarin', 'Chinese Name', '中文姓名')}
-            </th>
-            <td style="font-size: 12pt;"><strong>${escapeHTML(crew.chineseName || '-')}</strong></td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('ID Kru', 'Crew ID', '船員編號')}
-            </th>
-            <td>${escapeHTML(crew.submissionId)}</td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Jabatan', 'Position', '職務')}
-            </th>
-            <td style="font-size: 11pt;"><strong>${escapeHTML(crew.rankPosition || '-')}</strong></td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Tanggal Lahir', 'Date of Birth', '出生日期')}
-            </th>
-            <td>${escapeHTML(formatDisplayDate(crew.dob))}</td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Umur', 'Age', '年齡')}
-            </th>
-            <td>${age} ${isZh ? '歲 / Years / Tahun' : 'Tahun / Years / 歲'}</td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Jenis Kelamin', 'Gender', '性別')}
-            </th>
-            <td>${escapeHTML(crew.gender === 'Male' ? (isZh ? '男 / Male / Laki-laki' : 'Laki-laki / Male / 男') : (crew.gender === 'Female' ? (isZh ? '女 / Female / Perempuan' : 'Perempuan / Female / 女') : (crew.gender || '-')))}</td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Agama', 'Religion', '宗教')}
-            </th>
-            <td>${escapeHTML(crew.religion || '-')}</td>
-          </tr>
-          <tr>
-            <th>${cvLabel('Tinggi / Berat', 'Height / Weight', '\u8eab\u9ad8 / \u9ad4\u91cd')}</th>
-            <td>${escapeHTML(crew.heightCm || '-')} cm / ${escapeHTML(crew.weightKg || '-')} kg</td>
-          </tr>
-          <tr>
-            <th>${cvLabel('No. HP / WA', 'Phone / WhatsApp', '\u96fb\u8a71\u865f\u78bc')}</th>
-            <td>${escapeHTML(crew.phoneNo || '-')}</td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Alamat', 'Address', '地址')}
-            </th>
-            <td>${escapeHTML(crew.combinedAddress || crew.streetAddress || '-')}</td>
-          </tr>
-          <tr>
-            <th>
-              ${cvLabel('Kontak Darurat', 'Emergency Contact', '緊急聯絡人')}
-            </th>
-            <td>${escapeHTML(crew.fam1Name || '-')} (${escapeHTML(crew.fam1Relation || '-')}): ${escapeHTML(crew.fam1Phone || '-')}</td>
-          </tr>
-        </table>
-        
-        <div>
-          <div class="photo-box">
-            ${photoHtml}
+      <!-- A4 Document Container -->
+      <div class="a4-page mt-[60px] print:mt-0 z-10 relative bg-surface-container-lowest">
+        <!-- Watermark -->
+        <div aria-hidden="true" class="watermark-overlay">
+          <script>
+            for(let i=0; i<30; i++) {
+                document.write('<div class="watermark-text font-headline-sm">CONFIDENTIAL FOR ${escapeHTML(window.tokenOwnerName || 'SHIP OWNER')} - ${new Date().getFullYear()}</div>');
+            }
+          </script>
+        </div>
+
+        <!-- Content Canvas -->
+        <div class="relative z-10">
+          <!-- Header Section -->
+          <header class="flex justify-between items-start border-b border-outline-variant pb-stack-lg mb-stack-lg">
+            <div class="flex-1">
+              <h1 class="font-display text-display text-primary mb-1">${escapeHTML(crew.fullName)}</h1>
+              <div class="font-headline-sm text-headline-sm text-on-surface-variant mb-stack-md">${escapeHTML(crew.chineseName || '-')}</div>
+              <div class="grid grid-cols-2 gap-y-stack-sm w-3/4">
+                <div>
+                  <div class="font-label-bilingual text-label-bilingual text-on-surface-variant uppercase">${isZh ? '船員編號' : 'Crew ID'}</div>
+                  <div class="font-body-md text-body-md font-bold">${escapeHTML(crew.submissionId)}</div>
+                </div>
+                <div>
+                  <div class="font-label-bilingual text-label-bilingual text-on-surface-variant uppercase">${isZh ? '職務' : 'Position'}</div>
+                  <div class="font-body-md text-body-md font-bold text-primary">${escapeHTML(crew.rankPosition || '-')}</div>
+                </div>
+              </div>
+            </div>
+            <div class="w-[30mm] h-[40mm] border border-outline-variant rounded overflow-hidden flex-shrink-0 bg-surface-container flex items-center justify-center">
+              ${photoHtml}
+            </div>
+          </header>
+
+          <!-- Personal Data Grid -->
+          <section class="mb-stack-lg">
+            <h2 class="font-headline-sm text-headline-sm text-primary border-b border-outline-variant pb-stack-sm mb-stack-md flex items-center gap-2">
+              <span class="material-symbols-outlined text-[20px]">person</span> ${isZh ? '個人資料 / Personal Data' : 'Personal Data / 个人资料'}
+            </h2>
+            <div class="grid grid-cols-2 gap-x-gutter-grid gap-y-stack-md bg-surface-bright p-stack-md rounded-DEFAULT border border-outline-variant">
+              <div>
+                <div class="font-label-bold text-label-bold text-on-surface mb-0.5">${isZh ? '出生地點/日期' : 'POB/DOB'}</div>
+                <div class="font-label-bilingual text-label-bilingual text-on-surface-variant mb-1">${isZh ? '出生地點/日期' : 'Tempat/Tgl Lahir / 出生地点/日期'}</div>
+                <div class="font-body-sm text-body-sm">${escapeHTML(crew.pob || '-')}, ${escapeHTML(formatDisplayDate(crew.dob))}</div>
+              </div>
+              <div>
+                <div class="font-label-bold text-label-bold text-on-surface mb-0.5">${isZh ? '身高/體重' : 'Height/Weight'}</div>
+                <div class="font-label-bilingual text-label-bilingual text-on-surface-variant mb-1">${isZh ? '身高/體重' : 'Tinggi/Berat / 身高/体重'}</div>
+                <div class="font-body-sm text-body-sm">${escapeHTML(crew.heightCm || '-')}cm / ${escapeHTML(crew.weightKg || '-')}kg</div>
+              </div>
+              <div>
+                <div class="font-label-bold text-label-bold text-on-surface mb-0.5">${isZh ? '宗教' : 'Religion'}</div>
+                <div class="font-label-bilingual text-label-bilingual text-on-surface-variant mb-1">${isZh ? '宗教' : 'Agama / 宗教'}</div>
+                <div class="font-body-sm text-body-sm">${escapeHTML(crew.religion || '-').toUpperCase()}</div>
+              </div>
+              <div>
+                <div class="font-label-bold text-label-bold text-on-surface mb-0.5">${isZh ? '衣服/鞋子尺碼' : 'Shirt/Shoe Size'}</div>
+                <div class="font-label-bilingual text-label-bilingual text-on-surface-variant mb-1">${isZh ? '衣服/鞋子尺碼' : 'Ukuran Baju/Sepatu / 衣服/鞋子尺码'}</div>
+                <div class="font-body-sm text-body-sm">${escapeHTML(crew.shirtSize || '-')} / ${escapeHTML(crew.shoeSize || '-')}</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Documents Section -->
+          <section class="mb-stack-lg">
+            <h2 class="font-headline-sm text-headline-sm text-primary border-b border-outline-variant pb-stack-sm mb-stack-md flex items-center gap-2">
+              <span class="material-symbols-outlined text-[20px]">description</span> ${isZh ? '核心文件 / Core Documents' : 'Core Documents / 核心文件'}
+            </h2>
+            <div class="flex flex-col gap-stack-sm">
+              <!-- Passport -->
+              <div class="flex justify-between items-center py-2 border-b border-outline-variant border-opacity-50">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-outline">book</span>
+                  <div>
+                    <div class="font-label-bold text-label-bold">${isZh ? '護照 (Passport)' : 'Passport (Paspor)'}</div>
+                    <div class="font-label-bilingual text-label-bilingual text-on-surface-variant">No: ${escapeHTML(crew.passportNo || '-')} • Exp: ${escapeHTML(formatDisplayDate(crew.passportExpiry))}</div>
+                  </div>
+                </div>
+                <div class="px-2 py-0.5 rounded font-label-bold uppercase text-[9px] tracking-wider border ${isPassportValid ? 'bg-[#e6f4ea] text-[#137333] border-[#ceead6]' : 'bg-[#fce8e6] text-[#c5221f] border-[#fad2cf]' }">
+                  ${isPassportValid ? (isZh ? '有效 / Valid' : 'Valid') : (isZh ? '無效 / Expired' : 'Expired')}
+                </div>
+              </div>
+              <!-- CDC -->
+              <div class="flex justify-between items-center py-2 border-b border-outline-variant border-opacity-50">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-outline">directions_boat</span>
+                  <div>
+                    <div class="font-label-bold text-label-bold">${isZh ? '船員手冊 (Seaman Book / CDC)' : 'Seaman Book / CDC (Buku Pelaut)'}</div>
+                    <div class="font-label-bilingual text-label-bilingual text-on-surface-variant">No: ${escapeHTML(crew.cdcNo || '-')} • Exp: ${escapeHTML(formatDisplayDate(crew.cdcExpiry))}</div>
+                  </div>
+                </div>
+                <div class="px-2 py-0.5 rounded font-label-bold uppercase text-[9px] tracking-wider border ${isCdcValid ? 'bg-[#e6f4ea] text-[#137333] border-[#ceead6]' : 'bg-[#fce8e6] text-[#c5221f] border-[#fad2cf]' }">
+                  ${isCdcValid ? (isZh ? '有效 / Valid' : 'Valid') : (isZh ? '無效 / Expired' : 'Expired')}
+                </div>
+              </div>
+              <!-- BST -->
+              <div class="flex justify-between items-center py-2">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-outline">verified</span>
+                  <div>
+                    <div class="font-label-bold text-label-bold">${isZh ? '基本安全訓練 (BST)' : 'BST (Basic Safety Training)'}</div>
+                    <div class="font-label-bilingual text-label-bilingual text-on-surface-variant">Exp: ${escapeHTML(formatDisplayDate(crew.bstExpiry))}</div>
+                  </div>
+                </div>
+                <div class="px-2 py-0.5 rounded font-label-bold uppercase text-[9px] tracking-wider border ${isBstValid ? 'bg-[#e6f4ea] text-[#137333] border-[#ceead6]' : 'bg-[#fce8e6] text-[#c5221f] border-[#fad2cf]' }">
+                  ${isBstValid ? (isZh ? '有效 / Valid' : 'Valid') : (isZh ? '無效 / Expired' : 'Expired')}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Document Gallery -->
+          <section class="mb-stack-lg">
+            <h2 class="font-headline-sm text-headline-sm text-primary border-b border-outline-variant pb-stack-sm mb-stack-md flex items-center gap-2">
+              <span class="material-symbols-outlined text-[20px]">photo_library</span> ${isZh ? '文件庫 / Document Gallery' : 'Document Gallery / 文件库'}
+            </h2>
+            <div class="flex gap-gutter-grid flex-wrap">
+              ${galleryHtml || `<div class="text-on-surface-variant font-body-sm">${isZh ? '無上傳文件' : 'Tidak ada berkas terunggah.'}</div>`}
+            </div>
+          </section>
+
+          <!-- Vessel History Table -->
+          <section class="mb-stack-lg">
+            <div class="flex justify-between items-end border-b border-outline-variant pb-stack-sm mb-stack-md">
+              <h2 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">history</span> ${isZh ? '航海經歷 / Vessel History' : 'Vessel History / 航海经历'}
+              </h2>
+              <div class="font-label-bold text-label-bold text-on-surface-variant bg-surface-container-low px-2 py-1 rounded">
+                ${isZh ? '延繩釣經驗：' : 'Longline Fishing Exp: '}${escapeHTML(crew.expLongline || '-')}
+              </div>
+            </div>
+            <div class="border border-outline-variant rounded overflow-hidden">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-surface-dim text-on-surface">
+                    <th class="py-2 px-3 font-label-bold text-label-bold border-b border-outline-variant">Vessel Name <br/><span class="font-label-bilingual text-label-bilingual text-on-surface-variant font-normal">船名</span></th>
+                    <th class="py-2 px-3 font-label-bold text-label-bold border-b border-outline-variant">Type <br/><span class="font-label-bilingual text-label-bilingual text-on-surface-variant font-normal">类型</span></th>
+                    <th class="py-2 px-3 font-label-bold text-label-bold border-b border-outline-variant">Rank <br/><span class="font-label-bilingual text-label-bilingual text-on-surface-variant font-normal">职务</span></th>
+                    <th class="py-2 px-3 font-label-bold text-label-bold border-b border-outline-variant">Duration <br/><span class="font-label-bilingual text-label-bilingual text-on-surface-variant font-normal">服务期</span></th>
+                  </tr>
+                </thead>
+                <tbody class="font-body-sm text-body-sm">
+                  ${vesselRowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Signature Section -->
+          <div class="flex justify-between mt-8 pt-4 border-t border-outline-variant">
+            <div class="text-center w-[45%]">
+              <div class="font-label-bold text-label-bold text-on-surface">${isZh ? '船員簽名' : 'Crew Signature'}</div>
+              <div class="font-label-bilingual text-label-bilingual text-on-surface-variant mb-10">${isZh ? 'Crew Signature' : '船員簽名'}</div>
+              <div class="border-b border-on-background w-3/4 mx-auto"></div>
+            </div>
+            <div class="text-center w-[45%]">
+              <div class="font-label-bold text-label-bold text-on-surface">${isZh ? '合法船員派遣公司' : 'Authorized Manning Agency'}</div>
+              <div class="font-label-bilingual text-label-bilingual text-on-surface-variant">PT ALINDA PRIMA SENTOSA</div>
+              <div class="font-label-bilingual text-label-bilingual text-on-surface-variant mb-6">${isZh ? 'Authorized Manning Agency' : '合法船員派遣公司'}</div>
+              <div class="border-b border-on-background w-3/4 mx-auto"></div>
+            </div>
+          </div>
+
+          <!-- Footer Section -->
+          <div class="flex justify-between items-center mt-6 pt-4 border-t border-outline-variant text-[10px] text-on-surface-variant">
+            <div>
+              <div>${isZh ? '系統產生' : 'Generated by'}</div>
+              <div class="font-bold text-primary">Longline Crew Management System</div>
+              <div>Version 2.0</div>
+              <div class="font-bold">PT ALINDA PRIMA SENTOSA</div>
+            </div>
+            <div class="flex flex-col items-center">
+              ${qrImage}
+              <div class="font-label-bilingual text-label-bilingual text-center mt-1 font-bold">${isZh ? '掃描查看完整資料' : 'Scan to View Complete Profile'}</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${isZh ? '資格與航海經驗 / QUALIFICATIONS' : 'KUALIFIKASI / QUALIFICATIONS / 資格'}</h3>
-      <table>
-        <tr>
-          <th>
-            ${cvLabel('Pengalaman Longline', 'Longline Experience', '延繩釣經驗')}
-          </th>
-          <td><strong>${escapeHTML(crew.expLongline || '-')}</strong></td>
-        </tr>
-        <tr>
-          <th>
-            ${cvLabel('Jenis Kapal', 'Vessel Type', '船型')}
-          </th>
-          <td>${escapeHTML(crew.vesselTypeLongline || '-')} (${escapeHTML(crew.vesselOrigin || '-')})</td>
-        </tr>
-        <tr>
-          <th>${cvLabel('Riwayat Kapal', 'Vessel History', '\u8239\u8236\u7d93\u6b77')}</th>
-          <td>${escapeHTML(typeof makeVesselHistoryBilingual === 'function' ? makeVesselHistoryBilingual(crew.vesselName) : (crew.vesselName || '-'))}</td>
-        </tr>
-        <tr>
-          <th>
-            ${cvLabel('Negara Penempatan', 'Available For', '可派遣地區')}
-          </th>
-          <td><strong>${escapeHTML(crew.placementCountry || '-')}</strong></td>
-        </tr>
-        <tr>
-          <th>
-            ${cvLabel('Skill Umum', 'General Skills', '一般技能')}
-          </th>
-          <td class="skills-cell">${skillsHtml}</td>
-        </tr>
-      </table>
-
-      <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">${isZh ? '文件狀態 / DOCUMENT STATUS' : 'STATUS DOKUMEN / DOCUMENT STATUS / 文件狀態'}</h3>
-      <table style="text-align: center;">
-        <tr>
-          <th style="text-align: center; width: 33%;">${isZh ? '文件' : 'Document'}<br><span style="font-weight:normal; font-size:9pt;">${isZh ? 'Document' : '文件'}</span></th>
-          <th style="text-align: center; width: 33%;">${isZh ? '狀態' : 'Status'}<br><span style="font-weight:normal; font-size:9pt;">${isZh ? 'Status' : '狀態'}</span></th>
-          <th style="text-align: center; width: 33%;">${isZh ? '有效期限' : 'Chinese'}<br><span style="font-weight:normal; font-size:9pt;">${isZh ? 'Validity' : '中文'}</span></th>
-        </tr>
-        <tr>
-          <td><strong>${isZh ? '護照' : 'Passport'}</strong><br><span style="font-size: 8pt; color: #555;">${escapeHTML(crew.passportNo || '-')}</span></td>
-          <td>${isPassportValid ? validUntilText(crew.passportExpiry) : unavailableText}</td>
-          <td style="font-weight: bold;">${isPassportValid ? '有效至 ' + formatDisplayDate(crew.passportExpiry) : '無效'}</td>
-        </tr>
-        <tr>
-          <td><strong>${isZh ? '船員手冊' : 'Seaman Book'}</strong><br><span style="font-size: 8pt; color: #555;">${escapeHTML(crew.cdcNo || '-')}</span></td>
-          <td>${isCdcValid ? validUntilText(crew.cdcExpiry) : unavailableText}</td>
-          <td style="font-weight: bold;">${isCdcValid ? '有效至 ' + formatDisplayDate(crew.cdcExpiry) : '無效'}</td>
-        </tr>
-        <tr>
-          <td><strong>${isZh ? '體檢證明' : 'MCU'}</strong></td>
-          <td>${crew.medicalStatus === 'Ada' ? availableText : unavailableText}</td>
-          <td style="font-weight: bold;">${crew.medicalStatus === 'Ada' ? '已提供' : '無'}</td>
-        </tr>
-        <tr>
-          <td><strong>BST</strong></td>
-          <td>${isBstValid ? validUntilText(crew.bstExpiry) : unavailableText}</td>
-          <td style="font-weight: bold;">${isBstValid ? '有效至 ' + formatDisplayDate(crew.bstExpiry) : '無'}</td>
-        </tr>
-        <tr>
-          <td><strong>SKCK / ID Card</strong></td>
-          <td>${(crew.kkStatus === 'Ada' || crew.akteStatus === 'Ada') ? availableText : noneText}</td>
-          <td style="font-weight: bold;">${(crew.kkStatus === 'Ada' || crew.akteStatus === 'Ada') ? '已提供' : '無'}</td>
-        </tr>
-      </table>
-
-      <div class="signature-section">
-        <div class="signature-box">
-          <div class="signature-title">${isZh ? '船員簽名' : 'Crew Signature'}</div>
-          <div class="signature-tw">${isZh ? 'Crew Signature' : '船員簽名'}</div>
-          <div class="signature-line"></div>
-        </div>
-        
-        <div class="signature-box">
-          <div class="signature-title">${isZh ? '合法船員派遣公司' : 'Authorized Manning Agency'}</div>
-          <div class="signature-tw">PT ALINDA PRIMA SENTOSA<br>${isZh ? 'Authorized Manning Agency' : '合法船員派遣公司'}</div>
-          <div class="signature-line"></div>
-        </div>
-      </div>
-      
-      <div class="footer">
-        <div>
-          ${isZh ? '系統產生' : 'Generated by'}<br>
-          <strong>Longline Crew Management System</strong><br>
-          Version 2.0<br>
-          <strong>PT ALINDA PRIMA SENTOSA</strong>
-        </div>
-        <div class="qr-container">
-          ${qrImage}
-          <p>${isZh ? '掃描查看完整資料' : 'Scan to View Complete Profile'}</p>
-          <p class="qr-tw">${isZh ? 'Scan to View Complete Profile' : '掃描查看完整資料'}</p>
-        </div>
-      </div>
-
-      </main>
+      <!-- Attachment Pages (Page 2+) -->
       ${page2Html}
 
       <script>
